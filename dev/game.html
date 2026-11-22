@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Probar un minijuego</title>
+<link rel="stylesheet" href="../css/fonts.css">
+<link rel="stylesheet" href="../css/app.css">
+<script type="importmap">{ "imports": { "three": "../vendor/three/three.module.min.js" } }</script>
+</head>
+<body>
+<div id="app" class="app"></div>
+<script type="module">
+// Banco de pruebas de un minijuego, sin el resto de la app.
+//   dev/game.html?id=<juego>            abre el juego con su pantalla de instrucciones
+//   &auto=1                             salta las instrucciones y empieza a jugar
+//   &seed=123                           semilla fija para api.rand() (pruebas repetibles)
+//   &mute=1                             sin sonido
+//   id=demo                             juego de ejemplo (dev/demo-game.js)
+// En la consola / Playwright: window.__game → { id, api, phase, instance, start(), finish({won}), restart(), pause(), resume(), exit() }
+//   phase ∈ loading | intro | playing | paused | ending | result | message | error.   window.__gameError = texto del error (o null).
+// La partida guardada de pruebas vive en localStorage de este origen (se puede borrar con localStorage.clear()).
+import * as state from '../js/core/state.js';
+import * as audio from '../js/core/audio.js';
+import { fitApp } from '../js/core/ui.js';
+import { GAMES } from '../js/games/registry.js';
+import { startGame } from '../js/games/engine.js';
+
+const q = new URLSearchParams(location.search);
+const id = q.get('id') || 'demo';
+fitApp(); window.addEventListener('resize', fitApp);
+state.init();
+if (q.get('mute') === '1') audio.setSound(false);
+window.addEventListener('pointerdown', () => audio.unlock(), { once: true });
+if (id === 'demo' && !GAMES.find(g => g.id === 'demo')) {
+  GAMES.push({ id: 'demo', title: 'Juego de ejemplo', parable: 'oveja', icon: '⭐', scoreIcon: '⭐', colors: ['#5db8ee', '#8f7be8'],
+    how: ['Mueve el dedo para llevar la canasta.', 'Atrapa las estrellas.'], hud: { lives: 3 }, goal: 10, goalText: 'Atrapa 10 estrellas',
+    coinRate: 1, maxCoins: 20, load: () => import('./demo-game.js') });
+}
+try { await document.fonts.ready; } catch {}
+window.__state = state;
+await startGame(id, {
+  skipIntro: q.get('auto') === '1',
+  seed: q.has('seed') ? Number(q.get('seed')) : undefined,
+  onExit: () => { document.getElementById('app').innerHTML = '<p style="padding:24px;font:800 20px sans-serif;color:#fff">Saliste del juego. Recarga para volver a probar.</p>'; window.__exited = true; },
+});
+window.__ready = true;
+</script>
+</body>
+</html>

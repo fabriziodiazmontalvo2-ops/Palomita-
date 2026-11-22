@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Palomita</title>
+<meta name="description" content="Cuida a tu palomita, juega con las parábolas de Jesús y lee tu Biblia. Una app para niños de Primera Comunión.">
+<meta name="theme-color" content="#7cc8f5">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Palomita">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/home.css">
+<link rel="stylesheet" href="css/bible.css">
+<link rel="stylesheet" href="css/shop.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three/three.module.min.js" } }</script>
+</head>
+<body>
+<div id="app" class="app">
+  <div id="screen" class="screen">
+    <div class="splash">
+      <div class="splash__bird" aria-hidden="true">🕊️</div>
+      <h1>Palomita</h1>
+      <p>Preparando el nido…</p>
+    </div>
+  </div>
+  <div class="rotate-note"><p>📱 Gira tu teléfono para jugar con Palomita</p></div>
+  <div id="overlay" class="overlay-root"></div>
+</div>
+<noscript><p style="padding:24px;color:#fff;font:700 18px sans-serif">Palomita necesita JavaScript para funcionar.</p></noscript>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

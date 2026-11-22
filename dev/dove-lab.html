@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratorio de la palomita</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #bfe6ff; overflow: hidden; font: 13px system-ui, sans-serif; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #info { position: fixed; left: 8px; top: 8px; background: #fffc; padding: 4px 8px; border-radius: 8px; }
+  #err { position: fixed; left: 8px; bottom: 8px; right: 8px; color: #a00; background: #fffd; padding: 6px 8px; border-radius: 8px; white-space: pre-wrap; display: none; }
+</style>
+<script type="importmap">{ "imports": { "three": "../vendor/three/three.module.min.js" } }</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="info"></div>
+<div id="err"></div>
+<script type="module">
+// Laboratorio para ver y fotografiar el modelo 3D de la palomita con una iluminación estándar.
+//
+// Parámetros (query string):
+//   v=a|b|c|main   variante: js/pet/variants/dove-<v>.js  (main = js/pet/dove.js)
+//   mood=happy|neutral|sad|sleepy|hungry|excited
+//   sleep=1        dormida
+//   dirt=0..1      barro
+//   talk=0..1      pico abierto
+//   look=nx,ny     dirección de la mirada (-1..1)
+//   action=<nombre>   acción de play()
+//   at=<seg>       congela la simulación (paso fijo 1/60) `at` segundos después de lanzar la acción (o de iniciar)
+//   yaw=<grados> pitch=<grados> dist=<unidades>   cámara orbital (yaw 0 = de frente)
+//   warm=<seg>     segundos de simulación previos (por defecto 1.5)
+//   hud=0          oculta la etiqueta
+// Sin `at` corre en vivo. Con `at`, al terminar pone window.__ready = true (para capturas con Playwright).
+// Con `at` también deja window.__stats = { calls, triangles, geometries, textures } (renderer.info).
+// Errores: window.__error (string) y aparecen en pantalla.
+import * as THREE from 'three';
+
+const q = new URLSearchParams(location.search);
+const num = (k, d) => (q.has(k) && q.get(k) !== '' && !Number.isNaN(+q.get(k)) ? +q.get(k) : d);
+const v = q.get('v') || 'main';
+const errBox = document.getElementById('err');
+function fail(e) {
+  window.__error = String(e && e.stack || e);
+  errBox.style.display = 'block';
+  errBox.textContent = window.__error;
+  window.__ready = true;
+}
+window.addEventListener('error', e => fail(e.error || e.message));
+window.addEventListener('unhandledrejection', e => fail(e.reason));
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+// Fondo: degradado pastel vertical
+{
+  const c = document.createElement('canvas'); c.width = 4; c.height = 256;
+  const g = c.getContext('2d'); const gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, '#8fd0ff'); gr.addColorStop(0.6, '#d9f1ff'); gr.addColorStop(1, '#fff3d6');
+  g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  scene.background = tex;
+}
+// Iluminación estándar (la misma receta que usará la app)
+scene.add(new THREE.HemisphereLight(0xffffff, 0xffe9d2, 1.9));
+const sun = new THREE.DirectionalLight(0xfff6e6, 1.9);
+sun.position.set(2.5, 5, 4);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.left = -3; sun.shadow.camera.right = 3; sun.shadow.camera.top = 4; sun.shadow.camera.bottom = -2;
+sun.shadow.camera.near = 0.5; sun.shadow.camera.far = 14; sun.shadow.bias = -0.0005; sun.shadow.radius = 5;
+scene.add(sun);
+const rim = new THREE.DirectionalLight(0xcfe6ff, 1.1);
+rim.position.set(-3, 3, -4);
+scene.add(rim);
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(3.2, 48),
+  new THREE.MeshStandardMaterial({ color: 0xb9e3a4, roughness: 0.95 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 50);
+const yaw = num('yaw', 0) * Math.PI / 180, pitch = num('pitch', 8) * Math.PI / 180, dist = num('dist', 6.4);
+function placeCamera() {
+  const target = new THREE.Vector3(0, 1.0, 0);
+  camera.position.set(
+    target.x + Math.sin(yaw) * Math.cos(pitch) * dist,
+    target.y + Math.sin(pitch) * dist,
+    target.z + Math.cos(yaw) * Math.cos(pitch) * dist
+  );
+  camera.lookAt(target);
+}
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  placeCamera();
+}
+window.addEventListener('resize', resize);
+resize();
+
+try {
+  const mod = await import(v === 'main' ? '../js/pet/dove.js' : `../js/pet/variants/dove-${v}.js`);
+  const dove = mod.createDove(THREE);
+  window.__dove = dove;
+  scene.add(dove.group);
+
+  if (q.has('mood')) dove.setMood(q.get('mood'));
+  if (q.get('sleep') === '1') dove.setSleeping(true);
+  if (q.has('dirt')) dove.setDirt(num('dirt', 0));
+  if (q.has('look')) { const [x, y] = q.get('look').split(',').map(Number); dove.lookAt(x || 0, y || 0); }
+  const talk = num('talk', 0);
+  const action = q.get('action');
+  const warm = num('warm', 1.5);
+  if (q.get('hud') === '0') document.getElementById('info').style.display = 'none';
+  document.getElementById('info').textContent =
+    `v=${v}` + (q.has('mood') ? ` · ${q.get('mood')}` : '') + (action ? ` · ${action}@${q.get('at') || 'vivo'}` : '') + (q.get('sleep') === '1' ? ' · dormida' : '');
+
+  const STEP = 1 / 60;
+  let t = 0;
+  const step = () => { if (talk) dove.setTalking(talk); dove.update(STEP, t); t += STEP; };
+
+  if (q.has('at')) {
+    for (let i = 0; i < Math.round(warm / STEP); i++) step();
+    if (action) dove.play(action);
+    for (let i = 0; i < Math.round(num('at', 0) / STEP); i++) step();
+    renderer.render(scene, camera);
+    window.__stats = { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures };
+    document.title = `calls=${window.__stats.calls} tris=${window.__stats.triangles}`;
+    window.__ready = true;
+  } else {
+    if (action) setTimeout(() => dove.play(action), 600);
+    let last = performance.now();
+    const loop = now => {
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      if (talk) dove.setTalking(talk);
+      dove.update(dt, t); t += dt;
+      renderer.render(scene, camera);
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+    // Interacción manual: mover el puntero = mirada; clic = acción al azar
+    window.addEventListener('pointermove', e => dove.lookAt((e.clientX / innerWidth) * 2 - 1, -((e.clientY / innerHeight) * 2 - 1)));
+    const acts = ['hop', 'flap', 'eat', 'giggle', 'nod', 'shake', 'dance', 'pray', 'wave', 'spin', 'sneeze', 'surprise', 'sad'];
+    let ai = 0;
+    window.addEventListener('pointerdown', () => { const a = acts[ai++ % acts.length]; dove.play(a); document.getElementById('info').textContent = `v=${v} · ${a}`; });
+    window.__ready = true;
+  }
+} catch (e) { fail(e); }
+</script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Kit de dibujo 2D</title>
+<link rel="stylesheet" href="../css/fonts.css">
+<style>body{margin:0;background:#334;} canvas{display:block}</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1500" style="width:1080px;height:1500px"></canvas>
+<script type="module">
+// Hoja de muestra de js/games/kit.js: todos los dibujos disponibles para los minijuegos.
+import * as kit from '../js/games/kit.js';
+try { await document.fonts.load('800 18px "Baloo 2"'); await document.fonts.ready; } catch {}
+const g = document.getElementById('c').getContext('2d');
+g.scale(1.5, 1.5); // 720 × 1000 unidades
+const W = 720, H = 1000;
+let t = 1.3;
+const label = (s, x, y) => kit.text(g, s, x, y, { size: 11, color: '#fff', weight: 700, stroke: '#0008', strokeWidth: 3 });
+// cielos
+['day', 'dawn', 'sunset', 'night', 'storm', 'sea'].forEach((k, i) => {
+  g.save(); g.translate(i * 120, 0); g.beginPath(); g.rect(0, 0, 120, 150); g.clip();
+  kit.sky(g, 120, 150, k);
+  if (k === 'night') { kit.stars(g, 120, 100, t, 25); kit.moon(g, 90, 30, 14); }
+  if (k === 'day') { kit.sun(g, 90, 34, 16, t); kit.cloud(g, 40, 50, 0.7); }
+  if (k === 'storm') kit.stormCloud(g, 60, 40, 0.9, t);
+  if (k === 'sea') kit.water(g, 120, 150, 90, t);
+  else { kit.hills(g, 120, 150, 115, 10, kit.PAL.leafLight, i * 40); kit.ground(g, 120, 150, 132); }
+  if (k === 'dawn') kit.rainbow(g, 60, 120, 50, 4);
+  g.restore(); label(`sky '${k}'`, i * 120 + 60, 142);
+});
+g.fillStyle = '#9fd8ff'; g.fillRect(0, 150, W, 850);
+g.fillStyle = kit.PAL.leaf; g.fillRect(0, 330, W, 6); g.fillRect(0, 520, W, 6); g.fillRect(0, 700, W, 6);
+// palomita perfil
+[[0, 'flap 0'], [0.5, 'flap .5'], [1, 'flap 1']].forEach(([f, n], i) => { kit.dove(g, 60 + i * 90, 220, 1.2, { flap: f }); label(n, 60 + i * 90, 270); });
+kit.dove(g, 330, 220, 1.2, { flap: 0.7, carry: 'olive' }); label("carry 'olive'", 330, 270);
+kit.dove(g, 420, 220, 1.2, { dir: -1, flap: 0.3, mood: 'sad' }); label('dir -1, sad', 420, 270);
+kit.dove(g, 510, 220, 1.2, { mood: 'hurt', flap: 0.2, tilt: 0.3 }); label('hurt, tilt', 510, 270);
+kit.dove(g, 600, 230, 1.2, { mood: 'sleep', feet: true }); label('sleep, feet', 600, 270);
+kit.dove(g, 680, 226, 0.7, { feet: true, blink: true }); label('s .7 blink', 680, 270);
+label('dove(g, x, y, s, { dir, flap, tilt, mood, carry, feet, blink })', 360, 296);
+// de frente
+[['happy', 0], ['happy', 1], ['sad', 0], ['sleep', 0], ['wow', 0.4]].forEach(([m, w], i) => { kit.doveFront(g, 60 + i * 80, 420, 1, { mood: m, wings: w }); label(`${m} w${w}`, 60 + i * 80, 440); });
+kit.sheep(g, 470, 420, 1.2, { t }); label('sheep', 470, 440);
+kit.sheep(g, 540, 420, 1.2, { dir: -1, sad: true }); label('sheep sad', 540, 440);
+kit.sheep(g, 610, 420, 0.8, { hop: 6 }); label('hop', 610, 440);
+kit.heart(g, 660, 380, 1.3); kit.star(g, 690, 380, 12); kit.seed(g, 660, 415, 9); kit.drop(g, 690, 412, 1);
+label('doveFront(g, x, y, s, { mood, wings, bob })   sheep(g, x, y, s, { dir, t, sad, hop })   heart star seed drop', 360, 470);
+// personas
+const ppl = [
+  [{ robe: '#e9c46a', sash: '#b5651d', beard: true }, 'down'],
+  [{ robe: '#f4f1e8', sash: '#c0392b', beard: true, hair: '#6b4a2f', arms: 'open' }, 'open (Jesús)'],
+  [{ robe: '#7fb3d5', veil: '#f4f1e8', arms: 'up' }, 'veil, up'],
+  [{ robe: '#c97b63', hair: '#2f1e14', skin: '#b9825a', arms: 'reach' }, 'reach'],
+  [{ robe: '#8fbc8f', hair: '#3b2a20', skin: '#f0c8a0', walk: true, t }, 'walk'],
+  [{ robe: '#b08968', sad: true, hair: '#444' }, 'sad'],
+  [{ robe: '#9b7be8', skin: '#8d5a3b', hair: '#1c1410', dir: -1 }, 'dir -1'],
+];
+ppl.forEach(([o, n], i) => { kit.person(g, 50 + i * 78, 610, 1.3, o); label(n, 50 + i * 78, 632); });
+kit.person(g, 640, 610, 1.2, { robe: '#b08968', lying: true, sad: true }); label('lying', 650, 632);
+label('person(g, x, y, s, { robe, skin, hair, sash, veil, beard, arms, dir, t, walk, sad, lying })', 360, 660);
+// naturaleza
+kit.tree(g, 50, 790, 1.2); label('tree', 50, 810);
+kit.tree(g, 130, 790, 1.2, { kind: 'palm' }); label('palm', 130, 810);
+kit.tree(g, 210, 790, 1.2, { kind: 'olive' }); label('olive', 210, 810);
+kit.bush(g, 290, 790, 1.2); label('bush', 290, 810);
+kit.rock(g, 360, 790, 1.2); label('rock', 360, 810);
+kit.flower(g, 420, 790, 1.6); kit.flower(g, 440, 790, 1.6, kit.PAL.grape); kit.grass(g, 465, 790, 1.5); label('flower grass', 440, 810);
+kit.olive(g, 520, 760, 1.5, -0.3); label('olive()', 520, 810);
+kit.sunray(g, 580, 760, 1.3, t); label('sunray', 580, 810);
+kit.candle(g, 630, 790, 1.3, true, t); kit.candle(g, 660, 790, 1.3, false); label('candle', 645, 810);
+kit.bubble(g, 700, 760, 12); label('bubble', 700, 810);
+// texto y varios
+g.fillStyle = '#fffaf0'; g.fillRect(0, 830, W, 170);
+kit.text(g, 'text(): ¡Hola, Palomita! ÁÉÍÓÚ ñ ¿?', 180, 860, { size: 20 });
+kit.text(g, 'con borde', 180, 892, { size: 24, color: '#fff', stroke: kit.PAL.coralDeep, strokeWidth: 5 });
+kit.wrapText(g, 'wrapText(): este texto largo se parte solo en varios renglones para caber en el ancho indicado.', 180, 915, 300, { size: 14 });
+kit.speech(g, 460, 930, 'speech(): ¡Tengo sed!', { size: 14 });
+kit.emoji(g, '🍞', 560, 870, 30); kit.emoji(g, '🐟', 600, 870, 30); kit.emoji(g, '🧺', 640, 870, 30); kit.emoji(g, '🩹', 680, 870, 30); label('emoji()', 620, 900);
+kit.bar(g, 540, 930, 150, 14, 0.6, kit.PAL.leaf); kit.fillRR(g, 540, 955, 150, 30, 10, kit.PAL.coral); kit.text(g, 'fillRR + bar', 615, 970, { size: 14, color: '#fff' });
+kit.shadow(g, 460, 985, 30);
+window.__ready = true;
+</script>
+</body>
+</html>

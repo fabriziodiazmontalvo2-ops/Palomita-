@@ -1,0 +1,16 @@
+{
+  "name": "palomita",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Palomita: mascota virtual 3D, juegos con parábolas y Biblia para niños de Primera Comunión.",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs 8765",
+    "validate": "node tools/validate-content.mjs",
+    "build": "node tools/build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  },
+  "license": "MIT"
+}
