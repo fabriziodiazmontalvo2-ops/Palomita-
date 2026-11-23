@@ -164,6 +164,7 @@ export default {
         selected = null;
       },
       resize() { layout(); },
+      get debug() { return { people: people.map(p => ({ x: SLOTS[p.slot].x, y: SLOTS[p.slot].y - 34, need: p.need.k, state: p.state })), tray: tray.map(b => ({ x: b.x, y: b.y, k: b.item.k })) }; },
     };
   },
 };

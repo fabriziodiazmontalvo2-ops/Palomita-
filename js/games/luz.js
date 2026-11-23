@@ -138,6 +138,7 @@ export default {
       },
       resize() { layout(); },
       destroy() { dead = true; tts?.stop(); },
+      get debug() { return { lit, asked, answered, left: queue.length, right: current ? current.options[current.answer] : null }; },
     };
 
     function lerpColor(a, b, k) {

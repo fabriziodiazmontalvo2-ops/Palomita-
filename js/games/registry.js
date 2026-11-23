@@ -67,7 +67,7 @@ export const GAMES = [
   {
     id: 'panes', scoreIcon: '🧺', title: 'Panes y peces', parable: 'panes', icon: '🧺', colors: ['#e9a04b', '#62c370'],
     how: ['La gente tiene hambre y pide pan o pescado.', 'Toca el pan o el pez de la canasta y luego a quien lo pidió.', 'Jesús hace que alcance para todos.'],
-    hud: { time: 60 }, goal: 20, goalText: 'Comparte con 20 personas', coinRate: 1.6, maxCoins: 45,
+    hud: { time: 60 }, goal: 30, goalText: 'Comparte con 30 personas', coinRate: 1.2, maxCoins: 45,
     load: () => import('./panes.js'),
   },
   {

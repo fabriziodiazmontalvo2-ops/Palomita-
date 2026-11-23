@@ -5,7 +5,8 @@ El niño cuida a una palomita en 3D —come, se baña, duerme, juega y reza— y
 
 - **Mascota 3D** que reacciona cuando la tocas, con cinco habitaciones: el nido, la cocina, el baño, el dormitorio y el rincón de oración.
 - **11 minijuegos**, cada uno nacido de una parábola o historia de la Biblia. Al terminar, cada juego regala un *mensaje para tu corazón*, una *misión de hoy* y un versículo.
-- **Mi Biblia**: 40 historias del Antiguo y del Nuevo Testamento contadas para niños, las parábolas, las oraciones, un camino de catequesis hacia la Primera Comunión y mensajes del día. Todo se puede **escuchar en voz alta**.
+- **Mi Biblia**: 40 historias del Antiguo y del Nuevo Testamento contadas para niños, las 11 parábolas e historias de los juegos, 22 oraciones (con un modo para aprenderlas de memoria), un camino de catequesis de 15 etapas hacia la Primera Comunión y 70 mensajes del día. Todo se puede **escuchar en voz alta**.
+- **Tienda** de alimentos de la Biblia y accesorios para la palomita, que se consiguen con las semillas que se ganan jugando, leyendo y rezando.
 - **Sin anuncios, sin compras y sin recolección de datos.** El progreso se guarda solo en el dispositivo.
 
 | Juego | Parábola o historia | Cita |
@@ -52,6 +53,14 @@ npm run build               # crea dist/palomita.html
 ```
 
 `dist/palomita.html` contiene toda la app en un archivo: se abre con doble clic y se puede enviar por correo o mensajería.
+El mismo comando actualiza `sw.js`, la lista de archivos que la app guarda para funcionar sin conexión: conviene correrlo después de agregar o quitar archivos.
+
+**Probar que todo sigue funcionando**
+
+```bash
+node tools/serve.mjs &
+node tools/smoke-test.mjs   # recorre todas las pantallas y abre cada minijuego en un navegador real
+```
 
 ## Cómo está hecha
 

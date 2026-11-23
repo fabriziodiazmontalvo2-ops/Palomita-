@@ -106,6 +106,7 @@ export default {
       },
       pointerDown(x, y) { tap(x, y); },
       resize() { layoutCards(); },
+      get debug() { return { phase, round, cards: cards.map(c => ({ gift: c.gift[1], x: c.x + c.w / 2, y: c.y + c.h / 2, up: c.up, matched: c.matched })) }; },
     };
   },
 };

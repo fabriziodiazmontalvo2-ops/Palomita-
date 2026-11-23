@@ -134,6 +134,7 @@ export default {
         else { api.sfx('wrong'); api.loseLife(s.x, s.y - 30); }
       },
       resize() { layout(); },
+      get debug() { return { phase, round, shells: shells.map(s => ({ x: s.x, y: s.y, pearl: s.pearl })) }; },
     };
   },
 };

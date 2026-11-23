@@ -153,6 +153,7 @@ export default {
       },
       pointerDown(x, y) { tap(x, y); },
       resize() { layout(); },
+      get debug() { return { current, resetT, people: people.map(p => ({ x: p.x, y: p.y - 30 * p.s, state: p.state, want: p.want })) }; },
     };
   },
 };

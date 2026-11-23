@@ -320,7 +320,7 @@ export const PRAYERS = [
       'santa Madre de Dios;',
       'no deseches las súplicas',
       'que te dirigimos en nuestras necesidades,',
-      'antes bien, líbranos de todo peligro,',
+      'antes bien, líbranos siempre de todo peligro,',
       '¡oh Virgen gloriosa y bendita!',
       'Amén.',
     ],
