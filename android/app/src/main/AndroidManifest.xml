@@ -9,6 +9,9 @@
     <!-- Para que el aviso de «1 hora antes» llegue a tiempo (alarmas exactas; si no se permiten, llegan aproximadas) -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- Solo para el tablón de avisos de la parroquia, que un grande puede activar en Mi parroquia (apagado al instalar).
+         La app bloquea cualquier otra dirección de internet (ver MainActivity.shouldInterceptRequest). -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <queries>
         <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
@@ -37,6 +40,14 @@
             </intent-filter>
         </activity>
         <receiver android:name=".AvisoReceiver" android:exported="false" />
+        <!-- Para compartir una imagen, una copia de seguridad o la app misma con el selector del teléfono -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.palomita.app.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

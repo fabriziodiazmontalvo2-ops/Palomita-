@@ -1,6 +1,8 @@
 // Álbum de fotos de la palomita (solo de la escena 3D: no usa la cámara del teléfono).
 // Se guarda aparte de la partida, en este dispositivo, con un máximo de fotos para no llenar la memoria.
-const KEY = 'palomita.photos.v1';
+import { keyFor } from './profiles.js';
+
+const KEY = keyFor('palomita.photos.v1');   // cada niño (perfil) tiene sus fotos
 const MAX = 12;
 
 export function list() {

@@ -6,7 +6,7 @@
 //   available()                       → true si el navegador o la app permiten usar el micrófono
 //   const L = createListener({ onState, onLevel })
 //        onState('off' | 'listening' | 'hearing' | 'speaking' | 'denied')    onLevel(0..1) volumen mientras repite (para mover el pico)
-//   await L.start() → true si el micrófono quedó activo     L.stop()     L.pause() / L.resume()     L.state
+//   await L.start() → true si el micrófono quedó activo     L.stop()     L.pause() / L.resume()     L.state     L.busy (pidiendo el micrófono)
 import { context, duck } from '../core/audio.js';
 
 let blocked = false;
@@ -35,6 +35,9 @@ const PITCH = 1.5;           // voz más aguda y rapidita
 export function createListener({ onState = () => {}, onLevel = () => {} } = {}) {
   let ctx = null, stream = null, src = null, proc = null, sink = null, player = null, raf = 0;
   let state = 'off', paused = false;
+  // starting: la petición del micrófono en curso (si se pide dos veces, se espera la misma).
+  // gen: cambia con cada stop(); si stop() llega mientras se espera el permiso, el micrófono que llegue tarde se cierra.
+  let starting = null, gen = 0;
   let floor = 0.008, loudFor = 0, quietFor = 0, recLen = 0, cool = 0;
   let ring = [], ringLen = 0, rec = [];
 
@@ -106,18 +109,29 @@ export function createListener({ onState = () => {}, onLevel = () => {} } = {}) 
     s.start();
   }
 
-  async function start() {
-    if (state !== 'off' && state !== 'denied') return true;
+  function start() {
+    if (starting) return starting;
+    if (state !== 'off' && state !== 'denied') return Promise.resolve(true);
+    const my = gen;
+    starting = open(my).finally(() => { starting = null; });
+    return starting;
+  }
+  async function open(my) {
     ctx = context();
     if (!ctx || !available()) { set('denied'); return false; }
+    let s;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch {
+      if (my !== gen) return false;
       blocked = true;
       set('denied');
       return false;
     }
+    if (my !== gen) { try { s.getTracks().forEach(t => t.stop()); } catch { /* nada */ } return false; }   // ya no se quería escuchar
+    stream = s;
     try { if (ctx.state === 'suspended') await ctx.resume(); } catch { /* nada */ }
+    if (my !== gen) { try { s.getTracks().forEach(t => t.stop()); } catch { /* nada */ } stream = null; return false; }
     src = ctx.createMediaStreamSource(stream);
     proc = ctx.createScriptProcessor(FRAME, 1, 1);
     sink = ctx.createGain(); sink.gain.value = 0;       // el procesador necesita estar conectado para funcionar
@@ -129,6 +143,7 @@ export function createListener({ onState = () => {}, onLevel = () => {} } = {}) 
   }
 
   function stop() {
+    gen++;
     try { player?.stop(); } catch { /* nada */ }
     player = null;
     cancelAnimationFrame(raf);
@@ -146,5 +161,6 @@ export function createListener({ onState = () => {}, onLevel = () => {} } = {}) 
     resume() { paused = false; cool = Math.max(cool, 0.3); },
     get state() { return state; },
     get paused() { return paused; },
+    get busy() { return !!starting; },      // pidiendo el micrófono (todavía 'off')
   };
 }

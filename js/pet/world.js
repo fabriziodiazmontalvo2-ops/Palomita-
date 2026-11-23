@@ -5,6 +5,9 @@
 //   world.ROOMS / world.room           ids de habitaciones / habitación actual
 //   world.setRoom(id, { instant }) → Promise      world.setLights(on) (dormitorio)      world.setCandle(on) (capilla)
 //   world.start() / stop() / resize() / dispose() / setPaused(bool)
+//   Batería: con un cuadro de diálogo encima dibuja a ~12 cuadros por segundo; sin toques por 30 s, a 30; por 2 min, a 15.
+//   Calidad automática: si el teléfono no alcanza a dibujar fluido, baja la resolución y luego quita la sombra suave
+//   (la decisión se recuerda en 'palomita.gfx.v1'). world.quality → 0 completa · 1 media · 2 liviana
 //   world.on(evento, fn) → off()       'tap' { part, x, y } · 'stroke' { part, x, y, dx, dy } · 'tapProp' { id }
 //   world.project(nombre) → { x, y }   px CSS dentro del canvas: 'beak' | 'head' | 'body' | 'feet'
 //   world.hitDove(x, y) → parte | null
@@ -30,8 +33,12 @@ import { sfx } from '../core/audio.js';
 const MAX_SPRITES = 56;
 
 export function createWorld(canvas) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'default' });
+  const GFX_KEY = 'palomita.gfx.v1';
+  const GFX_RATIO = [2, 1.5, 1.25];
+  let gfx = 0;
+  try { gfx = Math.max(0, Math.min(2, Number(localStorage.getItem(GFX_KEY)) || 0)); } catch { /* sin guardado */ }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, GFX_RATIO[gfx]));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.shadowMap.enabled = true;
@@ -51,6 +58,7 @@ export function createWorld(canvas) {
   sun.shadow.mapSize.set(1024, 1024);
   Object.assign(sun.shadow.camera, { left: -3.2, right: 3.2, top: 4, bottom: -2.5, near: 0.5, far: 16 });
   sun.shadow.bias = -0.0006; sun.shadow.radius = 5;
+  if (gfx >= 2) sun.castShadow = false;          // calidad liviana: queda la sombra suave de contacto bajo la palomita
   const rim = new THREE.DirectionalLight(0xcfe6ff, 0.9);
   rim.position.set(-3, 3, -4);
   scene.add(hemi, sun, rim);
@@ -336,6 +344,32 @@ export function createWorld(canvas) {
   ro?.observe(canvas);
 
   let running = false, paused = false, raf = 0, last = 0, time = 0;
+  // Ahorro de batería y calidad automática
+  let lastInput = performance.now(), modalOpen = false, modalCheck = 0;
+  const onAnyInput = () => { lastInput = performance.now(); };
+  window.addEventListener('pointerdown', onAnyInput, true);
+  window.addEventListener('keydown', onAnyInput, true);
+  let measure = { from: 0, n: 0, sum: 0, rounds: 0 };
+  function setQuality(q) {
+    gfx = Math.max(0, Math.min(2, q));
+    try { localStorage.setItem(GFX_KEY, String(gfx)); } catch { /* nada */ }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, GFX_RATIO[gfx]));
+    sun.castShadow = gfx < 2;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (w > 1 && h > 1) renderer.setSize(w, h, false);
+  }
+  // Mide unos segundos de dibujo fluido (sin pausas ni ahorro) y, si va lento, baja un escalón (hasta dos veces).
+  function sampleFrame(now, dt) {
+    if (gfx >= 2 || measure.rounds >= 2 || window.__noAutoQuality) return;   // (las capturas de prueba lo apagan)
+    if (!measure.from) { measure.from = now + 1200; return; }      // el primer segundo compila sombreadores: no cuenta
+    if (now < measure.from) return;
+    measure.n++; measure.sum += dt;
+    if (now - measure.from < 3500) return;
+    const avg = measure.sum / Math.max(1, measure.n);
+    measure = { from: now + 1500, n: 0, sum: 0, rounds: measure.rounds + 1 };
+    if (avg > 0.028) setQuality(gfx + 1);                         // menos de ~36 cuadros por segundo
+    else measure.rounds = 2;                                       // va bien: no se mide más
+  }
   // Crecimiento y llegada
   let arrival = null, growthNow = 1, growthFrom = 1, growthTo = 1, growthT = 1;
   function applyGrowth(v) { growthNow = v; dove.group.scale.setScalar(v); blob.scale.setScalar(0.4 + v * 0.6); }
@@ -441,8 +475,14 @@ export function createWorld(canvas) {
     if (!running) return;
     raf = requestAnimationFrame(frame);
     if (document.hidden || paused) { last = now; return; }
+    if (now - modalCheck > 500) { modalCheck = now; modalOpen = !!document.querySelector('.modal-scrim'); }
+    const idle = now - lastInput;
+    const busy = ptr.id !== null || waterTimer > 0 || arrival || growthT < 1;
+    const minGap = busy ? 0 : modalOpen ? 80 : idle > 120000 ? 64 : idle > 30000 ? 31 : 0;
+    if (minGap && now - last < minGap) return;
     let dt = (now - last) / 1000; last = now;
     if (!(dt > 0)) dt = 0.001;
+    if (!minGap) sampleFrame(now, dt);
     tick(Math.min(dt, 0.05));
     renderer.render(scene, camera);
   }
@@ -498,7 +538,11 @@ export function createWorld(canvas) {
       return c;
     },
     stats() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; },
+    get quality() { return gfx; },
+    setQuality,
     dispose() {
+      window.removeEventListener('pointerdown', onAnyInput, true);
+      window.removeEventListener('keydown', onAnyInput, true);
       running = false; cancelAnimationFrame(raf); ro?.disconnect();
       canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); canvas.removeEventListener('lostpointercapture', onLost);

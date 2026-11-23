@@ -338,12 +338,13 @@ export async function mount(el, params = {}) {
   async function syncListen() {
     const L = wantsListen() ? ensureListener() : listener;
     if (!L) return;
-    if (!wantsListen()) { if (L.state !== 'off') { L.stop(); if (state.setting('music') !== false) music(true); } return; }
+    const on = L.state !== 'off' || L.busy;
+    if (!wantsListen()) { if (on) { L.stop(); if (state.setting('music') !== false) music(true); } return; }
     if (shouldListen()) {
       if (L.state === 'off') { music(false); await L.start(); }
       else if (L.paused) L.resume();
     } else if (L.state !== 'off' && !L.paused) L.pause();
-    if (state.get().sleeping && L.state !== 'off') L.stop();
+    if (state.get().sleeping && (L.state !== 'off' || L.busy)) L.stop();
   }
   function toggleListen() {
     const on = !wantsListen();
@@ -639,6 +640,13 @@ export async function mount(el, params = {}) {
   offs.push(state.on('settings', paintEar));
   offs.push(state.on('change', ({ evt }) => { if (evt === 'xp' || evt === 'names') refreshTop(); }));
   offs.push(state.on('wear', applyWear));
+  // Si la app se va al fondo, el micrófono se apaga de verdad (no solo en pausa); al volver se enciende solo si se quiere.
+  const onVisibility = () => {
+    if (document.hidden) { if (listener && (listener.state !== 'off' || listener.busy)) listener.stop(); }
+    else if (alive) syncListen();
+  };
+  document.addEventListener('visibilitychange', onVisibility);
+  offs.push(() => document.removeEventListener('visibilitychange', onVisibility));
   offs.push(state.on('inventory', () => { if (room === 'cocina') renderTray(); }));
 
   // ── Inicio ──
@@ -718,7 +726,7 @@ export async function mount(el, params = {}) {
       clearInterval(timer);
       for (const off of offs) off();
       tts.stop();
-      if (listener && listener.state !== 'off') { listener.stop(); if (state.setting('music') !== false) music(true); }
+      if (listener && (listener.state !== 'off' || listener.busy)) { listener.stop(); if (state.setting('music') !== false) music(true); }
       ghost?.remove();
       world.fx.foam(0);
       world.stop();

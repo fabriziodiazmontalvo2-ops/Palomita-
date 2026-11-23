@@ -16,6 +16,13 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = f => fs.readFileSync(path.join(root, f), 'utf8');
 const pkg = JSON.parse(read('package.json'));
 
+// ── 0. La versión que muestra la app (Ajustes, novedades) es la de package.json ──
+{
+  const want = `// Versión de Palomita. tools/build.mjs la mantiene igual a la de package.json (no la cambies a mano).\nexport const VERSION = '${pkg.version}';\n`;
+  const file = path.join(root, 'js/core/version.js');
+  if (!fs.existsSync(file) || fs.readFileSync(file, 'utf8') !== want) { fs.writeFileSync(file, want); console.log(`js/core/version.js → ${pkg.version}`); }
+}
+
 // ── 1. Service worker con la lista de archivos ──
 function walk(dir, out = []) {
   for (const e of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {

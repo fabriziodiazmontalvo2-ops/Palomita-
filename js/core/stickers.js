@@ -14,8 +14,9 @@
 //   reset()                                borra la colección (para «empezar de nuevo»)
 import * as state from './state.js';
 import { STICKERS, PAGES, RARITY, PACK_SIZE, PACK_PRICE, TRADE_COST, TRADE_COINS, PAGE_PRIZE, ALBUM_PRIZE } from '../data/stickers.js';
+import { keyFor } from './profiles.js';
 
-const KEY = 'palomita.stickers.v1';
+const KEY = keyFor('palomita.stickers.v1');   // cada niño (perfil) tiene su álbum
 const BY_ID = new Map(STICKERS.map(s => [s.id, s]));
 
 function fresh() {

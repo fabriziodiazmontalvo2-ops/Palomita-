@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -26,34 +27,51 @@ import androidx.webkit.WebViewClientCompat;
 
 import org.json.JSONArray;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Locale;
 
 /**
- * Palomita para Android: muestra la app web (empaquetada en assets/index.html) a pantalla completa.
+ * Palomita para Android: muestra la app web (empaquetada en assets/) a pantalla completa.
  * Todo funciona sin internet. Además:
  *  - pone la voz del teléfono (TextToSpeech) a disposición de la app para leer historias y oraciones;
  *  - pide el micrófono solo cuando el niño toca «Háblame»;
  *  - el botón «atrás» del teléfono navega dentro de la app antes de cerrarla;
  *  - programa los avisos de Misa y catequesis (notificaciones, ver Avisos.java);
- *  - abre el marcador del teléfono o el mapa solo cuando la app lo pide (tarjeta «Mi parroquia»).
+ *  - abre el marcador del teléfono o el mapa solo cuando la app lo pide (tarjeta «Mi parroquia»);
+ *  - comparte textos, imágenes o la propia app con el selector del teléfono (Compartir.java);
+ *  - guarda y abre copias de seguridad con el selector de archivos de Android;
+ *  - la pantalla se queda encendida solo mientras la app lo pide (narración, juegos), no siempre;
+ *  - la única conexión a internet posible es al tablón de avisos de la parroquia, y solo si un grande lo activa.
  */
 public class MainActivity extends Activity {
     // Los archivos se sirven desde una dirección https local: así el guardado (localStorage) y el micrófono
     // funcionan igual que en un navegador, sin salir nunca del teléfono.
-    private static final String START_URL = "https://appassets.androidplatform.net/assets/index.html";
+    private static final String LOCAL_HOST = "appassets.androidplatform.net";
+    private static final String START_URL = "https://" + LOCAL_HOST + "/assets/index.html";
     private static final int REQ_MIC = 7;
     private static final int REQ_NOTIF = 8;
+    private static final int REQ_SAVE = 21;
+    private static final int REQ_OPEN = 22;
+    private static final String PREFS_RED = "palomita_red";
 
     private WebView web;
     private TextToSpeech tts;
     private volatile boolean ttsReady = false;
     private PermissionRequest pendingMic;
+    private String pendingSave;
+    private volatile String openedText;
+    private volatile String feedHost = "";
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        feedHost = getSharedPreferences(PREFS_RED, MODE_PRIVATE).getString("host", "");
 
         final WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
                 .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
@@ -75,14 +93,20 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClientCompat() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                return loader.shouldInterceptRequest(request.getUrl());
+                Uri u = request.getUrl();
+                String host = u.getHost();
+                if (LOCAL_HOST.equals(host)) return loader.shouldInterceptRequest(u);
+                // Lo único que puede salir a internet: el tablón de avisos de la parroquia, si un grande lo activó.
+                if (host != null && !feedHost.isEmpty() && host.equalsIgnoreCase(feedHost) && "https".equals(u.getScheme())
+                        && "GET".equalsIgnoreCase(request.getMethod())) return null;
+                return blocked();
             }
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 // Nada sale de la app: no se abren enlaces externos.
                 Uri u = request.getUrl();
-                return !"appassets.androidplatform.net".equals(u.getHost());
+                return !LOCAL_HOST.equals(u.getHost());
             }
         });
         web.setWebChromeClient(new WebChromeClient() {
@@ -97,6 +121,8 @@ public class MainActivity extends Activity {
                     if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                         request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
                     } else {
+                        // Si quedó una petición anterior sin responder, se cierra antes de guardar la nueva.
+                        if (pendingMic != null && pendingMic != request) { try { pendingMic.deny(); } catch (Exception ignored) { } }
                         pendingMic = request;
                         requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_MIC);
                     }
@@ -146,8 +172,19 @@ public class MainActivity extends Activity {
         else web.loadUrl(START_URL);
     }
 
+    private static WebResourceResponse blocked() {
+        WebResourceResponse r = new WebResourceResponse("text/plain", "utf-8", new ByteArrayInputStream(new byte[0]));
+        r.setStatusCodeAndReasonPhrase(403, "Bloqueado");
+        r.setResponseHeaders(new HashMap<>());
+        return r;
+    }
+
     private void notifyDone() {
         runOnUiThread(() -> { if (web != null) web.evaluateJavascript("window.__palomitaTtsDone && window.__palomitaTtsDone()", null); });
+    }
+
+    private void js(String code) {
+        runOnUiThread(() -> { if (web != null) web.evaluateJavascript(code, null); });
     }
 
     /** Lo que la app web puede pedirle al teléfono. */
@@ -174,7 +211,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void stopSpeaking() { if (tts != null) tts.stop(); }
 
-        /** Lista de avisos [{ id, atMillis, title, text }]: reemplaza los programados. */
+        /** Lista de avisos [{ id, atMillis, expiresMillis?, title, text }]: reemplaza los programados. */
         @JavascriptInterface
         public void scheduleReminders(String json) { Avisos.schedule(MainActivity.this, json); }
 
@@ -214,6 +251,80 @@ public class MainActivity extends Activity {
                 }
             });
         }
+
+        /** Mantener la pantalla encendida solo mientras hace falta (narración, juego, oración guiada). */
+        @JavascriptInterface
+        public void keepAwake(boolean on) {
+            runOnUiThread(() -> {
+                if (on) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            });
+        }
+
+        /** Versión instalada, por ejemplo «1.3 (4)». */
+        @JavascriptInterface
+        public String appVersion() {
+            try {
+                PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+                long code = Build.VERSION.SDK_INT >= 28 ? pi.getLongVersionCode() : pi.versionCode;
+                return pi.versionName + " (" + code + ")";
+            } catch (Exception e) { return ""; }
+        }
+
+        /** Tamaño de letra elegido en el teléfono (1 = normal), para proponerlo dentro de la app. */
+        @JavascriptInterface
+        public float fontScale() { return getResources().getConfiguration().fontScale; }
+
+        @JavascriptInterface
+        public void shareText(String text, String title) { runOnUiThread(() -> Compartir.text(MainActivity.this, text, title)); }
+
+        @JavascriptInterface
+        public boolean shareImage(String dataUrl, String fileName, String text) { return Compartir.image(MainActivity.this, dataUrl, fileName, text); }
+
+        /** Prepara una copia del APK y abre el selector (Quick Share, Bluetooth, WhatsApp…). Responde con window.__palomitaShared(ok). */
+        @JavascriptInterface
+        public void shareApp() {
+            new Thread(() -> {
+                boolean ok = Compartir.app(MainActivity.this);
+                js("window.__palomitaShared && window.__palomitaShared(" + ok + ")");
+            }).start();
+        }
+
+        /** Guarda un archivo donde la persona elija (Descargas, Drive…). Responde con window.__palomitaFile('save', ok). */
+        @JavascriptInterface
+        public void saveFile(String name, String mime, String content) {
+            runOnUiThread(() -> {
+                pendingSave = content == null ? "" : content;
+                Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                        .setType(mime == null || mime.isEmpty() ? "application/json" : mime)
+                        .putExtra(Intent.EXTRA_TITLE, name == null || name.isEmpty() ? "palomita.json" : name);
+                try { startActivityForResult(i, REQ_SAVE); }
+                catch (ActivityNotFoundException e) { pendingSave = null; js("window.__palomitaFile && window.__palomitaFile('save', false)"); }
+            });
+        }
+
+        /** Abre un archivo elegido por la persona. Responde con window.__palomitaFile('open', ok) y el texto se pide con takeOpenedFile(). */
+        @JavascriptInterface
+        public void openFile() {
+            runOnUiThread(() -> {
+                Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*")
+                        .putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/json", "text/plain", "application/octet-stream"});
+                try { startActivityForResult(i, REQ_OPEN); }
+                catch (ActivityNotFoundException e) { js("window.__palomitaFile && window.__palomitaFile('open', false)"); }
+            });
+        }
+
+        @JavascriptInterface
+        public String takeOpenedFile() { String t = openedText; openedText = null; return t == null ? "" : t; }
+
+        /** Tablón de avisos de la parroquia por internet: el único sitio al que la app puede conectarse (vacío = ninguno). */
+        @JavascriptInterface
+        public void setFeedHost(String host) {
+            String h = host == null ? "" : host.trim().toLowerCase(Locale.ROOT);
+            if (!h.matches("^[a-z0-9.-]{0,253}$")) h = "";
+            feedHost = h;
+            getSharedPreferences(PREFS_RED, MODE_PRIVATE).edit().putString("host", h).apply();
+        }
     }
 
     private void openOutside(Intent i) {
@@ -223,7 +334,42 @@ public class MainActivity extends Activity {
     }
 
     private void notifyPermission(boolean granted) {
-        runOnUiThread(() -> { if (web != null) web.evaluateJavascript("window.__palomitaNotif && window.__palomitaNotif(" + granted + ")", null); });
+        js("window.__palomitaNotif && window.__palomitaNotif(" + granted + ")");
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        final Uri uri = data == null ? null : data.getData();
+        if (requestCode == REQ_SAVE) {
+            final String content = pendingSave;
+            pendingSave = null;
+            if (resultCode != RESULT_OK || uri == null || content == null) { js("window.__palomitaFile && window.__palomitaFile('save', false)"); return; }
+            new Thread(() -> {
+                boolean ok = false;
+                try (OutputStream out = getContentResolver().openOutputStream(uri, "wt")) {
+                    if (out != null) { out.write(content.getBytes(StandardCharsets.UTF_8)); ok = true; }
+                } catch (Exception ignored) { }
+                js("window.__palomitaFile && window.__palomitaFile('save', " + ok + ")");
+            }).start();
+        } else if (requestCode == REQ_OPEN) {
+            if (resultCode != RESULT_OK || uri == null) { js("window.__palomitaFile && window.__palomitaFile('open', false)"); return; }
+            new Thread(() -> {
+                boolean ok = false;
+                try (InputStream in = getContentResolver().openInputStream(uri)) {
+                    if (in != null) {
+                        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+                        byte[] b = new byte[1 << 16];
+                        int n, total = 0;
+                        while ((n = in.read(b)) > 0) { total += n; if (total > 40 * 1024 * 1024) throw new Exception("muy grande"); buf.write(b, 0, n); }
+                        openedText = buf.toString("UTF-8");
+                        ok = true;
+                    }
+                } catch (Exception ignored) { }
+                js("window.__palomitaFile && window.__palomitaFile('open', " + ok + ")");
+            }).start();
+        }
     }
 
     @Override
@@ -264,6 +410,7 @@ public class MainActivity extends Activity {
         super.onPause();
         if (tts != null) tts.stop();
         if (web != null) web.onPause();
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     @Override

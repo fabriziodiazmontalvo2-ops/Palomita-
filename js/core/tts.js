@@ -12,6 +12,7 @@
 //   recorded()             → true si la voz grabada está lista
 import { duck, context } from './audio.js';
 import { clean, sentences, keyOf } from './narration.js';
+import { keepAwake } from './device.js';
 
 let voice = null;
 let active = false;
@@ -192,6 +193,7 @@ function finish(my) {
   const was = active;
   active = false; endCb = null; indexCb = null;
   duck(false);
+  keepAwake('voz', false);
   if (was && cb) { try { cb(); } catch { /* nada */ } }
 }
 
@@ -235,6 +237,7 @@ export function speak(text, { onend, onIndex, keepLines = false } = {}) {
   indexCb = onIndex || null;
   active = true;
   duck(true);
+  keepAwake('voz', true);            // mientras la narradora lee, la pantalla no se apaga
   const my = ++gen;
   run(my, pieces).catch(() => finish(my));
   return true;
@@ -244,6 +247,7 @@ export function stop() {
   const cbWas = active ? endCb : null;
   active = false; endCb = null; indexCb = null;
   duck(false);
+  keepAwake('voz', false);
   if (current) { try { current.stop(); } catch { /* nada */ } current = null; }
   const f = bridgeDone; bridgeDone = null;
   try { synth()?.cancel(); } catch { /* nada */ }

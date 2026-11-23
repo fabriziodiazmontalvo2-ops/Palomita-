@@ -4,12 +4,14 @@
 //   sfx(nombre, opts?)  efectos: tap, pop, coin, good, bad, win, lose, jump, flap, eat, splash, bubble, chirp, coo, sparkle,
 //                       tick, drop, levelup, bell, page, whoosh, snore, sticker, grow, match, wrong, step
 //   setSound(bool) / setMusic(bool) / music(on)  (la música solo suena si está permitida en ajustes)
+//   setTheme(null | 'cuna' | 'navidad')  musiquita de siempre, canción de cuna (Brahms) o villancico (Noche de paz)
+//   Cuando la app se va al fondo, el sonido se detiene (contexto suspendido) y vuelve al regresar.
 //   tone(freq, dur, opts) para efectos a medida en un juego
 
 let ctx = null;
 let master = null, sfxBus = null, musicBus = null;
 let soundOn = true, musicOn = true, musicWanted = false;
-let musicTimer = 0, nextNote = 0, step = 0;
+let musicTimer = 0, nextNote = 0, step = 0, theme = null;
 let noiseBuf = null;
 
 function ensure() {
@@ -119,8 +121,41 @@ const SCALE = [N.C4, N.D4, N.E4, N.G4, N.A4, N.C5, N.D5, N.E5, N.G5, N.A5];
 const PATTERN = [0, 2, 4, 5, 4, 2, 3, 5, 7, 5, 4, 2, 1, 3, 4, 2];
 const BASS = [N.C4 / 2, N.A4 / 4, N.F4 / 2, N.G4 / 2];
 
+// Melodías de dominio público: [nota, duración en tiempos]. null = silencio.
+const NOTE = { ...N, B4: 493.88, D4: 293.66, F4: 349.23, F5: 698.46, E5: 659.25, D5: 587.33, C4: 261.63 };
+const TUNES = {
+  // Canción de cuna (Wiegenlied), Johannes Brahms, 1868.
+  cuna: { beat: 0.62, vol: 0.11, notes: [
+    ['E4', 0.5], ['E4', 0.5], ['G4', 2], ['E4', 0.5], ['E4', 0.5], ['G4', 2], ['E4', 0.5], ['G4', 0.5], ['C5', 1], ['B4', 1.5], ['A4', 0.5], ['A4', 1], ['G4', 1],
+    ['D4', 0.5], ['E4', 0.5], ['F4', 1], ['D4', 1], ['D4', 0.5], ['E4', 0.5], ['F4', 2], ['D4', 0.5], ['F4', 0.5], ['B4', 0.5], ['A4', 0.5], ['G4', 1], ['B4', 1], ['C5', 3], [null, 2]] },
+  // Noche de paz (Stille Nacht), Franz Xaver Gruber, 1818.
+  navidad: { beat: 0.27, vol: 0.12, notes: [
+    ['G4', 3], ['A4', 1], ['G4', 2], ['E4', 6], ['G4', 3], ['A4', 1], ['G4', 2], ['E4', 6],
+    ['D5', 4], ['D5', 2], ['B4', 6], ['C5', 4], ['C5', 2], ['G4', 6],
+    ['A4', 4], ['A4', 2], ['C5', 3], ['B4', 1], ['A4', 2], ['G4', 3], ['A4', 1], ['G4', 2], ['E4', 6],
+    ['A4', 4], ['A4', 2], ['C5', 3], ['B4', 1], ['A4', 2], ['G4', 3], ['A4', 1], ['G4', 2], ['E4', 6],
+    ['D5', 4], ['D5', 2], ['F5', 3], ['D5', 1], ['B4', 2], ['C5', 6], ['E5', 6],
+    ['C5', 3], ['G4', 1], ['E4', 2], ['G4', 3], ['F4', 1], ['D4', 2], ['C4', 10], [null, 6]] },
+};
+const BASS_OF = { C: N.C4 / 2, D: N.D4 / 2, E: N.E4 / 2, F: N.F4 / 2, G: N.G4 / 2, A: N.A4 / 2, B: N.G4 / 2 };
+
+function scheduleTune(t) {
+  while (nextNote < ctx.currentTime + 0.5) {
+    const [n, d] = t.notes[step % t.notes.length];
+    const at = Math.max(0, nextNote - ctx.currentTime);
+    const dur = d * t.beat;
+    if (n) {
+      tone(NOTE[n], Math.min(2.4, dur * 1.05 + 0.15), { type: 'sine', vol: t.vol, at, attack: 0.03, bus: musicBus });
+      if (d >= 2) tone(BASS_OF[n[0]] || N.C4 / 2, Math.min(2.6, dur), { type: 'triangle', vol: t.vol * 0.55, at, attack: 0.06, bus: musicBus });
+    }
+    nextNote += dur;
+    step++;
+  }
+}
+
 function scheduleMusic() {
   if (!ctx || !musicWanted || !musicOn) return;
+  if (theme && TUNES[theme]) { scheduleTune(TUNES[theme]); return; }
   while (nextNote < ctx.currentTime + 0.4) {
     const at = Math.max(0, nextNote - ctx.currentTime);
     const idx = PATTERN[step % PATTERN.length];
@@ -147,6 +182,29 @@ export function music(on) {
 function stopMusic() {
   if (musicTimer) { clearInterval(musicTimer); musicTimer = 0; }
   if (ctx && musicBus) musicBus.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.2);
+}
+// Cambia la musiquita (empieza desde el principio de la melodía).
+export function setTheme(name) {
+  const t = name && TUNES[name] ? name : null;
+  if (t === theme) return;
+  theme = t;
+  step = 0;
+  if (ctx && musicTimer) nextNote = ctx.currentTime + 0.4;
+}
+export function currentTheme() { return theme; }
+
+// En segundo plano no suena nada (ni gasta batería); al volver, sigue la música si estaba encendida.
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!ctx) return;
+    if (document.hidden) {
+      if (musicTimer) { clearInterval(musicTimer); musicTimer = 0; }
+      try { ctx.suspend().catch(() => {}); } catch { /* nada */ }
+    } else {
+      try { ctx.resume().catch(() => {}); } catch { /* nada */ }
+      if (musicWanted && musicOn) music(true);
+    }
+  });
 }
 // Baja la música mientras suena la voz o un juego.
 export function duck(on) {

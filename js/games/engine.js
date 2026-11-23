@@ -59,6 +59,7 @@ import { h, clear, button, iconButton, appRoot, reduceMotion } from '../core/ui.
 import { getGame } from './registry.js';
 import { levelConfig, levelSpec, MAX_LEVEL } from './levels.js';
 import { grantLevel, showChest } from '../core/rewards.js';
+import { keepAwake } from '../core/device.js';
 
 const LOGICAL_W = 360;
 const KEYMAP = {
@@ -557,7 +558,7 @@ export async function startGame(id, { onExit, skipIntro = false, seed, level } =
     window.removeEventListener('keyup', onKeyUp);
     document.removeEventListener('visibilitychange', onVisibility);
     root.remove();
-    if (current === ctl) current = null;
+    if (current === ctl) { current = null; keepAwake('juego', false); }
     if (window.__game && window.__game.id === id) window.__game = null;
     state.save();
     if (!silent) { try { onExit?.(); } catch (e) { console.error(e); } }
@@ -571,6 +572,7 @@ export async function startGame(id, { onExit, skipIntro = false, seed, level } =
     setSeed(n) { rng = mulberry32(n | 0); },
   };
   current = ctl;
+  keepAwake('juego', true);          // mientras se juega, la pantalla no se apaga
   window.__game = ctl;
   window.__gameError = null;
 

@@ -73,7 +73,7 @@ async function boot() {
   setInterval(() => { if (!document.hidden && !isRunning()) state.tick(TICK_SECONDS); }, TICK_SECONDS * 1000);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { hiddenAt = Date.now(); state.save(); tts.stop(); }
-    else if (hiddenAt) { state.tick(Math.min(12 * 3600, (Date.now() - hiddenAt) / 1000)); hiddenAt = 0; }
+    else if (hiddenAt) { state.resume((Date.now() - hiddenAt) / 1000); hiddenAt = 0; }   // con el mismo mínimo amable que al abrir
   });
   window.addEventListener('pagehide', () => state.save());
 

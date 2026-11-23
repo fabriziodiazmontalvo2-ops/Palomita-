@@ -11,10 +11,22 @@
 //   gameResult(id, { score, won, goal }) -> { best, newBest, firstSticker, plays }
 //   markRead(id) -> bool (true la primera vez) / isRead(id) / markQuiz(id) / quizDone(id)
 //   prayed(id) -> { firstToday } / dailyOnce(clave) -> bool (true la primera vez de hoy)
-//   setSleeping(bool) / tick(segundos) / mood() / wellbeing()
+//   setSleeping(bool) / tick(segundos) / resume(segundos) / takeAway() / mood() / wellbeing()
 //   setting(k) / setSetting(k, v) / flag(k) / setFlag(k, v) / save() / reset()
+//   Fechas especiales: date(k) / setDate(k, 'AAAA-MM-DD')                     k: cumple | bautismo
+//   Misiones de buenas obras: mission() / acceptMission({ text, from }) / missionDone() / missionLater() / deeds()
+//   Pasaporte de Misa: massKey(fecha) / massLog() / logMass(clave, datos) / massStamped(clave)
+//   Lo sé de memoria: memorized(id) / setMemorized(id, 'nino' | 'grande' | null)
+//   Mis repasos: reviewMiss(clave) / reviewHit(clave) / reviewDue() / reviewCount()
+//   Intenciones y diario: intentions() / addIntention(it) / removeIntention(at) / journal() / addJournal(entry)
+//   Actividad (para el informe de los papás): logActivity(puntos) / activity(días)
+//
+// Cada niño (perfil) tiene su propia partida: ver js/core/profiles.js. Una vez al día se guarda una copia
+// de la partida anterior (clave + '.prev') para poder recuperarla si algo se daña o se borra sin querer.
+import { keyFor } from './profiles.js';
 
-const KEY = 'palomita.save.v1';
+const KEY = keyFor('palomita.save.v1');
+const VERSION_DATA = 2;
 
 export const STATS = ['hambre', 'energia', 'limpieza', 'alegria', 'fe'];
 export const STAT_META = {
@@ -58,12 +70,23 @@ function defaults() {
     days: 0,
     settings: { sound: true, music: true, voice: true },
     flags: {},
+    dates: { cumple: '', bautismo: '' },
+    mission: null,          // { text, from, at, day, later }  misión de buenas obras aceptada
+    deeds: [],              // [{ day, text }]  misiones cumplidas (cada una es una flor en la jardinera)
+    massLog: {},            // { 'AAAA-MM-DD' del domingo: { at, color, liked, ok } }  ok = lo confirmó un grande
+    memorized: {},          // { id: { at, by: 'nino' | 'grande' } }
+    review: {},             // { clave: { box: 1–4, due: 'AAAA-MM-DD' } }
+    intentions: [],         // [{ id, label, emoji, at, sick }]  (máximo 5)
+    journal: [],            // [{ day, thanks: [ids], text }]   (máximo 60)
+    activity: {},           // { 'AAAA-MM-DD': puntos }        (últimos 60 días)
   };
 }
 
 let S = defaults();
 let storageOk = true;
 let saveTimer = 0;
+let away = 0;               // minutos que estuvo sin verla (al abrir o al volver del segundo plano)
+let recovered = false;      // la partida estaba dañada y se recuperó la copia del día anterior
 const listeners = new Map();
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -96,22 +119,50 @@ function merge(base, saved) {
 
 export function init() {
   S = defaults();
-  let fresh = true;
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) { merge(S, JSON.parse(raw)); fresh = false; }
-  } catch { storageOk = false; }
+  let fresh = true, raw = null;
+  try { raw = localStorage.getItem(KEY); } catch { storageOk = false; }
+  if (raw) {
+    try { merge(S, JSON.parse(raw)); fresh = false; }
+    catch {
+      // Partida dañada: se intenta con la copia del día anterior antes de empezar de cero.
+      try {
+        const prev = localStorage.getItem(KEY + '.prev');
+        if (prev) { merge(S, JSON.parse(prev)); fresh = false; recovered = true; raw = null; }
+      } catch { /* tampoco sirve */ }
+      if (fresh) { storageOk = false; S = defaults(); }   // no se sobrescribe lo dañado: quizá se pueda rescatar
+    }
+  }
+  migrate(S);
   for (const n of STATS) S.stats[n] = clamp(Number(S.stats[n]) || 0, 0, 100);
-  if (!fresh) applyOffline();
+  if (!fresh) away = applyOffline((Date.now() - (S.lastSeen || Date.now())) / 60000);
+  // Copia de la partida del día anterior (una vez por día, la primera vez que se abre).
+  const today = todayKey();
+  if (raw && storageOk && S.flags.snapDay !== today) {
+    try { localStorage.setItem(KEY + '.prev', raw); S.flags.snapDay = today; } catch { /* sin espacio: no pasa nada */ }
+  }
   rollDay();
   S.lastSeen = Date.now();
   save();
-  return { fresh };
+  return { fresh, recovered };
 }
 
-function applyOffline() {
-  const mins = clamp((Date.now() - (S.lastSeen || Date.now())) / 60000, 0, OFFLINE_CAP_MIN);
-  if (mins < 0.5) return;
+// Pone al día partidas guardadas por versiones anteriores (los campos nuevos los completa merge()).
+function migrate(st) {
+  if (!st.v || st.v < 2) {
+    // Antes de la 1.3 los cuestionarios se guardaban con «true»: siguen contando como hechos, sin fecha.
+    st.v = 2;
+  }
+  if (!Array.isArray(st.deeds)) st.deeds = [];
+  if (!Array.isArray(st.intentions)) st.intentions = [];
+  if (!Array.isArray(st.journal)) st.journal = [];
+  if (st.v > VERSION_DATA) st.v = VERSION_DATA;
+}
+
+// Tiempo sin verla (al abrir la app o al volver del segundo plano): los medidores bajan, pero nunca la encuentra
+// «en cero»: se quedan en un mínimo amable y se cuenta como mucho 12 horas.
+function applyOffline(minutes) {
+  const mins = clamp(minutes, 0, OFFLINE_CAP_MIN);
+  if (mins < 0.5) return 0;
   const rate = S.sleeping ? DECAY_ASLEEP : DECAY_AWAKE;
   for (const n of STATS) {
     const before = S.stats[n];
@@ -121,7 +172,25 @@ function applyOffline() {
   }
   // Si durmió lo suficiente, amanece despierta.
   if (S.sleeping && S.stats.energia >= 99) S.sleeping = false;
+  return mins;
 }
+// Al volver a la app después de tenerla en segundo plano (sin cerrarla).
+export function resume(seconds) {
+  const mins = seconds / 60;
+  if (mins < 0.5) { tick(seconds); return { mins }; }
+  const wasSleeping = S.sleeping;
+  const got = applyOffline(mins);
+  away = Math.max(away, got);
+  if (rollDay()) emit('day');
+  if (wasSleeping !== S.sleeping) emit('sleep', S.sleeping);
+  emit('stat', { name: '*' });
+  emit('resume', { mins: got });
+  save();
+  return { mins: got };
+}
+// Minutos que estuvo sin verla desde la última vez que alguien preguntó (para el «¡Te extrañé!»).
+export function takeAway() { const a = away; away = 0; return a; }
+export function wasRecovered() { const r = recovered; recovered = false; return r; }
 
 function rollDay() {
   const today = todayKey();
@@ -146,10 +215,31 @@ function saveSoon() {
 }
 
 export function reset() {
+  // Antes de borrar, se guarda una copia para poder «Recuperar mi avance anterior».
+  try { localStorage.setItem(KEY + '.prev', JSON.stringify(S)); } catch { /* sin espacio */ }
   S = defaults();
   rollDay();
   save();
   emit('reset');
+}
+// ¿Hay una copia anterior que se pueda recuperar? → { level, name, kid, at } o null
+export function prevInfo() {
+  try {
+    const p = JSON.parse(localStorage.getItem(KEY + '.prev') || 'null');
+    if (!p || typeof p !== 'object') return null;
+    return { level: Number(p.level) || 1, name: String(p.name || 'Palomita'), kid: String(p.kid || ''), at: Number(p.lastSeen) || 0 };
+  } catch { return null; }
+}
+// Vuelve a la copia anterior (la actual pasa a ser la copia). Después hay que recargar la app.
+export function restorePrev() {
+  try {
+    const prev = localStorage.getItem(KEY + '.prev');
+    if (!prev) return false;
+    JSON.parse(prev);
+    localStorage.setItem(KEY + '.prev', JSON.stringify(S));
+    localStorage.setItem(KEY, prev);
+    return true;
+  } catch { return false; }
 }
 
 // ── Medidores ──
@@ -334,16 +424,21 @@ export function totalStars() {
 // ── Lecturas, preguntas y oraciones ──
 export function isRead(id) { return !!S.read[id]; }
 export function markRead(id) {
+  dailyOnce('read:' + id);        // para «Mi día»: leyó algo hoy
   if (S.read[id]) return false;
   S.read[id] = Date.now();
+  logActivity(1);
   save();
   emit('change', { evt: 'read', id });
   return true;
 }
 export function quizDone(id) { return !!S.quiz[id]; }
+// Cuándo se aprobó (desde la versión 1.3; antes se guardaba sin fecha → null).
+export function quizAt(id) { const v = S.quiz[id]; return typeof v === 'number' ? v : null; }
 export function markQuiz(id) {
   if (S.quiz[id]) return false;
-  S.quiz[id] = true;
+  S.quiz[id] = Date.now();
+  logActivity(2);
   save();
   emit('change', { evt: 'quiz', id });
   return true;
@@ -360,6 +455,8 @@ export function doneToday(key) { rollDay(); return !!S.daily.done[key]; }
 export function prayed(id) {
   S.prayers[id] = (S.prayers[id] || 0) + 1;
   const firstToday = dailyOnce('pray:' + id);
+  dailyOnce('prayed');
+  if (firstToday) logActivity(1);
   saveSoon();
   emit('change', { evt: 'pray', id });
   return { firstToday, count: S.prayers[id] };
@@ -375,4 +472,139 @@ export function setNames({ name, kid } = {}) {
   if (typeof kid === 'string') S.kid = kid.trim().slice(0, 14);
   save();
   emit('change', { evt: 'names' });
+}
+
+// ── Fechas especiales del niño (las de la parroquia están en js/core/reminders.js) ──
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+export function date(k) { return S.dates?.[k] || ''; }
+export function setDate(k, iso) {
+  if (!['cumple', 'bautismo'].includes(k)) return false;
+  if (iso && !DATE_RE.test(iso)) return false;
+  S.dates = { ...S.dates, [k]: iso || '' };
+  save();
+  emit('change', { evt: 'dates' });
+  return true;
+}
+
+// ── Misiones de buenas obras ──
+// El niño acepta una misión (de un juego o de una parábola). Al día siguiente la palomita le pregunta si la cumplió.
+export function mission() { return S.mission; }
+export function acceptMission({ text, from = '' }) {
+  if (typeof text !== 'string' || !text.trim()) return false;
+  S.mission = { text: text.trim().slice(0, 240), from: String(from).slice(0, 60), at: Date.now(), day: todayKey(), later: '' };
+  save();
+  emit('change', { evt: 'mission' });
+  return true;
+}
+// ¿Toca preguntar hoy? (se aceptó otro día y hoy no se preguntó todavía)
+export function missionDue() {
+  const m = S.mission;
+  return !!m && m.day !== todayKey() && m.later !== todayKey();
+}
+export function missionDone() {
+  const m = S.mission;
+  if (!m) return 0;
+  S.deeds = [...S.deeds, { day: todayKey(), text: m.text }].slice(-60);
+  S.mission = null;
+  logActivity(2);
+  save();
+  emit('change', { evt: 'deed' });
+  return S.deeds.length;
+}
+export function missionLater() { if (S.mission) { S.mission.later = todayKey(); save(); } }
+export function dropMission() { S.mission = null; save(); emit('change', { evt: 'mission' }); }
+export function deeds() { return S.deeds.slice(); }
+
+// ── Pasaporte de la Misa del domingo ──
+// La Misa de la tarde del sábado (desde las 5 p. m.) ya cuenta para el domingo.
+export function massKey(d = new Date()) {
+  const day = d.getDay();
+  if (day === 0) return todayKey(d);
+  if (day === 6 && d.getHours() >= 17) return todayKey(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1));
+  if (day === 1) return todayKey(new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1));   // el lunes todavía se puede contar
+  return '';
+}
+export function massLog() { return { ...S.massLog }; }
+export function massStamped(key) { return !!(key && S.massLog[key]); }
+export function logMass(key, { color = '', liked = '', ok = false } = {}) {
+  if (!key) return false;
+  const prev = S.massLog[key] || {};
+  S.massLog = { ...S.massLog, [key]: { at: prev.at || Date.now(), color: color || prev.color || '', liked: liked || prev.liked || '', ok: !!(ok || prev.ok) } };
+  logActivity(2);
+  save();
+  emit('change', { evt: 'mass', key });
+  return true;
+}
+export function unlogMass(key) { if (S.massLog[key]) { const m = { ...S.massLog }; delete m[key]; S.massLog = m; save(); emit('change', { evt: 'mass', key }); } }
+
+// ── Lo sé de memoria ──
+export function memorized(id) { return S.memorized[id] || null; }
+export function setMemorized(id, by = 'nino') {
+  const m = { ...S.memorized };
+  if (!by) delete m[id];
+  else if (by === 'nino' && m[id]?.by === 'grande') return m[id];        // el sello verde de un grande no se pierde
+  else m[id] = { at: Date.now(), by };
+  S.memorized = m;
+  if (by) logActivity(2);
+  save();
+  emit('change', { evt: 'memorized', id });
+  return m[id] || null;
+}
+
+// ── Mis repasos (cajitas: lo que costó vuelve al día siguiente, luego a los 3 días, a la semana…) ──
+const BOX_DAYS = [0, 1, 3, 7, 14];
+const addDays = (n, d = new Date()) => todayKey(new Date(d.getFullYear(), d.getMonth(), d.getDate() + n));
+export function reviewMiss(key) {
+  if (!key) return;
+  S.review = { ...S.review, [key]: { box: 1, due: addDays(1) } };
+  saveSoon();
+}
+export function reviewHit(key) {
+  const r = S.review[key];
+  if (!r) return;
+  const box = Math.min(4, (r.box || 1) + 1);
+  const next = { ...S.review };
+  if (box >= 4) delete next[key];                 // ya lo sabe: sale de los repasos
+  else next[key] = { box, due: addDays(BOX_DAYS[box]) };
+  S.review = next;
+  saveSoon();
+}
+export function reviewDue() {
+  const t = todayKey();
+  return Object.entries(S.review).filter(([, r]) => r && r.due <= t).map(([k]) => k);
+}
+export function reviewCount() { return Object.keys(S.review).length; }
+
+// ── Intenciones (por quién rezo) y diario de gracias ──
+export function intentions() { return S.intentions.slice(); }
+export function addIntention({ id, label, emoji = '🙏', sick = false }) {
+  if (!label) return;
+  const list = S.intentions.filter(x => x.id !== id || id === 'otro');
+  list.unshift({ id: String(id || 'otro'), label: String(label).slice(0, 60), emoji, sick: !!sick, at: Date.now() });
+  S.intentions = list.slice(0, 5);
+  save();
+}
+export function removeIntention(at) { S.intentions = S.intentions.filter(x => x.at !== at); save(); }
+export function journal() { return S.journal.slice(); }
+export function addJournal({ thanks = [], text = '' } = {}) {
+  const day = todayKey();
+  const others = S.journal.filter(e => e.day !== day);
+  S.journal = [...others, { day, thanks: thanks.slice(0, 6), text: String(text || '').slice(0, 200) }].slice(-60);
+  logActivity(1);
+  save();
+}
+
+// ── Actividad de cada día (solo para el informe de los papás; se guardan los últimos 60 días) ──
+export function logActivity(points = 1) {
+  const t = todayKey();
+  const a = { ...S.activity, [t]: (S.activity[t] || 0) + points };
+  const keys = Object.keys(a).sort();
+  while (keys.length > 60) delete a[keys.shift()];
+  S.activity = a;
+  saveSoon();
+}
+export function activity(days = 14) {
+  const out = [];
+  for (let i = days - 1; i >= 0; i--) { const k = addDays(-i); out.push({ day: k, points: S.activity[k] || 0 }); }
+  return out;
 }
