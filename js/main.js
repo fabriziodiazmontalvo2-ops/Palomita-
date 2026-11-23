@@ -19,6 +19,8 @@ register('lesson', () => import('./screens/lesson.js'));
 register('confesion', () => import('./screens/confesion.js'));
 register('misa', () => import('./screens/misa.js'));
 register('reto', () => import('./screens/reto.js'));
+register('parroquia', () => import('./screens/parroquia.js'));
+register('figuritas', () => import('./screens/figuritas.js'));
 setHome('home');
 
 const TICK_SECONDS = 5;

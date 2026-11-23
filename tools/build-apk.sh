@@ -21,6 +21,14 @@ echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 node tools/build.mjs
 mkdir -p android/app/src/main/assets
 cp dist/palomita.html android/app/src/main/assets/index.html
+# Fotos de la parroquia, figuritas y la voz grabada de la narradora (la app las pide por ruta relativa).
+rm -rf android/app/src/main/assets/assets
+mkdir -p android/app/src/main/assets/assets
+for d in parroquia figuritas voz; do
+  [ -d "assets/$d" ] || continue
+  mkdir -p "android/app/src/main/assets/assets/$d"
+  find "assets/$d" -maxdepth 1 -type f ! -name '.*' -exec cp {} "android/app/src/main/assets/assets/$d/" \;
+done
 
 for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
   [ -f "android/app/src/main/res/mipmap-${d%%:*}/ic_launcher.png" ] || { echo "Faltan los íconos de Android (mipmap-${d%%:*})"; exit 1; }

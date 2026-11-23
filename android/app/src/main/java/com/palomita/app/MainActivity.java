@@ -3,8 +3,11 @@ package com.palomita.app;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
@@ -30,13 +33,16 @@ import java.util.Locale;
  * Todo funciona sin internet. Además:
  *  - pone la voz del teléfono (TextToSpeech) a disposición de la app para leer historias y oraciones;
  *  - pide el micrófono solo cuando el niño toca «Háblame»;
- *  - el botón «atrás» del teléfono navega dentro de la app antes de cerrarla.
+ *  - el botón «atrás» del teléfono navega dentro de la app antes de cerrarla;
+ *  - programa los avisos de Misa y catequesis (notificaciones, ver Avisos.java);
+ *  - abre el marcador del teléfono o el mapa solo cuando la app lo pide (tarjeta «Mi parroquia»).
  */
 public class MainActivity extends Activity {
     // Los archivos se sirven desde una dirección https local: así el guardado (localStorage) y el micrófono
     // funcionan igual que en un navegador, sin salir nunca del teléfono.
     private static final String START_URL = "https://appassets.androidplatform.net/assets/index.html";
     private static final int REQ_MIC = 7;
+    private static final int REQ_NOTIF = 8;
 
     private WebView web;
     private TextToSpeech tts;
@@ -151,11 +157,68 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void stopSpeaking() { if (tts != null) tts.stop(); }
+
+        /** Lista de avisos [{ id, atMillis, title, text }]: reemplaza los programados. */
+        @JavascriptInterface
+        public void scheduleReminders(String json) { Avisos.schedule(MainActivity.this, json); }
+
+        @JavascriptInterface
+        public boolean notificationsAllowed() { return Avisos.allowed(MainActivity.this); }
+
+        /** Pide permiso para notificaciones (Android 13+). Responde con window.__palomitaNotif(true|false). */
+        @JavascriptInterface
+        public void askNotifications() {
+            runOnUiThread(() -> {
+                Avisos.ensureChannel(MainActivity.this);
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIF);
+                } else {
+                    notifyPermission(Avisos.allowed(MainActivity.this));
+                }
+            });
+        }
+
+        /** Abre el marcador con el número escrito (no llama solo: la persona decide). */
+        @JavascriptInterface
+        public void openDial(String number) {
+            String digits = number == null ? "" : number.replaceAll("[^0-9+]", "");
+            if (digits.isEmpty()) return;
+            openOutside(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + digits)));
+        }
+
+        /** Abre la app de mapas con la dirección (o el navegador si no hay app de mapas). */
+        @JavascriptInterface
+        public void openMap(String query) {
+            String q = query == null ? "" : query;
+            runOnUiThread(() -> {
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(q))));
+                } catch (ActivityNotFoundException e) {
+                    openOutside(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=" + Uri.encode(q))));
+                }
+            });
+        }
+    }
+
+    private void openOutside(Intent i) {
+        runOnUiThread(() -> {
+            try { startActivity(i); } catch (ActivityNotFoundException ignored) { }
+        });
+    }
+
+    private void notifyPermission(boolean granted) {
+        runOnUiThread(() -> { if (web != null) web.evaluateJavascript("window.__palomitaNotif && window.__palomitaNotif(" + granted + ")", null); });
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == REQ_NOTIF) {
+            boolean ok = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
+            if (ok) Avisos.reschedule(this);
+            notifyPermission(ok);
+            return;
+        }
         if (requestCode != REQ_MIC || pendingMic == null) return;
         if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
             pendingMic.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});

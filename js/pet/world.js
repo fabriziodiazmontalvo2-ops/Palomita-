@@ -14,6 +14,12 @@
 //   world.setGrowth(escala 0.5..1, { animate })   tamaño de la palomita (crece con su nivel)
 //   world.startArrival() → Promise   escena de llegada en la jaulita (el niño toca para abrirla)
 //   world.arrivalStage                 etapa de la llegada ('wait' = esperando el toque) o null
+//   world.setBed(on, { instant })      la palomita se acuesta en su camita (dormitorio) y se tapa con la frazada
+//   world.setDoveVisible(bool)         la palomita no está en este cuarto (p. ej. duerme en el dormitorio)
+//   world.water(segundos)              abre la regadera un ratito (sin moverla)
+//   Objetos que se arrastran (baño: 'shower' regadera, 'soap' jabón):
+//     'grab' { id } · 'dragMove' { id, x, y, dist, part } · 'drop' { id, moved } · 'tapProp' { id } si solo se tocó
+//     'wet' { amount, top } mientras el chorro moja a la palomita · 'waterStop' cuando se cierra el agua
 import * as THREE from 'three';
 import { createDove } from './dove.js';
 import { buildRoom, ROOM_IDS, ROOM_LIGHT } from './rooms.js';
@@ -221,7 +227,26 @@ export function createWorld(canvas) {
   function on(evt, fn) { if (!listeners.has(evt)) listeners.set(evt, new Set()); listeners.get(evt).add(fn); return () => listeners.get(evt)?.delete(fn); }
   function emit(evt, data) { for (const fn of listeners.get(evt) || []) { try { fn(data); } catch (e) { console.error(e); } } }
 
-  const ptr = { id: null, x0: 0, y0: 0, x: 0, y: 0, t0: 0, moved: 0, part: null };
+  const ptr = { id: null, x0: 0, y0: 0, x: 0, y: 0, t0: 0, moved: 0, part: null, drag: null };
+  // ── Objetos que se arrastran (regadera y jabón del baño) ──
+  const dragPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -0.75);   // z = 0.75: delante de la palomita
+  const dragHit = new THREE.Vector3();
+  const draggables = () => (room && room.draggables) || [];
+  function hitDrag(x, y) {
+    const list = draggables();
+    if (!list.length) return null;
+    ray.setFromCamera(toNdc(x, y), camera);
+    const hits = ray.intersectObjects(list.map(d => d.obj), true);
+    if (!hits.length) return null;
+    for (let o = hits[0].object; o; o = o.parent) { const d = list.find(q => q.obj === o); if (d) return d; }
+    return null;
+  }
+  function aimDrag(d, x, y) {
+    ray.setFromCamera(toNdc(x, y), camera);
+    if (!ray.ray.intersectPlane(dragPlane, dragHit)) return;
+    d.target = d.target || new THREE.Vector3();
+    d.target.set(Math.max(-1.7, Math.min(1.7, dragHit.x)), Math.max(0.12, Math.min(3.7, dragHit.y + (d.lift || 0))), 0.75);
+  }
   let lookReset = 0;
   const local = e => { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
   function lookAtPointer(x, y) {
@@ -232,7 +257,9 @@ export function createWorld(canvas) {
   function onDown(e) {
     if (paused) return;
     const [x, y] = local(e);
-    Object.assign(ptr, { id: e.pointerId, x0: x, y0: y, x, y, t0: performance.now(), moved: 0, part: hitDove(x, y) });
+    const d = arrival ? null : hitDrag(x, y);
+    Object.assign(ptr, { id: e.pointerId, x0: x, y0: y, x, y, t0: performance.now(), moved: 0, part: d ? null : hitDove(x, y), drag: d });
+    if (d) { d.held = true; d.target = null; emit('grab', { id: d.id }); }
     try { canvas.setPointerCapture(e.pointerId); } catch { /* sin captura */ }
     lookAtPointer(x, y);
   }
@@ -243,6 +270,19 @@ export function createWorld(canvas) {
     if (ptr.id !== e.pointerId) return;
     const dx = x - ptr.x, dy = y - ptr.y;
     ptr.moved += Math.hypot(dx, dy); ptr.x = x; ptr.y = y;
+    if (ptr.drag) {
+      if (ptr.moved > 10) {
+        aimDrag(ptr.drag, x, y);
+        // lo que toca la palomita es el objeto (que va un poquito más arriba que el dedo), no el dedo
+        let part = null;
+        if (dove.group.visible && ptr.drag.target) {
+          const v = ptr.drag.target.clone().project(camera);
+          part = hitDove((v.x * 0.5 + 0.5) * cssW, (-v.y * 0.5 + 0.5) * cssH) || hitDove(x, y);
+        }
+        emit('dragMove', { id: ptr.drag.id, x, y, dist: Math.hypot(dx, dy), part });
+      }
+      return;
+    }
     if (ptr.moved > 10) { const part = hitDove(x, y); if (part) emit('stroke', { part, x, y, dx, dy }); }
   }
   function onUp(e) {
@@ -250,6 +290,13 @@ export function createWorld(canvas) {
     ptr.id = null;
     if (paused) return;
     const [x, y] = local(e);
+    if (ptr.drag) {
+      const d = ptr.drag; ptr.drag = null;
+      d.held = false; d.target = null;
+      emit('drop', { id: d.id, moved: ptr.moved });
+      if (ptr.moved <= 10) emit('tapProp', { id: d.id });
+      return;
+    }
     if (arrival) { if (arrival.stage === 'wait') arrival.open(); return; }
     if (ptr.moved <= 10 && performance.now() - ptr.t0 < 600) {
       const part = hitDove(x, y);
@@ -282,6 +329,79 @@ export function createWorld(canvas) {
   // Crecimiento y llegada
   let arrival = null, growthNow = 1, growthFrom = 1, growthTo = 1, growthT = 1;
   function applyGrowth(v) { growthNow = v; dove.group.scale.setScalar(v); blob.scale.setScalar(0.4 + v * 0.6); }
+  // ── Arrastre suave y regreso a su lugar ──
+  const tmpQ = new THREE.Quaternion(), tmpE = new THREE.Euler();
+  function stepDrag(dt) {
+    const k = 1 - Math.exp(-dt * 16), kb = 1 - Math.exp(-dt * 7);
+    for (const d of draggables()) {
+      const o = d.obj;
+      if (d.held && d.target) {
+        const vx = (d.target.x - o.position.x);
+        o.position.lerp(d.target, k);
+        // la regadera se endereza (chorro hacia abajo) y se ladea un poquito al moverla
+        tmpE.set(0.1, 0, Math.max(-0.5, Math.min(0.5, -vx * 1.6)));
+        tmpQ.setFromEuler(tmpE); o.quaternion.slerp(tmpQ, k);
+      } else if (!d.held) {
+        o.position.lerp(d.home, kb);
+        tmpQ.setFromEuler(d.homeRot); o.quaternion.slerp(tmpQ, kb);
+      }
+    }
+  }
+  // ── Agua de la regadera ──
+  let waterTimer = 0, waterWas = false, wetAcc = 0, splashT = 0, soundT = 0, dropT = 0;
+  const nozzle = new THREE.Vector3(), wdir = new THREE.Vector3(), probe = new THREE.Vector3(), hitAt = new THREE.Vector3();
+  function stepWater(dt) {
+    const sh = draggables().find(d => d.id === 'shower');
+    if (waterTimer > 0) waterTimer -= dt;
+    const on = !!sh && (sh.held || waterTimer > 0);
+    if (!on) { if (waterWas) { waterWas = false; emit('waterStop', {}); } return; }
+    waterWas = true;
+    nozzle.copy(sh.nozzle).applyMatrix4(sh.obj.matrixWorld);
+    wdir.set(0, -1, 0).applyQuaternion(sh.obj.quaternion).normalize();
+    dropT -= dt;
+    while (dropT <= 0) {
+      dropT += 0.018;
+      const a = Math.random() * 6.2832, r = Math.sqrt(Math.random()) * 0.17;
+      spawn('drop', nozzle.x + Math.cos(a) * r, nozzle.y, nozzle.z + Math.sin(a) * r,
+        { vx: wdir.x * 4.6 + R(-0.25, 0.25), vy: wdir.y * 4.6, vz: wdir.z * 4.6 + R(-0.2, 0.2), grav: 5, life: 0.75, s0: 0.1, s1: 0.09 });
+    }
+    soundT -= dt;
+    if (soundT <= 0) { soundT = 0.5; sfx('splash'); }
+    // ¿El chorro le cae a la palomita? (elipsoide aproximado del cuerpo)
+    if (!dove.group.visible || bedK > 0.05) return;
+    const g = growthNow, c = dove.group.position;
+    let hit = false;
+    for (let t = 0.1; t < 4.2; t += 0.08) {
+      probe.copy(wdir).multiplyScalar(t).add(nozzle);
+      const ex = (probe.x - c.x) / (0.78 * g), ey = (probe.y - (c.y + 1.0 * g)) / (1.05 * g), ez = (probe.z - c.z) / (0.95 * g);
+      if (ex * ex + ey * ey + ez * ez < 1) { hit = true; hitAt.copy(probe); break; }
+    }
+    if (!hit) return;
+    wetAcc += dt;
+    if (wetAcc >= 0.1) { emit('wet', { amount: wetAcc, top: hitAt.y > c.y + 1.4 * g }); wetAcc = 0; }
+    splashT -= dt;
+    if (splashT <= 0) {
+      splashT = 0.05;
+      for (let i = 0; i < 2; i++) spawn('drop', hitAt.x + R(-0.15, 0.15), hitAt.y, hitAt.z + 0.1, { vx: R(-1.4, 1.4), vy: R(0.6, 1.6), grav: 7, life: 0.45, s0: 0.07, s1: 0.04 });
+    }
+  }
+  // ── Camita ──
+  let bedOn = false, bedK = 0;
+  const bedFrom = new THREE.Vector3();
+  function stepBed(dt) {
+    const target = bedOn ? 1 : 0;
+    if (bedK === target) return;
+    bedK = bedOn ? Math.min(1, bedK + dt * 1.3) : Math.max(0, bedK - dt * 1.6);
+    placeInBed();
+  }
+  function placeInBed() {
+    const r = getRoom('dormitorio');
+    const spot = r.bed ? r.bed.spot : bedFrom;
+    const k = bedK * bedK * (3 - 2 * bedK);
+    dove.group.position.set(spot.x * k, spot.y * k + Math.sin(Math.PI * bedK) * 0.7, spot.z * k);
+    blob.visible = dove.group.visible && bedK < 0.05;
+    if (r.bed) r.bed.tuck(bedOn && bedK >= 0.92, growthNow);
+  }
   function tick(dt) {
     time += dt;
     if (growthT < 1) {
@@ -297,8 +417,11 @@ export function createWorld(canvas) {
     if (lookReset > 0) { lookReset -= dt; if (lookReset <= 0) dove.lookAt(0, 0); }
     dove.update(dt, time);
     room?.update(dt, time);
-    if (zzzOn) { zzzT -= dt; if (zzzT <= 0) { zzzT = 1.1; const h = dove.anchors.head.getWorldPosition(new THREE.Vector3()); spawn('z', h.x + 0.35, h.y + 0.05, h.z + 0.3, { vx: 0.25, vy: 0.5, wob: 0.25, life: 2.2, s0: 0.14, s1: 0.4 }); } }
+    if (zzzOn && dove.group.visible) { zzzT -= dt; if (zzzT <= 0) { zzzT = 1.1; const h = dove.anchors.head.getWorldPosition(new THREE.Vector3()); spawn('z', h.x + 0.35, h.y + 0.05, h.z + 0.3, { vx: 0.25, vy: 0.5, wob: 0.25, life: 2.2, s0: 0.14, s1: 0.4 }); } }
     if (showerOn) { showerT -= dt; while (showerT <= 0) { showerT += 0.03; spawn('drop', R(-0.7, 0.7), R(3.1, 3.5), R(0, 0.7), { vy: -5.5, grav: 4, life: 0.55, s0: 0.11, s1: 0.11 }); } }
+    stepDrag(dt);
+    stepWater(dt);
+    stepBed(dt);
     for (const b of foamBubbles) b.scale.setScalar(b.userData.base * (1 + Math.sin(time * 3 + b.userData.ph) * 0.08));
     stepFx(dt, time);
   }
@@ -321,6 +444,17 @@ export function createWorld(canvas) {
     get room() { return room ? room.id : null; },
     setLights(on) { const r = getRoom('dormitorio'); r.setLights(on); if (room === r) aimLight(r.light, false); },
     setCandle(on) { getRoom('capilla').setCandle(on); },
+    setBed(on, { instant = false } = {}) { bedOn = !!on; if (instant) { bedK = bedOn ? 1 : 0; placeInBed(); } },
+    setDoveVisible(v) { dove.group.visible = !!v; blob.visible = !!v && bedK < 0.05; },
+    get doveVisible() { return dove.group.visible; },
+    water(seconds = 3) { waterTimer = Math.max(waterTimer, seconds); },
+    // Dónde está en pantalla un objeto que se arrastra (px CSS), para pistas y pruebas.
+    screenOf(id) {
+      const d = draggables().find(q => q.id === id);
+      if (!d) return null;
+      const v = d.obj.getWorldPosition(new THREE.Vector3()).project(camera);
+      return { x: (v.x * 0.5 + 0.5) * cssW, y: (-v.y * 0.5 + 0.5) * cssH };
+    },
     start() { if (running) return; running = true; last = performance.now(); raf = requestAnimationFrame(frame); },
     stop() { running = false; cancelAnimationFrame(raf); },
     setPaused(v) { paused = !!v; },

@@ -108,12 +108,13 @@ const WALLS = {
     P.ell(-0.85, 2.85, 0.5, 0.64, '#ffffff'); P.ell(-0.85, 2.85, 0.42, 0.56, P.vgrad(2.3, 3.4, '#bfe6ff', '#eefaff'));
     P.line(-1.05, 3.12, -0.82, 3.3, 'rgba(255,255,255,0.9)', 0.05); P.line(-0.98, 2.95, -0.86, 3.05, 'rgba(255,255,255,0.8)', 0.035);
     // toallero con toalla
-    P.rect(0.3, 3.05, 1.25, 0.06, '#aeb6c2', 0.03);
-    P.rect(0.45, 2.25, 0.46, 0.84, '#ffd95e', 0.05); P.rect(0.45, 2.36, 0.46, 0.08, '#ffffff'); P.rect(0.45, 2.5, 0.46, 0.04, '#ffffff');
-    P.rect(1.02, 2.45, 0.4, 0.64, '#ff9db5', 0.05); P.rect(1.02, 2.56, 0.4, 0.07, '#ffffff');
+    P.rect(1.75, 3.05, 1.25, 0.06, '#aeb6c2', 0.03);
+    P.rect(1.9, 2.25, 0.46, 0.84, '#ffd95e', 0.05); P.rect(1.9, 2.36, 0.46, 0.08, '#ffffff'); P.rect(1.9, 2.5, 0.46, 0.04, '#ffffff');
+    P.rect(2.47, 2.45, 0.4, 0.64, '#ff9db5', 0.05); P.rect(2.47, 2.56, 0.4, 0.07, '#ffffff');
+
     // burbujas y repisa (pantallas anchas)
     for (const [x, y, r] of [[-2.2, 3.4, 0.14], [-2.6, 2.9, 0.09], [-1.9, 2.6, 0.07], [2.2, 3.5, 0.11], [2.6, 3.0, 0.16], [1.9, 3.75, 0.07]]) { P.circ(x, y, r, 'rgba(255,255,255,0.55)'); P.circ(x - r * 0.3, y + r * 0.3, r * 0.25, '#fff'); }
-    P.rect(2.3, 2.3, 1.3, 0.07, '#ffffff', 0.02); P.emoji('🧴', 2.6, 2.6, 0.4); P.emoji('🧽', 3.1, 2.55, 0.32);
+    P.rect(-3.3, 2.3, 1.3, 0.07, '#ffffff', 0.02); P.emoji('🧴', -3.0, 2.6, 0.4); P.emoji('🧽', -2.5, 2.55, 0.32);
   },
   dormitorio(P) {
     P.rect(-4.5, 0, 9, 6.4, P.vgrad(0, 6.4, '#d6ccf2', '#e7e0fa'));
@@ -195,7 +196,7 @@ export const ROOM_LIGHT = {
   bano: { hemi: [0xf4fbff, 0xd8f0ff, 1.9], sun: [0xffffff, 1.7] },
   dormitorio: { hemi: [0xfaf6ff, 0xe6dcff, 1.8], sun: [0xfff1e0, 1.7] },
   capilla: { hemi: [0xfff8ea, 0xf3dfba, 1.75], sun: [0xffe9c2, 1.9] },
-  noche: { hemi: [0x8f9be0, 0x39407c, 1.05], sun: [0xaab8ff, 0.55] },
+  noche: { hemi: [0x9aa6ea, 0x464c8c, 1.3], sun: [0xb8c4ff, 0.7] },
 };
 
 export function buildRoom(THREE, id) {
@@ -299,12 +300,110 @@ export function buildRoom(THREE, id) {
     anim.push((dt, t) => { if (squeak > 0) { squeak = Math.max(0, squeak - dt * 2.2); const k = Math.sin(squeak * Math.PI); duck.scale.set(1.15 + k * 0.25, 0.9 - k * 0.3, 1 + k * 0.2); } duck.rotation.y = -0.5 + Math.sin(t * 0.8) * 0.15; });
     // banquito
     add(cyl(0.22, 0.22, 0.07), mat(0xff9db5), 1.4, 0.34, -1.2); add(cyl(0.05, 0.07, 0.32, 8), mat(0xffffff), 1.4, 0.16, -1.2);
+
+    // ── Regadera de mano (se arrastra con el dedo; mientras se sostiene, sale agua) ──
+    const chrome = mat(0xf4f8fb, { roughness: 0.28 });
+    const rim = mat(0x3ecfc4, { roughness: 0.35 });
+    const shower = new THREE.Group();
+    shower.name = 'regadera';
+    // el mango apunta hacia arriba y la cara de la regadera mira hacia abajo
+    add(cyl(0.06, 0.075, 0.6, 18), chrome, 0, 0.38, 0, { parent: shower });
+    add(cyl(0.085, 0.085, 0.07, 18), rim, 0, 0.7, 0, { parent: shower });
+    add(cyl(0.085, 0.085, 0.05, 18), rim, 0, 0.16, 0, { parent: shower });
+    add(cyl(0.3, 0.13, 0.17, 32), chrome, 0, 0, 0, { parent: shower });
+    add(new THREE.TorusGeometry(0.29, 0.035, 10, 36), rim, 0, -0.07, 0, { parent: shower, r: [Math.PI / 2, 0, 0] });
+    const faceMat = new THREE.MeshStandardMaterial({ roughness: 0.5, map: tex(128, 128, g => {
+      g.fillStyle = '#eef4f8'; g.fillRect(0, 0, 128, 128);
+      g.fillStyle = '#7fb6d6';
+      for (let r = 0; r < 4; r++) { const n = r === 0 ? 1 : r * 7; for (let i = 0; i < n; i++) { const a = (i / n) * 6.2832 + r * 0.3, d = r * 15; g.beginPath(); g.arc(64 + Math.cos(a) * d, 64 + Math.sin(a) * d, 3.2, 0, 6.2832); g.fill(); } }
+    }) });
+    disposables.push(faceMat);
+    add(new THREE.CircleGeometry(0.28, 32), faceMat, 0, -0.086, 0, { parent: shower, r: [Math.PI / 2, 0, 0], shadow: false });
+    shower.position.set(0.42, 2.42, 0.4);
+    shower.rotation.set(0.12, 0, -0.32);
+    group.add(shower);
+    // manguera que baja desde arriba: se vuelve a dibujar cuando la regadera se mueve
+    const hoseMat = mat(0xdfe8f0, { roughness: 0.3 });
+    const hose = new THREE.Mesh(new THREE.BufferGeometry(), hoseMat);
+    hose.castShadow = true;
+    group.add(hose);
+    const hoseFrom = new THREE.Vector3(1.05, 5.2, -0.2);
+    const tip = new THREE.Vector3(), mid = new THREE.Vector3(), up = new THREE.Vector3();
+    let hoseKey = '';
+    function drawHose() {
+      up.set(0, 0.7, 0).applyEuler(shower.rotation); tip.copy(shower.position).add(up);
+      const key = tip.x.toFixed(3) + tip.y.toFixed(3) + tip.z.toFixed(3);
+      if (key === hoseKey) return;
+      hoseKey = key;
+      mid.copy(hoseFrom).add(tip).multiplyScalar(0.5); mid.x += 0.45; mid.y -= 0.25;
+      const curve = new THREE.QuadraticBezierCurve3(hoseFrom.clone(), mid.clone(), tip.clone());
+      hose.geometry.dispose();
+      hose.geometry = new THREE.TubeGeometry(curve, 28, 0.045, 8, false);
+    }
+    drawHose();
+    disposables.push({ dispose: () => hose.geometry.dispose() });
+    // ── Jabón en su jabonera ──
+    const soap = new THREE.Group();
+    soap.name = 'jabon';
+    add(sphere(0.22), mat(0xff9db5, { roughness: 0.35 }), 0, 0.09, 0, { parent: soap, s: [1.15, 0.5, 0.75] });
+    add(sphere(0.06), mat(0xffffff, { roughness: 0.3 }), 0.08, 0.2, 0.05, { parent: soap, s: [1, 0.5, 1] });
+    add(sphere(0.04), mat(0xffffff, { roughness: 0.3 }), -0.1, 0.19, -0.02, { parent: soap, s: [1, 0.5, 1] });
+    soap.position.set(-1.08, 0.07, 0.62);
+    group.add(soap);
+    add(cyl(0.34, 0.27, 0.07, 24), mat(0xffffff), -1.08, 0.035, 0.62, { s: [1.1, 1, 0.8] });
+    room.draggables = [
+      { id: 'shower', obj: shower, home: shower.position.clone(), homeRot: shower.rotation.clone(), lift: 0.55, nozzle: new THREE.Vector3(0, -0.12, 0) },
+      { id: 'soap', obj: soap, home: soap.position.clone(), homeRot: soap.rotation.clone(), lift: 0.3 },
+    ];
+    anim.push(() => drawHose());
   } else if (id === 'dormitorio') {
-    // nido-cama
-    add(new THREE.TorusGeometry(0.5, 0.18, 12, 28), mat(0xd9a45f), -1.32, 0.2, -1.05, { r: [Math.PI / 2, 0, 0] });
-    add(sphere(0.46), mat(0xfff6e2), -1.32, 0.18, -1.05, { s: [1, 0.35, 1] });
-    add(sphere(0.2), mat(0xffffff), -1.5, 0.34, -1.2, { s: [1.2, 0.5, 0.8] });
-    add(sphere(0.34), mat(0x9b7be8), -1.2, 0.3, -0.92, { s: [1, 0.3, 0.85] });
+    // ── Camita: cabecera, colchón, almohada y frazada de retazos ──
+    const wood = mat(0xd39a62), woodDark = mat(0xb27a46);
+    add(box(1.95, 0.26, 1.45), wood, 0, 0.2, -1.12);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(cyl(0.07, 0.06, 0.16, 10), woodDark, sx * 0.88, 0.08, -1.12 + sz * 0.62);
+    const arch = new THREE.Shape();
+    arch.moveTo(-1.02, 0); arch.lineTo(-1.02, 0.78); arch.absarc(-0.58, 0.78, 0.44, Math.PI, Math.PI / 2, true);
+    arch.lineTo(0.58, 1.22); arch.absarc(0.58, 0.78, 0.44, Math.PI / 2, 0, true); arch.lineTo(1.02, 0); arch.closePath();
+    const head = add(new THREE.ExtrudeGeometry(arch, { depth: 0.12, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, bevelSegments: 2, curveSegments: 18 }), wood, 0, 0.1, -1.92);
+    head.receiveShadow = true;
+    // estrella y corazón en la cabecera
+    const star = new THREE.Shape();
+    for (let i = 0; i < 10; i++) { const a = Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? 0.08 : 0.19; i ? star.lineTo(Math.cos(a) * q, Math.sin(a) * q) : star.moveTo(Math.cos(a) * q, Math.sin(a) * q); }
+    add(new THREE.ExtrudeGeometry(star, { depth: 0.04, bevelEnabled: false }), mat(0xffc94a, { emissive: 0x6a4a00, emissiveIntensity: 0.25 }), 0, 1.02, -1.76);
+    add(sphere(0.055), mat(0xff9db5), -0.55, 0.95, -1.75); add(sphere(0.055), mat(0x7cc8f5), 0.55, 0.95, -1.75);
+    add(box(1.82, 0.22, 1.32), mat(0xfff8ee, { roughness: 0.9 }), 0, 0.42, -1.1, { receive: true });
+    add(sphere(0.4), mat(0xffffff, { roughness: 0.95 }), 0, 0.6, -1.5, { s: [1.35, 0.4, 0.7], receive: true });
+    const quilt = tex(256, 256, g => {
+      const cols = ['#b9a2f2', '#ffc6d6', '#bfe3f7', '#ffe39a'];
+      for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { g.fillStyle = cols[(x + y * 2) % 4]; g.fillRect(x * 64, y * 64, 64, 64); }
+      g.strokeStyle = 'rgba(255,255,255,0.85)'; g.lineWidth = 3; g.setLineDash([7, 6]);
+      for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 64, 0); g.lineTo(i * 64, 256); g.stroke(); g.beginPath(); g.moveTo(0, i * 64); g.lineTo(256, i * 64); g.stroke(); }
+      g.setLineDash([]); g.fillStyle = 'rgba(255,255,255,0.7)';
+      for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) if ((x + y) % 2) { const cx = x * 64 + 32, cy = y * 64 + 32; g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? 6 : 13; g.lineTo(cx + Math.cos(a) * q, cy + Math.sin(a) * q); } g.fill(); }
+    });
+    quilt.wrapS = quilt.wrapT = THREE.RepeatWrapping; quilt.repeat.set(2, 1);
+    const quiltMat = new THREE.MeshStandardMaterial({ map: quilt, roughness: 0.95, side: THREE.DoubleSide });
+    disposables.push(quiltMat);
+    // doblada a los pies de la cama (despierta)
+    const folded = add(box(1.86, 0.1, 0.5), quiltMat, 0, 0.58, -0.62);
+    // tapadita sobre la palomita (dormida): un pedazo de cilindro acostado como frazada que cae
+    const blanket = new THREE.Group();
+    // Arco de cilindro acostado (eje X): cubre el frente de la palomita desde el colchón hasta el cuello.
+    const drape = add(new THREE.CylinderGeometry(1, 1, 1.9, 30, 1, true, -0.78, 1.95), quiltMat, 0, 0, 0, { parent: blanket, r: [0, 0, -Math.PI / 2] });
+    drape.receiveShadow = true;
+    add(new THREE.CylinderGeometry(0.075, 0.075, 1.94, 12), mat(0xffffff, { roughness: 0.9 }), 0, Math.sin(0.78), Math.cos(0.78), { parent: blanket, r: [0, 0, Math.PI / 2] });
+    blanket.visible = false;
+    group.add(blanket);
+    room.bed = {
+      // dónde se acuesta la palomita (el origen de la palomita es el piso entre sus patitas)
+      spot: new THREE.Vector3(0, 0.5, -1.02),
+      tuck(on, scale = 1) {
+        folded.visible = !on; blanket.visible = !!on;
+        const s = 0.7 * scale;
+        blanket.scale.set(1, s, s);
+        blanket.position.set(0, 0.5 + 0.24 * scale, -0.98);
+      },
+    };
     // mesita y lámpara
     add(cyl(0.26, 0.26, 0.05), mat(0xc08a57), 1.28, 0.5, -0.95); add(cyl(0.05, 0.08, 0.5, 10), mat(0xa9744a), 1.28, 0.25, -0.95);
     add(cyl(0.09, 0.11, 0.05), mat(0xffffff), 1.28, 0.55, -0.95); add(cyl(0.02, 0.02, 0.26, 8), mat(0xffffff), 1.28, 0.68, -0.95);

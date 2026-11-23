@@ -125,3 +125,41 @@
 .home-album__item { appearance: none; border: 0; padding: 4px; background: var(--white); border-radius: 12px; cursor: pointer; box-shadow: 0 3px 0 var(--paper-edge); }
 .home-album__item img { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 8px; }
 .home-album__big { display: block; width: 100%; border-radius: 14px; box-shadow: 0 4px 12px var(--shade); }
+
+/* Baño sin botones: solo una pista; la regadera y el jabón se mueven dentro de la escena */
+.home__tray[data-room="bano"] { min-height: 0; padding: 6px 10px; background: rgba(255, 255, 255, 0.72); }
+.home-bath-hint { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: var(--fs-sm, 0.9rem); color: var(--ink); text-align: center; line-height: 1.2; }
+
+/* Durmiendo en su camita mientras el niño pasea por la casa */
+.home-sleepnote { position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%); z-index: 3; width: min(82%, 300px);
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 16px; text-align: center;
+  background: rgba(54, 52, 120, 0.82); color: #fff; border-radius: 22px; box-shadow: 0 10px 28px rgba(30, 20, 80, 0.35);
+  font-family: var(--font-display); font-weight: 800; font-size: 1rem; line-height: 1.25; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); pointer-events: none; }
+.home-sleepnote[hidden] { display: none; }
+.home-sleepnote__z { font-size: 2rem; animation: home-zz 2.4s ease-in-out infinite; }
+.home-sleepnote__go { appearance: none; border: 0; cursor: pointer; margin-top: 2px; padding: 8px 16px; border-radius: 999px; background: #ffd95e; color: #3d2b24;
+  font-family: var(--font-display); font-weight: 800; font-size: 0.95rem; box-shadow: 0 3px 0 #d9a92e; pointer-events: auto; }
+.home-sleepnote__go:active { transform: translateY(2px); box-shadow: 0 1px 0 #d9a92e; }
+.home-tab.is-sleeping { position: relative; }
+.home-tab.is-sleeping::after { content: '💤'; position: absolute; top: -8px; right: -2px; font-size: 1rem; animation: home-zz 2.4s ease-in-out infinite; }
+@keyframes home-zz { 0%, 100% { transform: translateY(0) scale(1); opacity: 0.85; } 50% { transform: translateY(-4px) scale(1.08); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .home-sleepnote__z, .home-tab.is-sleeping::after { animation: none; } }
+
+/* Cuatro botones por lado: un poquito más compactos */
+.home__sides { position: relative; }
+.home__side-col { gap: 8px; }
+.home-side { padding: 5px 2px 4px; }
+.home-side__icon { font-size: 1.55rem; }
+@media (max-height: 680px) { .home__side-col { gap: 6px; } .home-side__icon { font-size: 1.3rem; } .home-side__label { font-size: 0.68rem; } }
+
+/* Aviso de Misa / catequesis (entre las dos columnas) */
+.home__aviso { position: absolute; top: 12px; left: calc(var(--gutter-l) + 72px); right: calc(var(--gutter-r) + 72px); display: flex; justify-content: center; pointer-events: none; }
+.home__aviso:empty { display: none; }
+.home-aviso { appearance: none; border: 0; cursor: pointer; pointer-events: auto; display: flex; align-items: center; gap: 8px; max-width: 100%; padding: 8px 12px; border-radius: 18px;
+  background: linear-gradient(135deg, #fff8e1, #ffe9b3); color: #5a3d12; box-shadow: 0 4px 0 #e8c46a, 0 8px 16px var(--shade); text-align: left;
+  font-family: var(--font-display); font-weight: 800; font-size: 0.86rem; line-height: 1.15; animation: home-aviso-in 0.5s ease-out both; }
+.home-aviso--catequesis { background: linear-gradient(135deg, #f1eaff, #dccdff); color: #3d2a7a; box-shadow: 0 4px 0 #b9a2f2, 0 8px 16px var(--shade); }
+.home-aviso__icon { font-size: 1.4rem; flex: none; }
+.home-aviso:active { transform: translateY(3px); }
+@keyframes home-aviso-in { from { transform: translateY(-8px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .home-aviso { animation: none; } }

@@ -11,6 +11,7 @@ import * as photos from '../core/photos.js';
 import { growthFor } from '../pet/arrival.js';
 import { music } from '../core/audio.js';
 import { dailyGiftDue, showDailyGift, showChest, takeLevelUps } from '../core/rewards.js';
+import * as reminders from '../core/reminders.js';
 
 const ROOMS = [
   { id: 'sala', icon: '🏠', name: 'Nido' },
@@ -86,7 +87,7 @@ export async function mount(el, params = {}) {
   const offs = [];
   let alive = true;
   let room = state.get().sleeping ? 'dormitorio' : (ROOMS.some(r => r.id === params.room) ? params.room : 'sala');
-  let foam = 0, soapMode = false, showering = 0, joyBudget = 8, bubbleTimer = 0, nextTalk = 4, strokeAcc = 0, ghost = null, talking = false, earState = 'off', growthStage = -1, celebrating = false, arriving = false;
+  let foam = 0, wet = 0, washSoaped = false, washGain = 0, bathTalk = 0, joyBudget = 8, bubbleTimer = 0, nextTalk = 4, strokeAcc = 0, ghost = null, talking = false, earState = 'off', growthStage = -1, celebrating = false, arriving = false;
 
   // ── Interfaz ──
   const lvl = h('span', { class: 'home-level__n' });
@@ -107,6 +108,17 @@ export async function mount(el, params = {}) {
     h('span', { class: 'home-side__icon', 'aria-hidden': 'true' }, icon), h('span', { class: 'home-side__label' }, label));
   const verseBtn = side('💌', 'Mensaje', () => showVerse(), 'home-side--verse');
   const giftBtn = side('🎁', 'Regalo', () => openGift(), 'home-side--gift');
+  const figusBtn = side('📒', 'Figuritas', () => go('figuritas'), 'home-side--figus');
+  // Aviso de Misa o catequesis (hoy o mañana) de la parroquia.
+  const avisoBox = h('div', { class: 'home__aviso' });
+  function paintAviso() {
+    clear(avisoBox);
+    let ev = null;
+    try { ev = reminders.todayBanner(); } catch (e) { console.warn(e); }
+    if (!ev) return;
+    avisoBox.append(h('button', { type: 'button', class: `home-aviso home-aviso--${ev.kind}`, onclick: () => { sfx('tap'); go('parroquia', { tab: ev.kind === 'misa' ? 'misas' : 'catequesis' }); } },
+      h('span', { class: 'home-aviso__icon', 'aria-hidden': 'true' }, ev.icon), h('span', { class: 'home-aviso__text' }, ev.text)));
+  }
   const bubble = h('button', { type: 'button', class: 'home__bubble', hidden: true, 'aria-live': 'polite', onclick: () => hideBubble() });
   const tray = h('div', { class: 'home__tray' });
   const tabs = h('nav', { class: 'home__tabs', 'aria-label': 'Habitaciones' }, ROOMS.map(r =>
@@ -121,8 +133,9 @@ export async function mount(el, params = {}) {
       h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Ajustes', onclick: () => { sfx('tap'); go('settings'); } }, '⚙️')),
     metersRow,
     h('div', { class: 'home__sides' },
-      h('div', { class: 'home__side-col' }, side('🎮', 'Juegos', () => go('games')), side('⛪', 'Catequesis', () => go('catequesis')), side('🛍️', 'Tienda', () => go('shop'))),
-      h('div', { class: 'home__side-col' }, side('📖', 'Biblia', () => go('bible')), verseBtn, giftBtn)),
+      h('div', { class: 'home__side-col' }, side('🎮', 'Juegos', () => go('games')), side('✝️', 'Catequesis', () => go('catequesis')), side('⛪', 'Parroquia', () => go('parroquia')), side('🛍️', 'Tienda', () => go('shop'))),
+      h('div', { class: 'home__side-col' }, side('📖', 'Biblia', () => go('bible')), figusBtn, verseBtn, giftBtn),
+      avisoBox),
     bubble,
     h('div', { class: 'home__bottom' }, tray, tabs)));
 
@@ -182,16 +195,17 @@ export async function mount(el, params = {}) {
   }
   function isAsleep(msg = true) {
     if (!state.get().sleeping) return false;
-    if (msg) toast('Shh… está dormida. Toca ☀️ Despertar.', { icon: '😴' });
+    if (msg) toast(room === 'dormitorio' ? 'Shh… está dormida. Toca ☀️ Despertar.' : `${state.get().name} duerme en su camita 😴`, { icon: '😴' });
     return true;
   }
 
   // ── Habitaciones ──
   function setRoom(id, { silent = false } = {}) {
-    if (id !== 'dormitorio' && state.get().sleeping) wake(true);
-    if (id !== 'bano') { soapMode = false; if (foam > 0) { foam = 0; world.fx.foam(0); } world.fx.shower(false); showering = 0; }
+    // Si está dormida, sigue durmiendo en su camita mientras el niño recorre la casa.
+    if (id !== 'bano' && foam > 0) { foam = 0; world.fx.foam(0); }
     room = id;
     world.setRoom(id);
+    placeDove();
     for (const b of tabs.children) { const on = b.dataset.room === id; b.classList.toggle('is-on', on); b.setAttribute('aria-current', on ? 'true' : 'false'); }
     renderTray();
     hideBubble();
@@ -217,9 +231,8 @@ export async function mount(el, params = {}) {
         h('button', { type: 'button', class: 'home-food home-food--add', 'aria-label': 'Comprar comida', onclick: () => { sfx('tap'); go('shop', { tab: 'comida' }); } }, '➕'));
       tray.append(strip, trayButton('🙏', 'Bendecir', blessTable, { cls: 'home-tool--small' }));
     } else if (room === 'bano') {
-      const soap = trayButton('🧼', soapMode ? '¡Frótala!' : 'Jabón', () => { if (isAsleep()) return; soapMode = !soapMode; renderTray(); if (soapMode) say('Frótame con el dedo 🫧', 3000); }, { cls: soapMode ? 'is-on' : '' });
-      dragSource(soap, '🧼', (x, y) => { if (world.hitDove(x, y)) addFoam(0.035); });
-      tray.append(soap, trayButton('🚿', showering > 0 ? 'Enjuagando…' : 'Ducha', shower, { cls: showering > 0 ? 'is-on' : '' }));
+      // Sin botones: la regadera y el jabón se mueven con el dedo dentro del baño.
+      tray.append(h('p', { class: 'home-bath-hint' }, h('span', { 'aria-hidden': 'true' }, '🧼'), ' Arrastra el jabón · luego la regadera ', h('span', { 'aria-hidden': 'true' }, '🚿')));
     } else if (room === 'dormitorio') {
       const sleeping = state.get().sleeping;
       tray.append(trayButton(sleeping ? '☀️' : '💡', sleeping ? 'Despertar' : 'Apagar la luz', () => (sleeping ? wake() : goToSleep()), { kind: sleeping ? 'accent' : '', cls: 'home-tool--wide' }));
@@ -400,36 +413,55 @@ export async function mount(el, params = {}) {
     prayerModal(p || { id: 'bendicion-de-los-alimentos', title: 'Bendición de los alimentos', emoji: '🍞', lines: ['Bendícenos, Señor,', 'y bendice estos alimentos', 'que por tu bondad vamos a recibir.', 'Amén.'] });
   }
 
-  // ── Baño ──
+  // ── Baño (como en las mascotas virtuales: jabón y regadera que se mueven con el dedo) ──
   function addFoam(d) {
-    if (isAsleep(false)) return;
+    if (isAsleep(false) || !world.doveVisible) return;
     const before = foam;
     foam = Math.min(1, foam + d);
     world.fx.foam(foam);
-    if (Math.floor(before * 8) !== Math.floor(foam * 8)) sfx('bubble');
-    if (before < 1 && foam >= 1) say('¡Cuánta espuma! Ahora la ducha 🚿', 3500);
+    if (foam > 0.05) washSoaped = washSoaped || foam >= 0.45;
+    if (Math.floor(before * 8) !== Math.floor(foam * 8)) { sfx('bubble'); if (Math.random() < 0.35) dove.play('giggle'); }
+    if (before < 1 && foam >= 1) say('¡Cuánta espuma! Ahora la regadera 🚿', 3500);
   }
-  function shower() {
-    if (isAsleep() || showering > 0) return;
-    showering = 3.2; soapMode = false;
-    world.fx.shower(true); sfx('splash');
-    dove.play('giggle');
-    renderTray();
+  function getWet(amount, top) {
+    if (state.get().sleeping || !world.doveVisible) return;
+    const firstDrops = wet < 0.05;
+    wet = Math.min(1, wet + amount * 0.9);
+    if (firstDrops) { dove.play(top ? 'surprise' : 'giggle'); if (bathTalk <= 0) { say(pick(['¡Uy, qué fresquita! 💧', '¡Jiji, me hace cosquillas!', '¡Agüita! 🚿']), 2400); bathTalk = 6; } }
+    if (foam > 0) {
+      foam = Math.max(0, foam - amount * 0.55);
+      world.fx.foam(foam);
+      if (foam <= 0.001) { foam = 0; finishWash(); }
+    } else if (!washSoaped && washGain < 18) {
+      const g = Math.min(18 - washGain, amount * 9);
+      washGain += g; state.addStat('limpieza', g);
+    }
   }
-  function endShower() {
-    world.fx.shower(false);
-    const soaped = foam >= 0.45;
-    foam = 0; world.fx.foam(0);
-    if (soaped) {
+  function finishWash() {
+    if (washSoaped) {
+      washSoaped = false; washGain = 0;
       state.setStat('limpieza', 100); joy(3); state.addXp(3);
       world.fx.sparkles(12); sfx('sparkle'); dove.play('flap');
       say(pick(D.phrases.clean));
-    } else {
-      state.addStat('limpieza', 18);
-      say('Primero enjabóname bien 🧼', 3500);
     }
-    renderTray();
   }
+  function waterStopped() {
+    if (wet < 0.25 || !world.doveVisible || state.get().sleeping) { wet = 0; return; }
+    wet = 0;
+    // Se sacude el agua como un pajarito.
+    setTimeout(() => {
+      if (!alive || state.get().sleeping) return;
+      dove.play('shake'); world.fx.splash(); sfx('splash');
+      if (foam > 0) say('Todavía tengo espuma 🫧', 2600);
+      else if (!washSoaped && state.stat('limpieza') < 70) say('Primero enjabóname 🧼 y luego me mojas', 3200);
+    }, 450);
+  }
+  offs.push(world.on('grab', ({ id }) => { if (id === 'shower' || id === 'soap') { sfx('pop'); hideBubble(); } }));
+  offs.push(world.on('dragMove', ({ id, part, dist }) => {
+    if (id === 'soap' && part) addFoam(dist * 0.0028);
+  }));
+  offs.push(world.on('wet', ({ amount, top }) => getWet(amount, top)));
+  offs.push(world.on('waterStop', waterStopped));
 
   // ── Dormir ──
   function goToSleep() {
@@ -447,10 +479,28 @@ export async function mount(el, params = {}) {
       sfx('coo');
     });
   }
-  function applySleep(on) {
+  // Dormida: se acuesta en su camita del dormitorio. En los otros cuartos no está (duerme), pero se puede pasear.
+  const sleepNote = h('div', { class: 'home-sleepnote', hidden: true, role: 'status' });
+  el.append(sleepNote);
+  function placeDove({ instant = false } = {}) {
+    const sleeping = !!state.get().sleeping;
+    world.setBed(sleeping, { instant });
+    const here = !sleeping || room === 'dormitorio';
+    world.setDoveVisible(here);
+    sleepNote.hidden = here;
+    if (!here) {
+      clear(sleepNote).append(h('span', { class: 'home-sleepnote__z', 'aria-hidden': 'true' }, '💤'),
+        h('span', null, `${state.get().name} está dormida en su camita.`),
+        h('button', { type: 'button', class: 'home-sleepnote__go', onclick: () => { sfx('tap'); setRoom('dormitorio'); } }, 'Ir a verla 🌙'));
+    }
+    for (const b of tabs.children) b.classList.toggle('is-sleeping', sleeping && b.dataset.room === 'dormitorio');
+  }
+  function applySleep(on, { instant = false } = {}) {
     world.setLights(!on);
     dove.setSleeping(on);
     world.fx.zzz(on);
+    if (on && foam > 0) { foam = 0; world.fx.foam(0); }
+    placeDove({ instant });
     hideBubble();
     renderTray();
   }
@@ -459,7 +509,7 @@ export async function mount(el, params = {}) {
     state.setSleeping(false);
     applySleep(false);
     refreshDove();
-    if (!silent) { sfx('chirp'); dove.play('flap'); say(pick(D.phrases.wakeUp)); }
+    if (!silent) { sfx('chirp'); setTimeout(() => { if (alive) dove.play('flap'); }, 700); setTimeout(() => { if (alive) say(pick(D.phrases.wakeUp)); }, 900); }
   }
 
   // ── Oración ──
@@ -559,13 +609,15 @@ export async function mount(el, params = {}) {
   offs.push(world.on('stroke', ({ dx, dy }) => {
     if (state.get().sleeping) return;
     const d = Math.hypot(dx, dy);
-    if (room === 'bano' && soapMode) { addFoam(d * 0.0022); return; }
+    if (room === 'bano' && foam > 0) { addFoam(d * 0.0009); return; }
     strokeAcc += d;
     if (strokeAcc > 90) { strokeAcc = 0; world.fx.hearts(1); joy(0.6); sfx('pop'); }
   }));
   offs.push(world.on('tapProp', ({ id }) => {
     if (id === 'ball') { sfx('jump'); if (!isAsleep(false)) { dove.play('hop'); joy(1); } }
     else if (id === 'duck') sfx('chirp');
+    else if (id === 'shower') { world.water(3); }
+    else if (id === 'soap') { if (!isAsleep(false)) say('Arrastra el jabón hasta mí 🧼', 2600); }
     else if (id === 'lamp') { sfx('tap'); state.get().sleeping ? wake() : goToSleep(); }
     else if (id === 'candle') { sfx('sparkle'); world.setCandle(true); say('¡Qué linda luz! 🕯️', 2600); }
     else if (id === 'bible') { sfx('page'); go('bible'); }
@@ -587,11 +639,7 @@ export async function mount(el, params = {}) {
     joyBudget = Math.min(8, joyBudget + STEP * (8 / 60));
     if (playCool > 0) playCool -= STEP;
     if (bubbleTimer > 0) { bubbleTimer -= STEP; if (bubbleTimer <= 0) bubble.hidden = true; else placeBubble(); }
-    if (showering > 0) {
-      showering -= STEP;
-      if (foam > 0) { foam = Math.max(0.0001, foam - STEP * 0.12); world.fx.foam(Math.max(0, foam - (3.2 - showering) * 0.25)); }
-      if (showering <= 0) endShower();
-    }
+    if (bathTalk > 0) bathTalk -= STEP;
     nextTalk -= STEP;
     if (nextTalk <= 0) { nextTalk = 16 + Math.random() * 10; if (bubble.hidden && !document.querySelector('.modal-scrim')) talkAboutNeeds(); }
     refreshDove();
@@ -601,10 +649,11 @@ export async function mount(el, params = {}) {
   }, STEP * 1000);
 
   // ── Inicio ──
-  refreshTop(); refreshMeters(); refreshDove(); applyWear();
+  refreshTop(); refreshMeters(); refreshDove(); applyWear(); paintAviso();
+  try { reminders.sync(); } catch (e) { console.warn(e); }
   world.setRoom(room, { instant: true });
   for (const b of tabs.children) b.classList.toggle('is-on', b.dataset.room === room);
-  applySleep(!!state.get().sleeping);
+  applySleep(!!state.get().sleeping, { instant: true });
   world.resize(); world.start();
   renderTray();
 
@@ -614,7 +663,7 @@ export async function mount(el, params = {}) {
       // Primera vez: la palomita llega pequeñita en una jaulita.
       arriving = true;
       el.classList.add('home--arrival');
-      if (state.get().sleeping) { state.setSleeping(false); applySleep(false); }
+      if (state.get().sleeping) { state.setSleeping(false); applySleep(false, { instant: true }); }
       world.setGrowth?.(growthFor(state.get().level).scale);
       growthStage = growthFor(state.get().level).stage;
       const banner = h('div', { class: 'home-arrival' }, h('p', { class: 'home-arrival__title' }, '¡Te llegó un regalo!'), h('p', { class: 'home-arrival__hint' }, 'Toca la jaulita para abrirla'));
@@ -652,7 +701,7 @@ export async function mount(el, params = {}) {
       tts.stop();
       if (listener && listener.state !== 'off') { listener.stop(); if (state.setting('music') !== false) music(true); }
       ghost?.remove();
-      world.fx.shower(false); world.fx.foam(0);
+      world.fx.foam(0);
       world.stop();
       el.classList.remove('home');
     },

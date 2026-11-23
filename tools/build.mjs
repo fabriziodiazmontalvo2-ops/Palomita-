@@ -25,7 +25,9 @@ function walk(dir, out = []) {
   return out;
 }
 const precache = ['index.html', 'manifest.webmanifest',
-  ...walk('css'), ...walk('js').filter(f => !f.includes('/variants/')), ...walk('assets'),
+  ...walk('css'), ...walk('js').filter(f => !f.includes('/variants/')),
+  // La voz grabada pesa mucho: se guarda sin conexión a medida que se escucha (no toda de una vez).
+  ...walk('assets').filter(f => !f.startsWith('assets/voz/') || f === 'assets/voz/index.json'),
   ...walk('vendor').filter(f => /\.(js|woff2)$/.test(f)),
 ].filter(f => !/\.(md|txt|map)$/.test(f)).sort();
 const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
