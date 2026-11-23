@@ -8,6 +8,10 @@ El niño cuida a una palomita en 3D —come, se baña, duerme, juega y reza— y
 - **11 minijuegos con 100 niveles cada uno**, nacidos de parábolas e historias de la Biblia. Cada nivel da estrellas; hay cofres cada 10 niveles, medallas en los niveles 25, 50, 75 y 100, y accesorios de premio al juntar estrellas. Al terminar, cada juego regala un *mensaje para tu corazón*, una *misión de hoy* y un versículo.
 - **Catequesis interactiva**: lecciones animadas narradas (como videos cortos) sobre los sacramentos, los mandamientos, la vida y los milagros de Jesús, la Eucaristía y la Misa; **guía para la Primera Confesión** con examen de conciencia para niños (privado: no se guarda) y ensayo de qué decirle al sacerdote; **la Misa paso a paso** con las respuestas del pueblo y práctica «¿Qué respondemos?»; y el **Reto de fe**, un cuestionario dinámico con racha, comodín y premios.
 - **Mi Biblia**: historias del Antiguo y del Nuevo Testamento y los milagros de Jesús contados para niños, las parábolas, las oraciones con audio que resalta cada renglón y un modo «Rezar juntos», el camino «Mi camino a la Primera Comunión» con lectura y cuestionarios, y mensajes del día. Todo se puede **escuchar en voz alta**.
+- **Baño y camita como en las mascotas virtuales**: en el baño no hay botones; el niño arrastra el jabón para hacer espuma y la regadera (con su manguera) para mojarla y enjuagarla, y ella se sacude. En el dormitorio se acuesta en su **camita** y se tapa con su frazada; sigue durmiendo aunque el niño recorra la casa.
+- **Voz cálida de narradora**: historias, lecciones, oraciones, la Confesión, la Misa y las preguntas tienen voz **grabada** con una voz neuronal libre (no la voz robótica del teléfono). Lo que no esté grabado lo lee la voz del dispositivo.
+- **Mi parroquia — Santo Cura de Ars (Pío Pata, El Tambo, Huancayo)**: datos del párroco y del diácono, dirección con mapa, oficina parroquial, teléfono, fotos de la iglesia y del altar, **horarios de Misa** y **fechas de catequesis** (los edita un adulto) y **avisos en el teléfono** antes de la Misa y de la catequesis.
+- **Álbum de figuritas** (como el de las mascotas virtuales): 48 figuritas en 6 páginas —Jesús Resucitado de la parroquia, mi parroquia, el Santo Cura de Ars, «nuestros pastores explican», íconos de la fe y mi Primera Comunión— que salen en **sobres** (regalo diario, cofres de los juegos, lecciones terminadas o comprados con semillas), con figuritas brillantes, repetidas para cambiar y premios por página.
 - **Premios como en las mascotas virtuales**: regalo diario, cofre al subir de nivel, tienda de alimentos de la Biblia y accesorios (incluidos un chullo y una chalina andinos), y fotos de la palomita en un álbum.
 - **Sin anuncios, sin compras y sin recolección de datos.** El progreso se guarda solo en el dispositivo.
 
@@ -85,9 +89,11 @@ node tools/smoke-test.mjs   # recorre todas las pantallas y abre cada minijuego 
 
 ## Cómo está hecha
 
-- **Gráficos 3D en tiempo real** con WebGL y [Three.js](https://threejs.org/) (incluido en `vendor/`). La palomita, las habitaciones y los accesorios se modelan y animan por código: no hay archivos de modelos ni imágenes externas.
+- **Gráficos 3D en tiempo real** con WebGL y [Three.js](https://threejs.org/) (incluido en `vendor/`). La palomita, las habitaciones y los accesorios se modelan y animan por código: no hay archivos de modelos 3D.
 - **Minijuegos** en Canvas 2D sobre un motor propio (`js/games/engine.js`) que pone el marcador, las vidas, el reloj, la pausa, los premios y la tarjeta con el mensaje de la parábola.
-- **Sonido** sintetizado con Web Audio y **lectura en voz alta** con la voz del dispositivo.
+- **Sonido** sintetizado con Web Audio. **Voz de la narradora** grabada con [Piper](https://github.com/rhasspy/piper) (voz `es_MX-claude-high`, licencia Apache-2.0) frase por frase en paquetes Opus (`assets/voz/`); si un texto no está grabado, lo lee la voz del dispositivo.
+- **Ilustraciones** de las historias, lecciones y figuritas pintadas por código en Canvas (`js/art/`), más las fotos de la parroquia (`assets/parroquia/`). Cada figurita acepta una imagen propia (`assets/figuritas/<id>.webp`) para reemplazar el dibujo.
+- **Avisos** en Android con AlarmManager y notificaciones (se vuelven a programar al reiniciar el teléfono).
 - JavaScript moderno en módulos, sin compilación obligatoria y sin dependencias en ejecución.
 
 ```
@@ -98,7 +104,9 @@ js/core/                partida guardada, sonido, voz, interfaz, navegación
 js/pet/                 palomita 3D, habitaciones, accesorios
 js/screens/             pantallas: mascota, juegos y niveles, Biblia, catequesis, tienda, ajustes, bienvenida
 js/games/               motor, kit de dibujo y un archivo por minijuego
-js/data/                contenidos: parábolas, historias, oraciones, catequesis, versículos, trivia
+js/data/                contenidos: parábolas, historias, oraciones, catequesis, versículos, trivia, parroquia, figuritas
+js/art/                 escenas pintadas de las historias y dibujos de las figuritas
+assets/                 íconos, fotos de la parroquia y voz grabada de la narradora (assets/voz)
 tools/                  servidor de pruebas, validador de contenidos y empaquetador
 dev/                    páginas de laboratorio para probar piezas sueltas
 android/                app de Android que envuelve la app web (voz del teléfono, micrófono, botón atrás)
@@ -112,6 +120,16 @@ Todos los textos están en `js/data/` como datos sencillos. Después de cambiarl
 npm run validate            # revisa la forma, las longitudes y las citas
 ```
 
+Si cambias textos que se leen en voz alta, vuelve a grabar solo lo nuevo (las frases ya grabadas se reutilizan):
+
+```bash
+pip install piper-tts       # y descarga es_MX-claude-high.onnx (+ .onnx.json) de huggingface.co/rhasspy/piper-voices
+node tools/narration-texts.mjs --json > /tmp/narracion.json
+python3 tools/gen-voice.py /tmp/narracion.json es_MX-claude-high.onnx assets/voz
+```
+
+Los **horarios de Misa** oficiales van en `js/data/parroquia.js` (`MASS_TIMES`); desde la app, un adulto también puede agregarlos en *Mi parroquia → Misas*.
+
 ## Sobre los textos bíblicos y la doctrina
 
 - Las historias y parábolas son **adaptaciones para niños**, escritas para esta app, siempre con su **cita bíblica** para leer el texto completo en la Biblia de la familia o de la catequesis. No se reproduce ninguna traducción con derechos de autor.
@@ -123,4 +141,4 @@ npm run validate            # revisa la forma, las longitudes y las citas
 
 ## Licencias
 
-Código de la app: MIT. Three.js: MIT (`vendor/three/LICENSE`). Tipografías Baloo 2 y Nunito: SIL Open Font License (`vendor/fonts/`).
+Código de la app: MIT. Three.js: MIT (`vendor/three/LICENSE`). Tipografías Baloo 2 y Nunito: SIL Open Font License (`vendor/fonts/`). Voz de la narradora: grabada con Piper y el modelo `es_MX-claude-high` (Apache-2.0). Fotos de la Parroquia Santo Cura de Ars: proporcionadas por la familia usuaria.
