@@ -3,10 +3,12 @@
 Una app para niños que se preparan para su **Primera Comunión** (7 a 10 años).
 El niño cuida a una palomita en 3D —come, se baña, duerme, juega y reza— y, mientras tanto, va conociendo a Jesús:
 
-- **Mascota 3D** que reacciona cuando la tocas, con cinco habitaciones: el nido, la cocina, el baño, el dormitorio y el rincón de oración.
-- **11 minijuegos**, cada uno nacido de una parábola o historia de la Biblia. Al terminar, cada juego regala un *mensaje para tu corazón*, una *misión de hoy* y un versículo.
-- **Mi Biblia**: 40 historias del Antiguo y del Nuevo Testamento contadas para niños, las 11 parábolas e historias de los juegos, 22 oraciones (con un modo para aprenderlas de memoria), un camino de catequesis de 15 etapas hacia la Primera Comunión y 70 mensajes del día. Todo se puede **escuchar en voz alta**.
-- **Tienda** de alimentos de la Biblia y accesorios para la palomita, que se consiguen con las semillas que se ganan jugando, leyendo y rezando.
+- **Mascota 3D que crece**: la palomita llega pequeñita en una jaulita colgada de globos; el niño la abre y la cuida —come, se baña, duerme, juega y reza— en cinco habitaciones. Crece con su nivel (del 1 al 100): pichón, pequeña, joven, grande y adulta.
+- **Te repite lo que dices**: si se activa, la palomita escucha y repite con su vocecita sin tocar ningún botón (se apaga con la orejita 👂). El sonido no se guarda ni se envía.
+- **11 minijuegos con 100 niveles cada uno**, nacidos de parábolas e historias de la Biblia. Cada nivel da estrellas; hay cofres cada 10 niveles, medallas en los niveles 25, 50, 75 y 100, y accesorios de premio al juntar estrellas. Al terminar, cada juego regala un *mensaje para tu corazón*, una *misión de hoy* y un versículo.
+- **Catequesis interactiva**: lecciones animadas narradas (como videos cortos) sobre los sacramentos, los mandamientos, la vida y los milagros de Jesús, la Eucaristía y la Misa; **guía para la Primera Confesión** con examen de conciencia para niños (privado: no se guarda) y ensayo de qué decirle al sacerdote; **la Misa paso a paso** con las respuestas del pueblo y práctica «¿Qué respondemos?»; y el **Reto de fe**, un cuestionario dinámico con racha, comodín y premios.
+- **Mi Biblia**: historias del Antiguo y del Nuevo Testamento y los milagros de Jesús contados para niños, las parábolas, las oraciones con audio que resalta cada renglón y un modo «Rezar juntos», el camino «Mi camino a la Primera Comunión» con lectura y cuestionarios, y mensajes del día. Todo se puede **escuchar en voz alta**.
+- **Premios como en las mascotas virtuales**: regalo diario, cofre al subir de nivel, tienda de alimentos de la Biblia y accesorios (incluidos un chullo y una chalina andinos), y fotos de la palomita en un álbum.
 - **Sin anuncios, sin compras y sin recolección de datos.** El progreso se guarda solo en el dispositivo.
 
 | Juego | Parábola o historia | Cita |
@@ -94,7 +96,7 @@ css/                    estilos (app.css = sistema de diseño)
 js/main.js              arranque
 js/core/                partida guardada, sonido, voz, interfaz, navegación
 js/pet/                 palomita 3D, habitaciones, accesorios
-js/screens/             pantallas: mascota, juegos, Biblia, tienda, ajustes, bienvenida
+js/screens/             pantallas: mascota, juegos y niveles, Biblia, catequesis, tienda, ajustes, bienvenida
 js/games/               motor, kit de dibujo y un archivo por minijuego
 js/data/                contenidos: parábolas, historias, oraciones, catequesis, versículos, trivia
 tools/                  servidor de pruebas, validador de contenidos y empaquetador
@@ -115,6 +117,8 @@ npm run validate            # revisa la forma, las longitudes y las citas
 - Las historias y parábolas son **adaptaciones para niños**, escritas para esta app, siempre con su **cita bíblica** para leer el texto completo en la Biblia de la familia o de la catequesis. No se reproduce ninguna traducción con derechos de autor.
 - Las oraciones tradicionales van con su texto habitual en español de América Latina.
 - Los contenidos siguen la enseñanza de la Iglesia católica y fueron revisados con cuidado, pero **conviene que un sacerdote o catequista los lea** antes de usarlos en un grupo.
+- «Mi camino a la Primera Comunión» es un **temario general** ordenado según las cuatro partes del Catecismo (Creo, Celebro, Vivo, Rezo), con referencias a los santos del Perú. No es el temario oficial de ninguna diócesis: si la parroquia (por ejemplo, de la Arquidiócesis de Huancayo) usa otro orden u otros temas, se ajusta editando `js/data/catechism.js`.
+- Las respuestas de la Misa siguen el Misal Romano en español usado en América Latina; algunas costumbres (posturas, saludos en la confesión) pueden variar de una parroquia a otra.
 - La palomita es una amiga del niño. La paloma nos recuerda al Espíritu Santo y la paz, pero la mascota **no** lo representa.
 
 ## Licencias

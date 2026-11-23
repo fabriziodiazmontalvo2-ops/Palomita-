@@ -150,7 +150,7 @@ export const CONFESSION = {
       id: 'pecados',
       title: 'Cuenta tus pecados con sencillez',
       emoji: '🗣️',
-      text: 'Dile tus pecados con tus propias palabras, con sencillez y sin esconder nada. No hace falta contar detalles ni echarles la culpa a otros: solo lo que hiciste tú. Si no sabes cómo decir algo, el sacerdote te ayuda con cariño. Al terminar, avísale que ya acabaste.',
+      text: 'Dile tus pecados con tus propias palabras, con sencillez y sin esconder nada. No hace falta contar detalles ni echarles la culpa a otros: solo lo que hiciste tú. Puedes empezar diciendo «Me acuso de…». Si no sabes cómo decir algo, el sacerdote te ayuda con cariño. Al terminar, avísale que ya acabaste.',
       dialogue: [
         { who: 'yo', text: 'Me acuso de que desobedecí a mi mamá, de que dije una mentira y de que peleé con mi hermano.' },
         { who: 'yo', text: 'Esos son mis pecados. Me arrepiento de ellos y también de los que no recuerdo.' },

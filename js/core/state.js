@@ -212,7 +212,7 @@ export function tick(seconds) {
 // ── Semillas (monedas), experiencia y nivel ──
 export const MAX_LEVEL = 100;
 // Experiencia para pasar del nivel `level` al siguiente. Crecer hasta el 100 es un camino largo, como en las mascotas virtuales.
-export function xpForLevel(level) { return 30 + level * 6; }
+export function xpForLevel(level) { return 25 + level * 5; }
 export function addCoins(n) {
   n = Math.round(n);
   if (!n) return S.coins;
