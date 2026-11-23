@@ -10,6 +10,7 @@ let voice = null;
 let queue = [];
 let active = false;
 let endCb = null;
+let gen = 0;          // cada lectura nueva invalida los avisos tardíos de la anterior
 let indexCb = null;
 let queueIdx = [];
 
@@ -57,8 +58,9 @@ function next() {
   voice = voice || pickVoice();
   if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = 'es-MX';
   u.rate = 0.92; u.pitch = 1.12; u.volume = 1;
-  u.onend = () => { if (active) next(); };
-  u.onerror = () => finish();
+  const my = gen;
+  u.onend = () => { if (active && my === gen) next(); };
+  u.onerror = () => { if (my === gen) finish(); };
   try { s.speak(u); } catch { finish(); }
 }
 function finish() {
@@ -95,10 +97,13 @@ export function speak(text, { onend, onIndex, keepLines = false } = {}) {
     return true;
   }
   try { s.cancel(); } catch { /* nada */ }
-  next();
+  const my = ++gen;
+  // Chrome avisa tarde el fin de la lectura cancelada: se empieza un instante después.
+  setTimeout(() => { if (active && my === gen) next(); }, 60);
   return true;
 }
 export function stop() {
+  gen++;
   const s = synth();
   const cbWas = endCb;
   active = false; queue = []; queueIdx = []; endCb = null; indexCb = null;

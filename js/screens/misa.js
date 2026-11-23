@@ -69,6 +69,10 @@ export async function mount(el, params = {}) {
   }
   const goTab = (id, label, icon = '▶️') => button(label, { kind: 'sun', block: true, icon, sound: 'pop', onClick: () => { show(id); tabs.button(id)?.focus({ preventScroll: true }); } });
 
+  // Quién dice la frase: en las lecturas y la oración de los fieles, el lector; en lo demás, el sacerdote.
+  const LECTOR = new Set(['primera-lectura', 'segunda-lectura', 'salmo', 'oracion-de-los-fieles']);
+  const who = part => (LECTOR.has(part?.id) ? 'El lector dice' : 'El sacerdote dice');
+
   // ── Paso a paso: línea de tiempo vertical ──
   function viewPasos() {
     let n = 0;
@@ -76,7 +80,7 @@ export async function mount(el, params = {}) {
       n++;
       const pos = POSTURE[p.posture] || null;
       const dialogues = arr(p.dialogues).filter(d => d && (d.priest || d.people));
-      const readAll = () => [txt(p.title), txt(p.text), ...dialogues.flatMap(d => [`El sacerdote dice: ${txt(d.priest)}`, `Todos respondemos: ${txt(d.people)}`]), p.tip ? `Un consejo: ${txt(p.tip)}` : ''];
+      const readAll = () => [txt(p.title), txt(p.text), ...dialogues.flatMap(d => [`${who(p)}: ${txt(d.priest)}`, `Todos respondemos: ${txt(d.people)}`]), p.tip ? `Un consejo: ${txt(p.tip)}` : ''];
       return h('li', { class: 'ms-part', id: `ms-${p.id}` },
         h('span', { class: 'ms-part__dot', 'aria-hidden': 'true' }, txt(p.emoji) || '⛪'),
         h('article', { class: 'ms-part__card' },
@@ -88,7 +92,7 @@ export async function mount(el, params = {}) {
           pos ? h('span', { class: `ms-posture ms-posture--${p.posture.replace(/\s+/g, '-')}` }, deco(pos.icon), pos.label) : null,
           h('p', { class: 'ms-part__text' }, txt(p.text)),
           dialogues.length ? h('div', { class: 'ms-dialogues' }, dialogues.map(d => h('div', { class: 'ms-dlg' },
-            d.priest ? h('div', { class: 'ms-dlg__priest' }, h('span', { class: 'ms-dlg__who' }, deco('🧔'), 'El sacerdote dice'), h('p', null, `«${txt(d.priest)}»`)) : null,
+            d.priest ? h('div', { class: 'ms-dlg__priest' }, h('span', { class: 'ms-dlg__who' }, deco(LECTOR.has(p.id) ? '📖' : '🧔'), who(p)), h('p', null, `«${txt(d.priest)}»`)) : null,
             d.people ? h('div', { class: 'ms-dlg__people' }, h('span', { class: 'ms-dlg__who' }, deco('🙋'), 'Todos respondemos'), h('p', null, `«${txt(d.people)}»`)) : null))) : null,
           p.tip ? h('p', { class: 'ms-tip' }, deco('💡'), txt(p.tip)) : null));
     };
@@ -157,7 +161,7 @@ export async function mount(el, params = {}) {
         h('div', { class: 'ms-prac__hero' },
           h('span', { class: 'ms-prac__icon', 'aria-hidden': 'true' }, '🗣️'),
           h('h2', null, '¿Qué respondemos?'),
-          h('p', null, 'El sacerdote dice una frase y tú eliges qué respondemos todos. ¡Así participas en la Misa!')),
+          h('p', null, 'El sacerdote (o el lector) dice una frase y tú eliges qué respondemos todos. ¡Así participas en la Misa!')),
         won ? h('p', { class: 'ms-prac__won' }, deco('⭐'), '¡Ya ganaste el premio de la práctica! Puedes repetir cuando quieras.')
           : h('p', { class: 'ms-prac__goal' }, deco('🎁'), `Complétala sin errores y gana +${PRIZE_PRACTICE.coins} ${state.COIN.name} y +${PRIZE_PRACTICE.fe} de Fe.`),
         button('¡Empezar!', { kind: 'sun', block: true, icon: '▶️', sound: 'pop', onClick: play }));
@@ -182,7 +186,7 @@ export async function mount(el, params = {}) {
         const priest = h('div', { class: 'ms-say' },
           h('span', { class: 'ms-say__face', 'aria-hidden': 'true' }, '🧔'),
           h('div', { class: 'ms-say__box' },
-            h('span', { class: 'ms-say__who' }, 'El sacerdote dice'),
+            h('span', { class: 'ms-say__who' }, who(it.part)),
             h('p', null, `«${it.priest}»`)),
           speakBtn(() => it.priest, { compact: true, label: 'Escuchar al sacerdote' }));
         const eyebrow = h('p', { class: 'ms-prac__where' }, deco(g.icon), `${g.title} · ${txt(it.part.title)}`);
@@ -227,7 +231,9 @@ export async function mount(el, params = {}) {
         clear(box).append(h('div', { class: 'ct-result' },
           h('div', { class: 'ct-stars ms-result__stars', role: 'img', 'aria-label': `${hits} de ${round.length} respuestas correctas` },
             marks.map(ok => h('span', { class: ok ? '' : 'is-off', 'aria-hidden': 'true' }, '⭐'))),
-          h('p', { class: 'ct-result__msg', role: 'status' }, perfect ? '¡Sin errores! Ya sabes responder en la Misa.' : `¡Muy bien! Acertaste ${hits} de ${round.length}.`),
+          h('p', { class: 'ct-result__msg', role: 'status' }, perfect ? '¡Sin errores! Ya sabes responder en la Misa.'
+            : hits >= Math.ceil(round.length * 0.7) ? `¡Muy bien! Acertaste ${hits} de ${round.length}.`
+              : `¡Buen intento! Acertaste ${hits} de ${round.length}. Mira la Misa paso a paso y vuelve a practicar.`),
           rewardRow(gains),
           !perfect && !state.quizDone('misa:practica') ? h('p', { class: 'ct-result__hint' }, deco('🎁'), 'Complétala sin errores para ganar el premio.') : null,
           button('Practicar otra vez', { kind: 'sun', small: true, icon: '🔄', onClick: play }),

@@ -106,7 +106,7 @@
 .bb-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .bb-listen.is-on { --btn-bg: var(--coral); --btn-edge: var(--coral-deep); }
 .bb-font { display: inline-flex; gap: 8px; margin-left: auto; }
-.bb-font__btn { appearance: none; border: 0; cursor: pointer; width: 48px; height: 44px; border-radius: 14px; background: var(--white); color: var(--ink); box-shadow: 0 3px 0 var(--paper-edge);
+.bb-font__btn { appearance: none; border: 0; cursor: pointer; width: 48px; height: 48px; border-radius: 14px; background: var(--white); color: var(--ink); box-shadow: 0 3px 0 var(--paper-edge);
   font-family: var(--font-display); font-weight: 800; display: inline-flex; align-items: baseline; justify-content: center; gap: 1px; padding-top: 8px; }
 .bb-font__btn--minus { font-size: 1rem; }
 .bb-font__btn--plus { font-size: 1.35rem; padding-top: 4px; }
@@ -286,8 +286,8 @@
 .bb-lines.is-kar .bb-line { opacity: 0.55; }
 .bb-lines.is-kar .bb-line.is-past { opacity: 0.8; }
 .bb-lines.is-kar .bb-line.is-say { opacity: 1; background: #fff1c9; box-shadow: inset 0 0 0 3px var(--sun); transform: scale(1.03); }
-.bb-lines.is-kar .bb-line.is-you { opacity: 1; background: #f1e9ff; box-shadow: inset 0 0 0 3px var(--grape); margin-top: 14px; }
-.bb-you { position: absolute; top: -13px; right: 8px; display: inline-flex; flex-direction: column; gap: 2px; padding: 3px 10px 4px; border-radius: var(--r-pill); background: var(--grape); color: var(--white);
+.bb-lines.is-kar .bb-line.is-you { opacity: 1; background: #f1e9ff; box-shadow: inset 0 0 0 3px var(--grape); margin-top: 30px; }
+.bb-you { position: absolute; bottom: calc(100% + 2px); right: 8px; display: inline-flex; flex-direction: column; gap: 2px; padding: 3px 10px 4px; border-radius: var(--r-pill); background: var(--grape); color: var(--white);
   font-family: var(--font-display); font-weight: 800; font-size: 0.78rem; line-height: 1.1; box-shadow: 0 3px 8px var(--shade); animation: pop-in 0.3s cubic-bezier(0.2, 1.5, 0.4, 1) both; pointer-events: none; }
 .bb-you i { display: block; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.9); transform-origin: left; animation: bb-wait var(--wait, 3000ms) linear forwards; }
 @keyframes bb-wait { from { transform: scaleX(1); } to { transform: scaleX(0); } }

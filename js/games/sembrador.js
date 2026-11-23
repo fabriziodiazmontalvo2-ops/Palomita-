@@ -32,7 +32,7 @@ const NEWS = {
 export default {
   id: 'sembrador',
   levels: {
-    goal: [5, 24], curve: 1.1, time: [45, 110], selfEnd: false,
+    goal: [5, 24], curve: 1.1, time: [45, 100], selfEnd: false,
     goalLabel: n => `Siembra ${n} semillas en tierra buena`,
   },
   create(api) {
@@ -57,18 +57,18 @@ export default {
     const TYPES = ['buena', 'camino', 'piedras', 'espinas'];
     const FALL = 0.62;                                          // segundos que tarda en caer la semilla (igual en todas las pantallas)
     const COOL = 0.36;                                          // pausa mínima entre dos semillas
-    const BAG = GOAL + Math.round(lerp(12, 6, D));              // la bolsa: meta + holgura (grande al principio, pequeña al final)
-    const V0 = lerp(46, 84, Math.pow(D, 0.85));                 // velocidad del terreno al empezar la partida
-    const VR = lerp(8, 20, D);                                  // lo que acelera dentro de la partida…
+    const BAG = GOAL + Math.round(lerp(12, 5, D));              // la bolsa: meta + holgura (grande al principio, pequeña al final)
+    const V0 = lerp(46, 92, Math.pow(D, 0.85));                 // velocidad del terreno al empezar la partida
+    const VR = lerp(8, 24, D);                                  // lo que acelera dentro de la partida…
     const RAMP = 50;                                            // …en estos segundos
-    const GOOD_W = lerp(122, 52, Math.pow(D, 0.8));             // ancho medio de la tierra buena
+    const GOOD_W = lerp(122, 40, Math.pow(D, 0.8));             // ancho medio de la tierra buena
     const P_GOOD = lerp(0.68, 0.32, D);                         // probabilidad de tierra buena tras un tramo malo
     const MAX_BAD = Math.round(lerp(2, 4, D));                  // nunca más de estos tramos malos seguidos
     const BAD_W = [lerp(62, 74, D), lerp(98, 112, D)];          // ancho de los tramos malos
     const P_GOLD = F.golden ? lerp(0.24, 0.14, ramp(11, 89)) : 0;
     const P_SHRINK = F.shrink ? lerp(0.3, 0.6, ramp(61, 39)) : 0;
     const SHRINK = 0.27;                                        // cuánto se cierran las espinas por cada lado (fracción del ancho)
-    const BIRD_EVERY = F.fly ? lerp(6.5, 3.6, ramp(21, 79)) : 0;   // segundos entre pajaritos (en promedio)
+    const BIRD_EVERY = F.fly ? lerp(6.5, 3.2, ramp(21, 79)) : 0;   // segundos entre pajaritos (en promedio)
     const BIRD_V = lerp(52, 92, ramp(21, 79));
     const P_FLOCK = F.flock ? lerp(0.35, 0.65, ramp(71, 29)) : 0;
     const DRIFT = F.wind ? lerp(26, 56, ramp(31, 69)) : 0;      // desvío máximo de la semilla por el viento
@@ -373,9 +373,9 @@ export default {
       const night = SCENE === 'night', dusk = SKY === 'sunset';
       if (night) {
         kit.stars(g, W, L.sowerY + 40, t, 46, 11);
-        kit.moon(g, 300, api.top + 44, 20);
+        kit.moon(g, 66, api.top + 40, 20);
       } else if (dusk) kit.sun(g, 296, L.strip - 120, 26, t);
-      else kit.sun(g, 300, api.top + 46, 24, t);
+      else kit.sun(g, 66, api.top + 40, 22, t);
       if (!night) {
         kit.cloud(g, ((t * 7) % (W + 120)) - 60, api.top + 34, 0.9, dusk ? 0.75 : 0.95, dusk ? '#ffe3cf' : '#ffffff');
         kit.cloud(g, ((t * 4 + 200) % (W + 140)) - 70, api.top + 84, 0.7, dusk ? 0.65 : 0.8, dusk ? '#ffe3cf' : '#ffffff');
@@ -480,7 +480,7 @@ export default {
           else {
             rain.x -= rain.v * dt;
             for (const s of segs) if (s.type === 'buena' && !s.wet && !s.golden && s.x < rain.x + rain.w / 2 && s.x + s.w > rain.x - rain.w / 2) s.wet = true;
-            if (rain.x < -90) { rain = null; rainT = api.randRange(8, 14); }
+            if (rain.x < -90) { rain = null; rainT = api.randRange(8, 14) * lerp(1, 1.7, ramp(41, 59)); }
           }
         }
         // semillas que rebotan
@@ -574,10 +574,11 @@ export default {
         if (LV <= 10 && t < 9) {
           const a = clamp((9 - t) / 1.5);
           g.save(); g.globalAlpha = a;
-          kit.fillRR(g, 60, L.strip - 104, 240, 30, 15, 'rgba(255,255,255,0.92)');
-          kit.fillRR(g, 74, L.strip - 97, 30, 16, 5, '#7a4a2a');
-          kit.text(g, '= tierra buena', 112, L.strip - 88, { size: 15, align: 'left' });
-          kit.emoji(g, '🌾', 258, L.strip - 89, 18);
+          const ly = Math.max(L.handY + 60, L.strip - 150);   // encima de donde salen los «¡×30!»
+          kit.fillRR(g, 60, ly, 240, 30, 15, 'rgba(255,255,255,0.92)');
+          kit.fillRR(g, 74, ly + 7, 30, 16, 5, '#7a4a2a');
+          kit.text(g, '= tierra buena', 112, ly + 16, { size: 15, align: 'left' });
+          kit.emoji(g, '🌾', 258, ly + 15, 18);
           g.restore();
         }
       },

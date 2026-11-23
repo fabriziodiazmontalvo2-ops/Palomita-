@@ -4,6 +4,8 @@
 /* ───────── Armazón compartido ───────── */
 .ct { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .ct-top h1 { font-size: var(--fs-xl); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ct-top h1.is-long { font-size: var(--fs-lg); line-height: 1.12; white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.ct-top h1.is-xlong { font-size: 1.08rem; }
 .ct-chip { min-height: 40px; flex: none; }
 .ct-page { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--paper); border-radius: 22px 22px 0 0; box-shadow: 0 -4px 16px var(--shade); overflow: hidden; }
 .ct-scroll { padding-top: 16px; outline: none; }
@@ -232,10 +234,13 @@
 .ls-scene.is-in { animation: ls-fade 0.7s ease both; }
 .ls-cam { transform-origin: var(--ox, 50%) 60%; animation: ls-kb var(--kb, 10s) ease-out both; }
 @keyframes ls-fade { from { opacity: 0; } }
-@keyframes ls-kb { from { transform: scale(1); } to { transform: scale(1.07); } }
+@keyframes ls-kb { from { transform: scale(1); } to { transform: scale(1.05); } }
 /* Actores: x, y = centro del emoji (y = 100 abajo); nunca se salen del cuadro */
 .ls-actor { position: absolute; left: calc(var(--x) * 1%); top: calc(var(--y) * 1%); transform: translate(-50%, -50%);
-  left: clamp(calc(6.5cqw * var(--s)), calc(var(--x) * 1%), calc(100% - 6.5cqw * var(--s))); top: clamp(calc(6.5cqw * var(--s)), calc(var(--y) * 1%), calc(100% - 6.5cqw * var(--s)));
+  /* Media caja del emoji (≈1,3 em de ancho y 1,05 em de alto) + margen para el acercamiento lento de la cámara (ls-kb, ×1.05):
+     así ningún personaje se recorta, ni siquiera al final de la escena. */
+  left: clamp(calc(8.6cqw * var(--s) + 3.4cqw), calc(var(--x) * 1%), calc(100% - 8.6cqw * var(--s) - 3.4cqw));
+  top: clamp(calc(6.9cqw * var(--s) + 2.4cqw), calc(var(--y) * 1%), calc(100% - 6.9cqw * var(--s) - 2.4cqw));
   font-size: calc(var(--s) * 2.6rem); font-size: calc(var(--s) * 13cqw); line-height: 1; white-space: nowrap; filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.2)); pointer-events: none; }
 .ls-actor__in, .ls-actor__loop { display: block; }
 .ls-actor__in { animation: ls-in-fade 0.6s var(--d, 0s) ease-out both; }
@@ -294,6 +299,7 @@
 .ls-caption { min-height: 4.4em; display: flex; align-items: center; justify-content: center; text-align: center; padding: 12px 14px; border-radius: var(--r-md); background: var(--white);
   box-shadow: 0 4px 0 var(--paper-edge); font-family: var(--font-display); font-weight: 700; font-size: 1.22rem; line-height: 1.3; text-wrap: balance; }
 .ls-caption.is-new { animation: ls-cap 0.45s ease-out both; }
+.ls-ref { white-space: nowrap; }
 @keyframes ls-cap { from { opacity: 0; transform: translateY(6px); } }
 .ls-bar { position: relative; display: flex; align-items: center; justify-content: center; }
 .ls-count { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -375,11 +381,12 @@
 .cf-bubble.is-new { animation: cf-in 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
 .cf-bubble--me { flex-direction: row-reverse; align-self: flex-end; }
 .cf-bubble__face { flex: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; background: var(--white); box-shadow: 0 2px 0 var(--paper-edge); }
-.cf-bubble__box { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 8px 54px 10px 12px; border-radius: 18px 18px 18px 4px; background: var(--white); min-width: 0; box-shadow: 0 3px 0 rgba(61, 43, 36, 0.1); }
+.cf-bubble__box { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 8px 58px 10px 12px; border-radius: 18px 18px 18px 4px; background: var(--white); min-width: 0; box-shadow: 0 3px 0 rgba(61, 43, 36, 0.1); }
 .cf-bubble--me .cf-bubble__box { border-radius: 18px 18px 4px 18px; background: #fff1c9; }
 .cf-bubble__who { font-size: var(--fs-xs); font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); }
 .cf-bubble__box p { font-family: var(--font-display); font-weight: 700; font-size: 1.08rem; line-height: 1.3; }
-.cf-bubble__box .ct-say { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; font-size: 1.1rem; }
+.cf-bubble__box .ct-say { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; font-size: 1.1rem; }
+.cf-bubble__box .ct-say:active { transform: translateY(calc(-50% + 2px)); }
 @keyframes cf-in { from { opacity: 0; transform: translateY(10px) scale(0.95); } }
 .cf-chat__ctrl { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
 .cf-chat__done { display: flex; gap: 6px; font-family: var(--font-display); font-weight: 800; color: var(--leaf-deep); }

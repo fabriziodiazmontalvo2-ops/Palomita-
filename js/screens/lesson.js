@@ -78,6 +78,15 @@ export async function mount(el, params = {}) {
   sh.fill(player, endBox);
 
   // ── Escena ──
+  // Subtítulo como texto; las citas «(Lucas 22, 19-20)» no se parten en dos renglones.
+  function setCaption(t) {
+    const line = h('span', null);           // un solo bloque: el subtítulo es flex y centra su contenido
+    for (const part of txt(t).split(/(\([^()]*\d[^()]*\))/)) {
+      if (!part) continue;
+      line.append(/^\(.*\d.*\)$/.test(part) && part.length < 40 ? h('span', { class: 'ls-ref' }, part) : part);
+    }
+    clear(caption).append(line);
+  }
   function actorEl(a, k) {
     const anim = ANIMS.includes(a.anim) ? a.anim : 'pop';
     const s = clamp(num(a.s, 1), 0.4, 3);
@@ -100,7 +109,7 @@ export async function mount(el, params = {}) {
     sceneBox.append(layer);
     // El fundido: la escena nueva aparece encima y la anterior se quita después.
     if (old.length) life.later(() => old.forEach(o => o.remove()), reduceMotion() || !fade ? 0 : 700);
-    caption.textContent = capOf(sc);
+    setCaption(capOf(sc));
     caption.classList.remove('is-new');
     void caption.offsetWidth;
     caption.classList.add('is-new');
@@ -130,14 +139,15 @@ export async function mount(el, params = {}) {
     const voiceOk = voiceReady();
     muteBtn.disabled = !voiceOk;
     muteBtn.firstChild.textContent = voiceOk && !muted ? '🔊' : '🔇';
-    const ml = !voiceOk ? 'La voz no está disponible en este teléfono' : muted ? 'Activar la voz' : 'Silenciar la voz';
+    const ml = !voiceOk ? (tts.available() ? 'La voz está apagada en Ajustes' : 'La voz no está disponible en este teléfono') : muted ? 'Activar la voz' : 'Silenciar la voz';
     muteBtn.setAttribute('aria-label', ml);
     muteBtn.title = ml;
     muteBtn.setAttribute('aria-pressed', String(voiceOk && muted));
   }
 
   // ── Reproducción ──
-  function stopVoice() { tok++; life.cancel(waitId); waitId = 0; tts.stop(); }
+  let cutAt = -1e9;         // cuándo se cortó la voz por última vez
+  function stopVoice() { tok++; life.cancel(waitId); waitId = 0; cutAt = performance.now(); tts.stop(); }
 
   function begin(i, { fade = true } = {}) {
     stopVoice();
@@ -156,27 +166,34 @@ export async function mount(el, params = {}) {
       mode = 'voice';
       elapsed = 0;                                // la voz siempre lee la escena desde el principio
       dur = voiceGuess(sc);
-      const t0 = Date.now();
-      const text = sayOf(sc);
-      const ok = tts.speak(text, { onend: () => {
-        if (my !== tok || !playing || phase !== 'play') return;
-        const spent = Date.now() - t0;
-        if (spent < 400 && text.length > 24) {    // la voz no pudo hablar: seguimos por tiempo
-          mode = 'time';
-          dur = timeFor(sc);
-          elapsed = Math.min(elapsed, dur - 1200);
-          return;
-        }
-        elapsed = dur;
-        paintSegs();
-        waitId = life.later(() => { if (my === tok && playing) skip(true); }, 800);
-      } });
-      if (!ok) { mode = 'time'; dur = timeFor(sc); }
+      // Al cortar una voz (⏭, ⏮…), algunos navegadores avisan un instante después que la anterior «terminó».
+      // Esperar un poquito evita confundir ese aviso tardío con el final de la escena nueva.
+      const gap = Math.ceil(cutAt + 250 - performance.now());
+      if (gap > 0) waitId = life.later(() => { if (my === tok && playing && phase === 'play') say(my, sc); }, gap);
+      else say(my, sc);
     } else {
       mode = 'time';
       dur = timeFor(sc);
     }
     paintSegs();
+  }
+  function say(my, sc) {
+    const t0 = Date.now();
+    const text = sayOf(sc);
+    const ok = tts.speak(text, { onend: () => {
+      if (my !== tok || !playing || phase !== 'play') return;
+      const spent = Date.now() - t0;
+      if (spent < 400 && text.length > 24) {    // la voz no pudo hablar: seguimos por tiempo
+        mode = 'time';
+        dur = timeFor(sc);
+        elapsed = Math.min(elapsed, dur - 1200);
+        return;
+      }
+      elapsed = dur;
+      paintSegs();
+      waitId = life.later(() => { if (my === tok && playing) skip(true); }, 800);
+    } });
+    if (!ok && my === tok) { mode = 'time'; dur = timeFor(sc); }
   }
   function tick() {
     if (phase !== 'play' || !playing) return;
@@ -319,7 +336,7 @@ export async function mount(el, params = {}) {
 
   // Primer cuadro: la portada de la lección con su color; la primera escena ya está detrás, esperando.
   paintScene(0, { fade: false });
-  caption.textContent = txt(L.summary) || 'Toca ▶ para ver la lección.';
+  setCaption(txt(L.summary) || 'Toca ▶ para ver la lección.');
   sh.setChip(null);
   counter.textContent = `${n} escenas`;
   mode = canVoice() ? 'voice' : 'time';

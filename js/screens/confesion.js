@@ -236,9 +236,11 @@ export async function mount(el, params = {}) {
       if (shown < dialogue.length) {
         const nextWho = dialogue[shown].who === 'yo' ? 'Ahora tú' : 'Sigue el sacerdote';
         ctrl.append(button(`Siguiente · ${nextWho}`, { kind: 'grape', small: true, icon: '💬', onClick: () => { shown++; sfx('pop'); paint(); list.lastChild?.scrollIntoView({ behavior: smooth(), block: 'nearest' }); } }));
-      } else {
+      } else if (dialogue.length > 1) {
         ctrl.append(h('p', { class: 'cf-chat__done' }, deco('🌟'), '¡Muy bien! Ya sabes qué decir.'),
-          button('Ensayar otra vez', { kind: 'ghost', small: true, icon: '🔄', onClick: () => { shown = 1; paint(); } }));
+          button('Ensayar otra vez', { kind: 'ghost', small: true, icon: '🔄', onClick: () => { shown = 1; sfx('page'); paint(); list.firstChild?.scrollIntoView({ behavior: smooth(), block: 'nearest' }); } }));
+      } else {
+        ctrl.append(h('p', { class: 'cf-chat__done' }, deco('🗣️'), 'Dilo tú en voz alta, despacito.'));
       }
     }
     paint();

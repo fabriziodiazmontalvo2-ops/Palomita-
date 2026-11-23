@@ -104,9 +104,16 @@ export function shell(el, { title, onBack, cls = '' }) {
   const top = h('header', { class: 'topbar ct-top' }, iconButton('↩️', 'Volver', onBack), titleEl, chip);
   const root = h('div', { class: `ct ${cls}`.trim() }, top, page);
   el.append(root);
+  // Títulos largos (p. ej. el de una lección): letra más pequeña y hasta dos renglones, en vez de cortarse con «…».
+  const fitTitle = t => {
+    const n = [...txt(t)].length;
+    titleEl.classList.toggle('is-long', n > 12);
+    titleEl.classList.toggle('is-xlong', n > 30);
+  };
+  fitTitle(title);
   return {
     root, top, titleEl, chip, page, scroll,
-    setTitle(t) { titleEl.textContent = t; },
+    setTitle(t) { titleEl.textContent = t; fitTitle(t); },
     setChip(c) {
       clear(chip);
       chip.hidden = !c;

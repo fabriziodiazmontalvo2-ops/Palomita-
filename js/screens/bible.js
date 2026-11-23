@@ -957,7 +957,7 @@ export async function mount(el, params = {}) {
     function together(my, i) {
       if (my !== tok) return;
       if (i >= lines.length) { done(); return; }
-      status.textContent = 'Escucha el renglón… y luego repítelo tú.';
+      status.textContent = hasVoice() ? 'Escucha el renglón… y luego repítelo tú.' : 'Lee el renglón que brilla… y luego dilo tú en voz alta.';
       mark(i, 'say');
       const yourTurn = ms => {
         if (my !== tok) return;

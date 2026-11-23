@@ -27,6 +27,7 @@ const LEVELS = [
   { id: 'experto', name: 'Experto', icon: '🦁', sub: '25 s · más difícil', time: 25, trivia: [2, 3] },
 ];
 const ROUND = 10;
+const FULL_ROUNDS = 5;              // rondas de cada día con el premio completo (después, un premio pequeño)
 const MIN_POOL = 4;
 const recent = [];                 // preguntas de las últimas rondas (en esta sesión) para no repetirlas pronto
 const prefs = { topic: 'todo', level: 'normal' };
@@ -34,16 +35,19 @@ const prefs = { topic: 'todo', level: 'normal' };
 const norm = s => txt(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const valid = q => q && txt(q.q).trim() && arr(q.options).length >= 2 && Number.isInteger(q.answer) && q.answer >= 0 && q.answer < q.options.length;
 
-// Temas de una pregunta según su origen y algunas palabras clave.
-function tagsFromWords(s) {
+// Temas de una lección o tema del catecismo según su id y su título (palabras clave precisas: «Espíritu Santo» o
+// «Semana Santa» no son «María y los santos», y una lección de María no es de «Oraciones» solo por estar en la unidad Rezo).
+function tagsFromWords(raw) {
   const t = new Set();
-  s = norm(s);
-  if (/bautis|confirmaci|sacramento|uncion|matrimonio|orden sacerdotal/.test(s)) t.add('sacramentos');
+  const all = norm(raw).replace(/[-_]+/g, ' ');
+  if (/jesus|cristo|semana santa|pascua|resucit|resurrecci|\bcruz\b|ultima cena|milagro/.test(all)) t.add('jesus');
+  if (/creacion|\bnoe\b|abraham|moises|\badan\b|\bdavid\b|antiguo testamento/.test(all)) t.add('at');
+  const s = all.replace(/espiritu santo|semana santa|jueves santo|viernes santo|sabado santo|santa misa|santo evangelio|santa cena/g, ' ');
+  if (/bautis|confirmaci|sacramento|uncion|matrimonio|orden sacerdotal|eucarist|comunion|ultima cena/.test(s)) t.add('sacramentos');
   if (/reconcili|confes|penitencia|perdon de los pecados|examen de conciencia/.test(s)) { t.add('confesion'); t.add('sacramentos'); }
-  if (/\bmisa\b|eucarist|comuni[oó]n|consagr|homil|ofertorio|altar/.test(s)) t.add('misa');
-  if (/maria|virgen|santo |santa |santos|angel/.test(s)) t.add('maria');
-  if (/oracion|rezar|rezamos|padre nuestro|ave maria|credo|gloria al padre/.test(s)) t.add('oraciones');
-  if (/jesus|cristo/.test(s)) t.add('jesus');
+  if (/\bmisa\b|eucarist|comunion|consagr|homil|ofertorio|altar|ultima cena/.test(s)) t.add('misa');
+  if (/\bmaria\b|virgen|\bsant[oa]s?\b|\bsan [a-z]/.test(s)) t.add('maria');
+  if (/oracion|\brez[aoe]|padre nuestro|ave maria|\bcredo\b|gloria al padre/.test(s)) t.add('oraciones');
   return t;
 }
 function triviaTags(topic) {
@@ -60,7 +64,6 @@ function triviaTags(topic) {
   if (s.includes('mandamiento') || s.includes('camino') || s.includes('catecismo')) t.add('camino');
   return t;
 }
-const UNIT_TAGS = { celebro: ['sacramentos'], rezo: ['oraciones'], creo: [], vivo: [] };
 
 async function buildBank() {
   const [trivia, lessons, cat, at, nt, mi, parables, conf, mass] = await Promise.all(
@@ -76,11 +79,11 @@ async function buildBank() {
   };
   for (const q of arr(trivia)) add(q, triviaTags(q.topic), 'trivia', Number(q.level) || 2);
   for (const l of arr(lessons)) {
-    const base = new Set(['camino', ...(UNIT_TAGS[l.unit] || []), ...tagsFromWords(`${txt(l.id)} ${txt(l.title)}`)]);
+    const base = new Set(['camino', ...tagsFromWords(`${txt(l.id)} ${txt(l.title)}`)]);
     for (const q of arr(l.quiz)) add(q, base, 'lesson');
   }
   for (const c of arr(cat)) {
-    const base = new Set(['camino', ...(UNIT_TAGS[c.unit] || []), ...tagsFromWords(`${txt(c.id)} ${txt(c.title)}`)]);
+    const base = new Set(['camino', ...tagsFromWords(`${txt(c.id)} ${txt(c.title)}`)]);
     for (const q of arr(c.quiz)) add(q, base, 'catechism');
   }
   for (const s of arr(at)) for (const q of arr(s.quiz)) add(q, ['at'], 'story');
@@ -333,8 +336,12 @@ export async function mount(el, params = {}) {
       const prev = best(topic.id);
       const record = hits > prev;
       if (record) state.setFlag(`reto:best:${topic.id}`, hits);
-      const coins = hits + (hits === total ? 5 : 0) + (record && prev ? 2 : 0);
-      const gains = grant({ coins, xp: 4 + hits });
+      // Premio completo en las primeras rondas del día; después uno pequeño, para que no se pueda «cosechar» sin fin.
+      let full = false;
+      for (let k = 1; k <= FULL_ROUNDS && !full; k++) full = state.dailyOnce(`reto:ronda${k}`);
+      const bonus = record && prev ? 2 : 0;
+      const coins = full ? hits + (hits === total ? 5 : 0) + bonus : Math.ceil(hits / 4) + bonus;
+      const gains = grant({ coins, xp: full ? 4 + hits : 1 + Math.floor(hits / 3) });
       sfx(stars === 3 ? 'win' : stars === 2 ? 'sticker' : 'sparkle');
       if (stars >= 2) celebrate(sh.page, ['⭐', '🏆', '✨', '🌟']);
       const msg = stars === 3 ? '¡Eres un campeón de la fe!' : stars === 2 ? '¡Muy bien! Sabes mucho.' : '¡Buen intento! Cada reto te ayuda a aprender.';
@@ -349,6 +356,7 @@ export async function mount(el, params = {}) {
           h('span', null, deco('🔥'), `Mejor racha: ${bestStreak}`)),
         record ? h('p', { class: 'rt-record' }, deco('🏅'), `¡Nuevo récord en ${topic.name}!`) : prev ? h('p', { class: 'rt-result__best' }, `Tu récord: ${Math.max(prev, hits)}/${ROUND}`) : null,
         rewardRow(gains),
+        full ? null : h('p', { class: 'rt-result__best' }, deco('🌙'), '¡Cuánto practicas! Hoy ya ganaste los premios grandes del reto. Mañana vuelven.'),
         h('div', { class: 'rt-result__row' },
           button('Jugar otra vez', { kind: 'sun', icon: '🔄', sound: 'pop', onClick: () => startRound() }),
           button('Cambiar tema', { kind: 'ghost', icon: '🎯', onClick: () => { endGame(); setup(); } }))));
