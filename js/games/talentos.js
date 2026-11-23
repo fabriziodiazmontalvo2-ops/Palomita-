@@ -64,7 +64,7 @@ const SCENES = {
 export default {
   id: 'talentos',
   levels: {
-    goal: [5, 30], curve: 1.1, time: [45, 72], selfEnd: true,
+    goal: [5, 30], curve: 1.1, time: [45, 74], selfEnd: true,
     goalLabel: n => `Encuentra ${n} parejas de talentos`,
   },
   create(api) {
@@ -82,7 +82,7 @@ export default {
     const SC = SCENES[THEME];
 
     // ───────────────────────── Dificultad del nivel ─────────────────────────
-    const MAXB = LV <= 5 ? 3 : Math.round(lerp(4, 10, Math.pow(clamp((LV - 6) / 94), 0.8)));   // parejas por tablero
+    const BS = LV <= 5 ? 3 : Math.round(lerp(3, 10, Math.pow((LV - 1) / 99, 0.85)));   // parejas del tablero principal
     const PREV0 = lerp(2.4, 1.0, Math.pow(D, 0.8));            // vista previa: base…
     const PREV_CARD = lerp(0.1, 0.035, D);                     // …más un poquito por cada carta a la vista
     const MISS_T = lerp(0.95, 1.0, D);                         // cuánto se quedan boca arriba dos cartas distintas
@@ -109,9 +109,14 @@ export default {
     const P_ROT = has(61) ? lerp(0.3, 0.4, ramp(61, 39)) : 0;
     const DOVE_FLY = 0.55;
 
-    // Tableros del nivel: tantos como hagan falta para la meta; el resto se reparte entre los últimos.
-    const NB = Math.max(1, Math.ceil(GOAL / MAXB));
-    const PLAN = Array.from({ length: NB }, (_, i) => Math.floor(GOAL / NB) + (i >= NB - (GOAL % NB) ? 1 : 0));
+    // Tableros del nivel: los que quepan del tamaño principal; lo que sobra va primero, como tablero de calentamiento
+    // (si sobra una sola pareja, se suma al último tablero). Así el tamaño principal nunca baja al subir de nivel.
+    const PLAN = Array(Math.floor(GOAL / BS)).fill(BS);
+    const REST = GOAL % BS;
+    if (REST >= 2 || !PLAN.length) PLAN.unshift(REST || GOAL);
+    else if (REST === 1) PLAN[PLAN.length - 1]++;
+    const NB = PLAN.length;
+    const NOVEL_B = Math.max(0, PLAN.findIndex(p => p >= 4));   // tablero donde se enseña la novedad del nivel
 
     // ───────────────────────── Estado ─────────────────────────
     let t = 0, phase = 'deal', phaseT = 0, dealDur = 0, prevT = 0, bi = 0, rk = 0;
@@ -165,9 +170,9 @@ export default {
     const visible = c => !c.gone && (c.up || c.matched || c.peek > 0 || phase === 'won' || phase === 'end' || (phase === 'preview' && !c.buried));
 
     function deal() {
-      const P = PLAN[bi] || MAXB;
+      const P = PLAN[bi] || BS;
       rk = NB > 1 ? bi / (NB - 1) : 0;
-      const novel = n => LV === n && bi === 0;                // la novedad se enseña seguro en el primer tablero
+      const novel = n => LV === n && bi === NOVEL_B;          // la novedad se enseña seguro en el primer tablero grande
       const gold = P >= 3 && has(11) && (novel(11) || api.rand() < P_GOLD);
       const multi = P >= 4 && has(31) && (novel(31) || api.rand() < P_MULTI);
       const hasDove = P >= 4 && has(41) && (novel(41) || api.rand() < P_DOVE);
@@ -206,12 +211,11 @@ export default {
       dealDur = 0.35 + cards.length * 0.03;
       phase = 'deal'; phaseT = 0;
       api.sfx('whoosh');
+      // La novedad del nivel se cuenta al repartir el tablero que la trae, mientras las cartas están boca abajo.
+      if (bi === NOVEL_B && NEWS[LV]) { api.hint(NEWS[LV], 2600); dealDur += 1.9; }
+      else if (bi === 0 && LV <= 3) { api.hint('¡Memoriza dónde está cada talento!', 1900); dealDur += 1.6; }
     }
-
-    // Primer tablero: si el nivel trae una novedad, se cuenta mientras las cartas están boca abajo.
     deal();
-    if (NEWS[LV]) { api.hint(NEWS[LV], 2600); dealDur += 1.9; }
-    else if (LV <= 3) { api.hint('¡Memoriza dónde está cada talento!', 1900); dealDur += 1.6; }
 
     // ───────────────────────── Barajeos ─────────────────────────
     const movable = () => cards.filter(c => !c.gone && !c.matched && !c.up && !c.buried && c.peek <= 0);
@@ -304,12 +308,12 @@ export default {
       a.matched = b.matched = true; a.glow = b.glow = 1; open = [];
       pairsLeft--;
       const [ax, ay] = center(a), [bx, by] = center(b);
-      const mx = (ax + bx) / 2, my = Math.min(ay, by) - G.h * 0.3;
+      const mx = (ax + bx) / 2, my = Math.max(api.top + 56, Math.min(ay, by) - G.h * 0.3);   // sin subir hasta el marcador
       api.addScore(a.kind === 'multi' ? 2 : 1, mx, my);
       let bonus = PAIR_T;
       if (a.kind === 'gold') {
         bonus += GOLD_T;
-        api.floatText(mx, my - 26, `+${Math.round(bonus)} s`, { color: '#fff3a6', size: 22 });
+        api.floatText(mx, my + 26, `+${Math.round(bonus)} s`, { color: '#fff3a6', size: 22 });
         api.sfx('coin');
       } else if (a.kind === 'multi') api.sfx('good');
       api.addTime(bonus);
@@ -320,7 +324,7 @@ export default {
         phase = 'clear'; phaseT = 0;
         for (const c of cards) if (c.single) c.gone = true;
         api.addTime(CLEAR_T);
-        api.floatText(W / 2, api.top + 52, `¡Tablero completo! +${Math.round(CLEAR_T)} s`, { color: '#fff3a6', size: 20 });
+        api.floatText(W / 2, api.top + 60, `+${Math.round(CLEAR_T)} s`, { color: '#fff3a6', size: 22 });
         api.sfx('bell');
         return;
       }
@@ -413,9 +417,9 @@ export default {
     function drawDove(g) {
       if (!dove) return;
       const [a, b] = dove.pair;
-      const [tx, ty] = a && b ? [(center(a)[0] + center(b)[0]) / 2, Math.min(center(a)[1], center(b)[1]) - G.h * 0.45] : [W / 2, api.top + 60];
+      const [tx, ty] = a && b ? [(center(a)[0] + center(b)[0]) / 2, Math.max(api.top + 50, Math.min(center(a)[1], center(b)[1]) - G.h * 0.45)] : [W / 2, api.top + 60];
       const p = ease.inOut(clamp(dove.t / DOVE_FLY));
-      const x = lerp(dove.x0, tx, p), y = lerp(dove.y0, ty, p) - Math.sin(p * Math.PI) * 40;
+      const x = lerp(dove.x0, tx, p), y = Math.max(api.top + 50, lerp(dove.y0, ty, p) - Math.sin(p * Math.PI) * 40);
       const alpha = clamp(1 - (dove.t - DOVE_FLY - 0.5) / 0.4);
       g.save(); g.globalAlpha = alpha;
       kit.dove(g, x, y, 0.7, { flap: 0.5 + 0.5 * Math.sin(t * 16), dir: tx >= dove.x0 ? 1 : -1 });

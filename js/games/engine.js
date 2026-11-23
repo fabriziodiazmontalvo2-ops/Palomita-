@@ -192,8 +192,8 @@ export async function startGame(id, { onExit, skipIntro = false, seed, level } =
     goalHit = true;
     audio.sfx('sticker');
     api.burst(W / 2, H * 0.3, { emoji: '⭐', count: 8, speed: 170, size: 18, life: 1 });
-    if (spec.selfEnd) api.hint('🏅 ¡Meta lograda!', 2000);
-    else finish({ won: true });
+    // Los juegos con final propio hacen su celebración; el resto termina aquí.
+    if (!spec.selfEnd) finish({ won: true });
   }
   function renderScore() { scoreVal.textContent = spec.goal > 0 ? `${score}/${spec.goal}` : String(score); }
   const maxLives = () => (def.hud?.lives ? (spec.lives ?? def.hud.lives) : 0);

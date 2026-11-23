@@ -24,7 +24,7 @@ export const GAMES = [
   },
   {
     id: 'sembrador', scoreIcon: '🌾', title: 'El sembrador', parable: 'sembrador', icon: '🌾', colors: ['#f0a93b', '#e2643a'],
-    how: ['Toca la pantalla para soltar una semilla.', 'Apunta a la tierra buena: ahí crece el trigo.', 'Tienes 26 semillas: en el camino, las piedras y las espinas se pierden.'],
+    how: ['Toca la pantalla para soltar una semilla.', 'Apunta a la tierra buena: ahí crece el trigo.', 'Tu bolsa trae semillas contadas: en el camino, las piedras y las espinas se pierden.'],
     hud: { time: 60 }, goal: 12, goalText: 'Siembra 12 semillas en tierra buena', coinRate: 2.5, maxCoins: 45,
     load: () => import('./sembrador.js'),
   },
@@ -66,7 +66,7 @@ export const GAMES = [
   },
   {
     id: 'panes', scoreIcon: '🧺', title: 'Panes y peces', parable: 'panes', icon: '🧺', colors: ['#e9a04b', '#62c370'],
-    how: ['La gente tiene hambre y pide pan o pescado.', 'Toca el pan o el pez de la canasta y luego a quien lo pidió.', 'Jesús hace que alcance para todos.'],
+    how: ['Mira qué hay en la canasta: pan o pez.', 'Toca a quien lo está pidiendo.', 'Jesús hace que alcance para todos.'],
     hud: { time: 60 }, goal: 30, goalText: 'Comparte con 30 personas', coinRate: 1.2, maxCoins: 45,
     load: () => import('./panes.js'),
   },

@@ -358,3 +358,12 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; line-height: 1.
 .gm-prize.is-on { background: #fff1c9; }
 .gm-prize.is-on span { filter: none; }
 .gm-prize small { font-size: 0.62rem; font-weight: 800; text-align: center; line-height: 1.1; font-family: var(--font-body); }
+/* Marcador: nunca en dos renglones, aunque la meta tenga tres cifras */
+.game-hud { flex-wrap: nowrap; }
+.game-hud .chip { white-space: nowrap; flex: none; }
+.game-hud__level { font-size: var(--fs-xs); padding-left: 9px; padding-right: 9px; }
+.game-hud__hearts { font-size: 0.95rem; letter-spacing: 0; }
+/* Cartelito de ayuda: delgado y justo debajo del marcador, para no tapar el juego */
+.game-hint { top: calc(var(--safe-t) + 64px); }
+.game-hint > span { font-size: var(--fs-md); padding: 7px 14px; background: rgba(255, 255, 255, 0.9); }
+@media (max-width: 380px) { .game-hud { gap: 5px; } .game-hud .chip { padding-left: 8px; padding-right: 8px; } }
