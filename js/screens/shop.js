@@ -67,7 +67,7 @@ export async function mount(el, params = {}) {
 
   function render() {
     refreshCoins();
-    clear(tabsEl).append(TABS.map(([id, icon, label]) => h('button', { type: 'button', role: 'tab', class: `shop-tab ${id === tab ? 'is-on' : ''}`.trim(), 'aria-selected': String(id === tab),
+    clear(tabsEl).append(...TABS.map(([id, icon, label]) => h('button', { type: 'button', role: 'tab', class: `shop-tab ${id === tab ? 'is-on' : ''}`.trim(), 'aria-selected': String(id === tab),
       onclick: () => { sfx('tap'); tab = id; render(); list.scrollTop = 0; } }, h('span', { 'aria-hidden': 'true' }, icon), label)));
     clear(list);
     if (tab === 'comida') {

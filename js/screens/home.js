@@ -192,8 +192,9 @@ export async function mount(el, params = {}) {
     clear(tray);
     tray.dataset.room = room;
     if (room === 'sala') {
-      tray.append(trayButton('🎾', 'Jugar', playWithDove), talkback.available() ? trayButton('🎤', talking ? 'Te escucho…' : 'Háblame', talk, { cls: talking ? 'is-on' : '' }) : null,
-        trayButton('🎮', 'Juegos', () => go('games'), { kind: 'accent' }));
+      tray.append(trayButton('🎾', 'Jugar', playWithDove));
+      if (talkback.available()) tray.append(trayButton('🎤', talking ? 'Te escucho…' : 'Háblame', talk, { cls: talking ? 'is-on' : '' }));
+      tray.append(trayButton('🎮', 'Juegos', () => go('games'), { kind: 'accent' }));
     } else if (room === 'cocina') {
       const have = FOODS.filter(f => state.countItem(f.id) > 0);
       const strip = h('div', { class: 'home-foods' },

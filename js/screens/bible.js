@@ -353,7 +353,8 @@ export async function mount(el, params = {}) {
     clear(chip);
     chip.hidden = !out.chip;
     if (out.chip) {
-      chip.append(out.chip.icon ? deco(out.chip.icon) : null, out.chip.text);
+      if (out.chip.icon) chip.append(deco(out.chip.icon));
+      chip.append(out.chip.text);
       chip.setAttribute('aria-label', out.chip.label || out.chip.text);
     }
     clear(scroll).append(h('div', { class: `bb-view bb-view--${next.kind}` }, out.body));
@@ -427,10 +428,9 @@ export async function mount(el, params = {}) {
         const last = i === qs.length - 1;
         const nextBtn = button(last ? 'Ver mi resultado' : 'Siguiente pregunta', { kind: last ? 'sun' : 'sky', small: true, onClick: () => { if (last) finish(); else { i++; ask(); box.scrollIntoView({ behavior: smooth(), block: 'nearest' }); } } });
         fb.classList.add(right ? 'is-ok' : 'is-no');
-        fb.append(
-          h('p', { class: 'bb-fb__title' }, deco(right ? '🌟' : '💡'), right ? '¡Muy bien!' : `Casi. La respuesta es: ${txt(q.options[q.answer])}`),
-          q.explain ? h('p', { class: 'bb-fb__text' }, txt(q.explain)) : null,
-          nextBtn);
+        fb.append(h('p', { class: 'bb-fb__title' }, deco(right ? '🌟' : '💡'), right ? '¡Muy bien!' : `Casi. La respuesta es: ${txt(q.options[q.answer])}`));
+        if (q.explain) fb.append(h('p', { class: 'bb-fb__text' }, txt(q.explain)));
+        fb.append(nextBtn);
         fb.hidden = false;
         nextBtn.focus({ preventScroll: true });
         fb.scrollIntoView({ behavior: smooth(), block: 'nearest' });
@@ -940,7 +940,7 @@ export async function mount(el, params = {}) {
       const head = h('button', { type: 'button', class: 'bb-theme__head', 'aria-expanded': 'false', 'aria-controls': panel.id, onclick: () => {
         const openNow = panel.hidden;
         sfx(openNow ? 'pop' : 'tap');
-        if (openNow && !panel.firstChild) panel.append(items.map(verseRow));
+        if (openNow && !panel.firstChild) panel.append(...items.map(verseRow));
         panel.hidden = !openNow;
         head.setAttribute('aria-expanded', String(openNow));
         box.classList.toggle('is-open', openNow);
