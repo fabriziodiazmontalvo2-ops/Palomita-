@@ -939,7 +939,7 @@ export const STORIES_NT = [
     title: 'Pentecostés',
     ref: 'Hechos 2, 1-13',
     emoji: '🔥',
-    art: { bg: 'cenaculo', emojis: ['🔥', '🌬️', '🌍'] },
+    art: { bg: 'dorado', emojis: ['🔥', '🌬️', '🌍'] },
     summary: 'Con viento y fuego, el Espíritu Santo llena de fuerza y valentía a los amigos de Jesús.',
     paragraphs: [
       'Jesús había prometido enviar al Espíritu Santo. Por eso sus amigos lo esperaban en Jerusalén, rezando juntos, con María, la madre de Jesús. Cuando llegó el día de la fiesta de Pentecostés, estaban todos reunidos en el mismo lugar.',

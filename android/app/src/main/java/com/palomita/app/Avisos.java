@@ -18,9 +18,11 @@ import org.json.JSONObject;
 
 /**
  * Avisos de la parroquia (Misas y catequesis) como notificaciones del teléfono.
- * La app web calcula la lista de avisos de las próximas semanas ({ id, atMillis, title, text }) y la manda aquí;
- * se guarda para volver a programarla cuando el teléfono se reinicia. Las alarmas son inexactas a propósito
- * (no hace falta el permiso de alarmas exactas): el aviso puede llegar unos minutos antes o después.
+ * La app web calcula la lista de avisos de las próximas semanas ({ id, atMillis, expiresMillis?, title, text })
+ * y la manda aquí; se guarda para volver a programarla cuando el teléfono se reinicia.
+ * Si el teléfono lo permite, la alarma es exacta (el aviso de «1 hora antes» llega a tiempo); si no, es inexacta
+ * y puede llegar tarde (hasta una hora en Android 12 o más nuevo). Un aviso que llega después de su vencimiento
+ * (expiresMillis, por ejemplo cuando la Misa ya empezó) no se muestra.
  */
 final class Avisos {
     static final String CHANNEL = "avisos";
@@ -45,15 +47,27 @@ final class Avisos {
                 JSONObject o = list.getJSONObject(i);
                 String id = o.optString("id", "");
                 long at = o.optLong("atMillis", 0);
-                if (id.isEmpty() || at <= now) continue;
-                PendingIntent pi = alarmIntent(app, id, o.optString("title", "Palomita"), o.optString("text", ""));
-                if (am != null) am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
+                long expires = o.optLong("expiresMillis", 0);
+                if (id.isEmpty() || at <= now || (expires > 0 && expires <= now)) continue;
+                PendingIntent pi = alarmIntent(app, id, o.optString("title", "Palomita"), o.optString("text", ""), expires);
+                if (am != null) setAlarm(am, at, pi);
                 ids.put(id);
             }
             prefs.edit().putString(KEY_JSON, list.toString()).putString(KEY_IDS, ids.toString()).apply();
         } catch (Exception e) {
             prefs.edit().putString(KEY_JSON, "[]").putString(KEY_IDS, ids.toString()).apply();
         }
+    }
+
+    /** Exacta si el teléfono lo permite; si no, inexacta (puede llegar algo tarde). */
+    private static void setAlarm(AlarmManager am, long at, PendingIntent pi) {
+        try {
+            if (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()) {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
+                return;
+            }
+        } catch (SecurityException ignored) { /* sin permiso de alarmas exactas */ }
+        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
     }
 
     /** Después de reiniciar el teléfono o de actualizar la app: vuelve a programar lo guardado. */
@@ -68,20 +82,21 @@ final class Avisos {
         try {
             JSONArray ids = new JSONArray(idsJson);
             for (int i = 0; i < ids.length(); i++) {
-                PendingIntent pi = alarmIntent(app, ids.getString(i), "", "");
+                PendingIntent pi = alarmIntent(app, ids.getString(i), "", "", 0);
                 am.cancel(pi);
                 pi.cancel();
             }
         } catch (Exception ignored) { }
     }
 
-    private static PendingIntent alarmIntent(Context app, String id, String title, String text) {
+    private static PendingIntent alarmIntent(Context app, String id, String title, String text, long expires) {
         Intent i = new Intent(app, AvisoReceiver.class)
                 .setAction(ACTION)
                 .setData(Uri.parse("palomita://aviso/" + Uri.encode(id)))
                 .putExtra("id", id)
                 .putExtra("title", title)
-                .putExtra("text", text);
+                .putExtra("text", text)
+                .putExtra("expires", expires);
         return PendingIntent.getBroadcast(app, id.hashCode(), i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 

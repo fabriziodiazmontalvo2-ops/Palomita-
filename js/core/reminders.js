@@ -222,25 +222,38 @@ export function notifications(now = new Date()) {
   for (const e of upcoming(AHEAD_DAYS, { from: now })) {
     const hour = fmtTime(`${String(e.start.getHours()).padStart(2, '0')}:${String(e.start.getMinutes()).padStart(2, '0')}`);
     const extra = e.note ? ` · ${e.note}` : '';
+    // El teléfono puede entregar un aviso un poco tarde: el título dice la hora (no «en una hora»)
+    // y cada aviso tiene vencimiento (expiresMillis): si llega cuando ya no sirve, no se muestra.
     if (lead === 'ambos' || lead === 'hora') {
       const t = e.start.getTime() - 60 * 60000;
       if (t > now.getTime()) {
+        const expiresMillis = e.start.getTime();
         out.push(e.kind === 'misa'
-          ? { id: `${e.id}#h`, atMillis: t, title: '⛪ En una hora es la Misa', text: `Hoy a las ${hour} en la ${place}. ¡Jesús te espera!` }
-          : { id: `${e.id}#h`, atMillis: t, title: '📖 En una hora tienes catequesis', text: dot(`Hoy a las ${hour}${extra}`) + ' ¡Lleva tu cuaderno y muchas ganas de aprender!' });
+          ? { id: `${e.id}#h`, atMillis: t, expiresMillis, title: `⛪ Hoy hay Misa a las ${hour}`, text: `En la ${place}. ¡Jesús te espera!` }
+          : { id: `${e.id}#h`, atMillis: t, expiresMillis, title: `📖 Hoy tienes catequesis a las ${hour}`, text: dot(`Hoy a las ${hour}${extra}`) + ' ¡Lleva tu cuaderno y muchas ganas de aprender!' });
       }
     }
     if (lead === 'ambos' || lead === 'dia') {
       const eve = new Date(e.start.getFullYear(), e.start.getMonth(), e.start.getDate() - 1, 18, 0, 0, 0).getTime();
       if (eve > now.getTime()) {
         const dname = DAYS[e.start.getDay()].toLowerCase();
+        const expiresMillis = new Date(e.start.getFullYear(), e.start.getMonth(), e.start.getDate()).getTime();   // ya es el mismo día: no sirve
         out.push(e.kind === 'misa'
-          ? { id: `${e.id}#d`, atMillis: eve, title: '⛪ Mañana hay Misa', text: `Mañana ${dname} a las ${hour} en la ${place}. ¡Prepárate con alegría!` }
-          : { id: `${e.id}#d`, atMillis: eve, title: '📖 Mañana tienes catequesis', text: dot(`Mañana ${dname} a las ${hour}${extra}`) });
+          ? { id: `${e.id}#d`, atMillis: eve, expiresMillis, title: '⛪ Mañana hay Misa', text: `Mañana ${dname} a las ${hour} en la ${place}. ¡Prepárate con alegría!` }
+          : { id: `${e.id}#d`, atMillis: eve, expiresMillis, title: '📖 Mañana tienes catequesis', text: dot(`Mañana ${dname} a las ${hour}${extra}`) });
       }
     }
   }
-  return out.sort((a, b) => a.atMillis - b.atMillis).slice(0, MAX_ALARMS);
+  const list = out.sort((a, b) => a.atMillis - b.atMillis).slice(0, MAX_ALARMS - 1);
+  // Los avisos se programan solo para las próximas 4 semanas (y cada vez que se abre Palomita se renuevan).
+  // Si en todo ese tiempo nadie abre la app, un último aviso pide abrirla para seguir avisando.
+  const renewAt = new Date(now.getFullYear(), now.getMonth(), now.getDate() + AHEAD_DAYS - 3, 17, 0, 0, 0).getTime();
+  const more = upcoming(AHEAD_DAYS * 4, { from: now }).some(e => e.start.getTime() > renewAt);
+  if (more && renewAt > now.getTime()) {
+    list.push({ id: 'renovar-avisos', atMillis: Math.min(renewAt, list.length >= MAX_ALARMS - 1 ? list[list.length - 1].atMillis + 60000 : renewAt),
+      title: '🕊️ Abre Palomita un momento', text: 'Así te sigo avisando de la Misa y la catequesis de las próximas semanas.' });
+  }
+  return list;
 }
 
 // ── Puente con Android ──
@@ -262,7 +275,14 @@ export function permissionState() {
 
 let pendingAsk = null;
 if (typeof window !== 'undefined') {
-  window.__palomitaNotif = granted => { const r = pendingAsk; pendingAsk = null; r?.(!!granted); if (granted) sync(); };
+  window.__palomitaNotif = granted => {
+    const r = pendingAsk; pendingAsk = null;
+    r?.(!!granted);
+    if (granted) sync();
+    if (!r) for (const fn of listeners) { try { fn(); } catch (e) { console.warn(e); } }   // respuesta tardía: que se repinte
+  };
+  // Cada vez que Palomita vuelve a primer plano, se renuevan las próximas 4 semanas de avisos.
+  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (!document.hidden) { try { sync(); } catch { /* nada */ } } });
 }
 export function requestPermission() {
   const b = bridge();
@@ -271,8 +291,8 @@ export function requestPermission() {
   return new Promise(resolve => {
     pendingAsk = resolve;
     try { b.askNotifications(); } catch { pendingAsk = null; resolve(false); return; }
-    // Si el teléfono no contesta (permiso ya negado para siempre), no esperar para siempre.
-    setTimeout(() => { if (pendingAsk === resolve) { pendingAsk = null; resolve(permissionState() === 'granted'); } }, 20000);
+    // El teléfono siempre contesta (aunque se cierre el cuadro); esto es solo por si algo se pierde.
+    setTimeout(() => { if (pendingAsk === resolve) { pendingAsk = null; resolve(permissionState() === 'granted'); } }, 120000);
   });
 }
 

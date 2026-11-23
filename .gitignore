@@ -11,3 +11,4 @@ android/keystore.properties
 android/*.jks
 android/app/src/main/assets/
 assets/voz/.cache/
+smoke-shots/

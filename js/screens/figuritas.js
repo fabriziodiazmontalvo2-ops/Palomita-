@@ -275,7 +275,7 @@ export async function mount(el, params = {}) {
         if (!reduceMotion()) celebrate(sh.page, ['✨', '⭐', '🕊️', '💛']);
         sfx('sticker');
       } else show('sobres');
-      if (res.prizes.length) life.later(() => prizesChest(res.prizes), 700);
+      if (res.prizes.length) setTimeout(() => prizesChest(res.prizes), 700);   // aunque salga del álbum enseguida, el premio se muestra
     }
   }
   function revealCard(c, i, onFlip) {
@@ -341,9 +341,9 @@ export async function mount(el, params = {}) {
     let goAlbum = false;
     modal({ title: '¡Cambio hecho!', className: 'fg-trade-modal', body: [h('div', { class: 'fg-open__cards fg-open__cards--one' }, card.node), h('p', { style: { textAlign: 'center' } }, '¡Una figurita nueva para tu álbum!')],
       buttons: [{ label: 'Seguir', kind: 'ghost' }, { label: 'Ver en el álbum', kind: 'sun', onClick: () => { goAlbum = true; } }] }).closed.then(() => {
+      if (r.prizes.length) setTimeout(() => prizesChest(r.prizes), 500);
       if (life.dead) return;
       if (goAlbum) { pageIdx = PAGES.findIndex(p => p.id === s.page); show('album'); }
-      if (r.prizes.length) life.later(() => prizesChest(r.prizes), 500);
     });
     life.later(() => card.flip(), reduceMotion() ? 0 : 450);
     show('repetidas');

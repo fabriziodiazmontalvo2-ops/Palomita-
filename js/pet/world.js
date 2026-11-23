@@ -254,8 +254,17 @@ export function createWorld(canvas) {
     dove.lookAt(Math.max(-1, Math.min(1, (x - h.x) / (cssW * 0.45))), Math.max(-1, Math.min(1, -(y - h.y) / (cssH * 0.3))));
     lookReset = 1.6;
   }
+  // Suelta lo que se está arrastrando (siempre avisa con 'drop', aunque esté en pausa o se pierda el dedo).
+  function releaseDrag() {
+    const d = ptr.drag; ptr.drag = null;
+    if (!d) return false;
+    d.held = false; d.target = null;
+    emit('drop', { id: d.id, moved: ptr.moved });
+    return true;
+  }
   function onDown(e) {
     if (paused) return;
+    if (ptr.drag && ptr.id !== null && ptr.id !== e.pointerId) return;   // otro dedo mientras se arrastra: se ignora
     const [x, y] = local(e);
     const d = arrival ? null : hitDrag(x, y);
     Object.assign(ptr, { id: e.pointerId, x0: x, y0: y, x, y, t0: performance.now(), moved: 0, part: d ? null : hitDove(x, y), drag: d });
@@ -288,15 +297,14 @@ export function createWorld(canvas) {
   function onUp(e) {
     if (ptr.id !== e.pointerId) return;
     ptr.id = null;
-    if (paused) return;
-    const [x, y] = local(e);
     if (ptr.drag) {
-      const d = ptr.drag; ptr.drag = null;
-      d.held = false; d.target = null;
-      emit('drop', { id: d.id, moved: ptr.moved });
-      if (ptr.moved <= 10) emit('tapProp', { id: d.id });
+      const id = ptr.drag.id;
+      releaseDrag();
+      if (!paused && e.type === 'pointerup' && ptr.moved <= 10) emit('tapProp', { id });
       return;
     }
+    if (paused) return;
+    const [x, y] = local(e);
     if (arrival) { if (arrival.stage === 'wait') arrival.open(); return; }
     if (ptr.moved <= 10 && performance.now() - ptr.t0 < 600) {
       const part = hitDove(x, y);
@@ -308,6 +316,8 @@ export function createWorld(canvas) {
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerup', onUp);
   canvas.addEventListener('pointercancel', onUp);
+  const onLost = e => { if (ptr.id === e.pointerId) onUp(e); };
+  canvas.addEventListener('lostpointercapture', onLost);
 
   // ── Tamaño y bucle ──
   function resize() {
@@ -373,8 +383,10 @@ export function createWorld(canvas) {
     let hit = false;
     for (let t = 0.1; t < 4.2; t += 0.08) {
       probe.copy(wdir).multiplyScalar(t).add(nozzle);
-      const ex = (probe.x - c.x) / (0.78 * g), ey = (probe.y - (c.y + 1.0 * g)) / (1.05 * g), ez = (probe.z - c.z) / (0.95 * g);
-      if (ex * ex + ey * ey + ez * ez < 1) { hit = true; hitAt.copy(probe); break; }
+      // Solo x e y: la regadera siempre va delante de la palomita y el chorro se ve encima de ella,
+      // así que cuenta lo que el niño ve (con la profundidad, la palomita pequeñita nunca se mojaba).
+      const ex = (probe.x - c.x) / (0.78 * g), ey = (probe.y - (c.y + 1.0 * g)) / (1.05 * g);
+      if (ex * ex + ey * ey < 1) { hit = true; hitAt.copy(probe); break; }
     }
     if (!hit) return;
     wetAcc += dt;
@@ -456,7 +468,7 @@ export function createWorld(canvas) {
       return { x: (v.x * 0.5 + 0.5) * cssW, y: (-v.y * 0.5 + 0.5) * cssH };
     },
     start() { if (running) return; running = true; last = performance.now(); raf = requestAnimationFrame(frame); },
-    stop() { running = false; cancelAnimationFrame(raf); },
+    stop() { running = false; cancelAnimationFrame(raf); ptr.id = null; releaseDrag(); waterTimer = 0; },
     setPaused(v) { paused = !!v; },
     setGrowth(v, { animate = false } = {}) {
       v = Math.max(0.4, Math.min(1, v));
@@ -489,7 +501,7 @@ export function createWorld(canvas) {
     dispose() {
       running = false; cancelAnimationFrame(raf); ro?.disconnect();
       canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove);
-      canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp);
+      canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); canvas.removeEventListener('lostpointercapture', onLost);
       for (const s of Object.keys(wearing)) wear(s, null);
       fx.foam(0);
       for (const r of rooms.values()) r.dispose();

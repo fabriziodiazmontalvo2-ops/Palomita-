@@ -32,6 +32,7 @@ if (typeof window !== 'undefined') {
 const VOZ = 'assets/voz/';
 let clips = null;            // clave → [paquete, desde, largo]
 const packs = new Map();     // paquete → Promise<ArrayBuffer>  (los últimos 8)
+const sizes = new Map();     // paquete → bytes que debe tener según index.json
 const decoded = new Map();   // clave → Promise<AudioBuffer>    (los últimos 40)
 let current = null;          // AudioBufferSourceNode sonando
 let voiceGain = null;
@@ -47,6 +48,7 @@ const loading = (typeof fetch === 'function' && typeof window !== 'undefined')
         const len = +n;
         if (k && len) { map.set(k, [pack, off, len]); off += len; }
       }
+      sizes.set(pack, off);
     }
     if (map.size) clips = map;
   }).catch(() => {})
@@ -61,8 +63,20 @@ function lru(map, key, make, max) {
   while (map.size > max) map.delete(map.keys().next().value);
   return v;
 }
+// Un paquete que no llega, que no es audio Ogg o que no mide lo que dice el índice (otra versión) no se usa:
+// esa frase la lee la voz del teléfono. Si falló, se olvida para volver a intentarlo la próxima vez.
 function loadPack(name) {
-  return lru(packs, name, () => fetch(VOZ + name + '.bin').then(r => { if (!r.ok) throw new Error('voz'); return r.arrayBuffer(); }), 8);
+  return lru(packs, name, () => {
+    const p = fetch(VOZ + name + '.bin')
+      .then(r => { if (!r.ok) throw new Error('voz'); return r.arrayBuffer(); })
+      .then(ab => {
+        if (ab.byteLength < 4 || new Uint8Array(ab, 0, 4).join() !== '79,103,103,83') throw new Error('voz');   // «OggS»
+        if (sizes.has(name) && ab.byteLength !== sizes.get(name)) throw new Error('voz');
+        return ab;
+      });
+    p.catch(() => { if (packs.get(name) === p) packs.delete(name); });
+    return p;
+  }, 8);
 }
 function decode(key) {
   const where = clips?.get(key);

@@ -710,7 +710,7 @@ const PAINT = {
       g.save(); archPath(g, wx, wy, ww, wh); g.clip();
       g.fillStyle = lin(g, 0, wy - wh, 0, wy, [[0, '#16205a'], [1, '#3c3f8a']]); g.fillRect(wx, wy - wh, ww, wh);
       for (let i = 0; i < 26; i++) { g.fillStyle = rgba('#ffffff', 0.5 + r() * 0.5); g.beginPath(); g.arc(wx + r() * ww, wy - wh + r() * wh * 0.6, 0.8 + r() * 1.2, 0, TAU); g.fill(); }
-      g.fillStyle = '#fff3c8'; g.beginPath(); g.arc(wx + ww * 0.75, wy - wh * 0.72, h * 0.02, 0, TAU); g.fill();
+      if (o.orb) { g.fillStyle = '#fff3c8'; g.beginPath(); g.arc(wx + ww * 0.75, wy - wh * 0.72, h * 0.02, 0, TAU); g.fill(); }   // sin luna pintada si la escena ya trae 🌙
       for (let i = 0; i < 7; i++) { const hx = wx + i * ww * 0.15 - ww * 0.04, hh = h * (0.04 + r() * 0.05); house(g, hx, wy, ww * 0.13, hh, { wall: '#1f2656', side: '#1a2048', roof: '#283070', door: '#141838', lit: r() > 0.3 }); }
       g.restore();
       g.fillStyle = '#7a4a28'; g.fillRect(wx - w * 0.02, wy, ww + w * 0.04, h * 0.025);

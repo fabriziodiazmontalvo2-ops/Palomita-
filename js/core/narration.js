@@ -22,9 +22,10 @@ export function sentences(t) {
     if (!s) continue;
     // Un pedazo sin letras ni números (comillas o puntos sueltos) se pega al anterior.
     if (!/[\p{L}\p{N}]/u.test(s)) { if (out.length) out[out.length - 1] += s; continue; }
-    const m = s.match(LABEL);
-    if (m && m[1].split(' ').length <= 4) out.push(m[1], m[2]);
-    else out.push(s);
+    // Puede haber más de un rótulo seguido («A: Su gracia: …»); lo que queda sin letras («…») es solo una pausa.
+    let rest = s, m;
+    while ((m = rest.match(LABEL)) && m[1].split(' ').length <= 4) { out.push(m[1]); rest = m[2]; }
+    if (/[\p{L}\p{N}]/u.test(rest)) out.push(rest);
   }
   return out;
 }

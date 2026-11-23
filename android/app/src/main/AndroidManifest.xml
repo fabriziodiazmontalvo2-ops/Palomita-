@@ -6,6 +6,9 @@
     <!-- Avisos de Misa y catequesis: notificaciones (se piden en el momento) y reprogramarlas al reiniciar el teléfono. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Para que el aviso de «1 hora antes» llegue a tiempo (alarmas exactas; si no se permiten, llegan aproximadas) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <queries>
         <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>

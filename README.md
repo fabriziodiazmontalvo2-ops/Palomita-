@@ -93,7 +93,7 @@ node tools/smoke-test.mjs   # recorre todas las pantallas y abre cada minijuego 
 - **Minijuegos** en Canvas 2D sobre un motor propio (`js/games/engine.js`) que pone el marcador, las vidas, el reloj, la pausa, los premios y la tarjeta con el mensaje de la parábola.
 - **Sonido** sintetizado con Web Audio. **Voz de la narradora** grabada con [Piper](https://github.com/rhasspy/piper) (voz `es_MX-claude-high`, licencia Apache-2.0) frase por frase en paquetes Opus (`assets/voz/`); si un texto no está grabado, lo lee la voz del dispositivo.
 - **Ilustraciones** de las historias, lecciones y figuritas pintadas por código en Canvas (`js/art/`), más las fotos de la parroquia (`assets/parroquia/`). Cada figurita acepta una imagen propia (`assets/figuritas/<id>.webp`) para reemplazar el dibujo.
-- **Avisos** en Android con AlarmManager y notificaciones (se vuelven a programar al reiniciar el teléfono).
+- **Avisos** en Android con AlarmManager y notificaciones (se vuelven a programar al reiniciar el teléfono). Se programan las próximas 4 semanas cada vez que se abre Palomita; usan alarmas exactas cuando el teléfono lo permite (`USE_EXACT_ALARM`, pensado para instalar el APK directamente: si algún día se publica en Google Play habría que justificar ese permiso o quitarlo) y un aviso que llega tarde (la Misa ya empezó) no se muestra.
 - JavaScript moderno en módulos, sin compilación obligatoria y sin dependencias en ejecución.
 
 ```

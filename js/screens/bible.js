@@ -959,7 +959,7 @@ export async function mount(el, params = {}) {
         const ok = tts.speak(lines, { keepLines: true,
           onIndex: i => { if (my === tok) { heard = true; mark(i, 'say'); } },
           onend: () => {
-            if (my !== tok) return;
+            if (my !== tok || document.hidden) return;   // si la app se fue al fondo, la oración no «terminó»
             if (!heard && Date.now() - t0 < 400) { byTime(my, 0); return; }   // la voz no pudo hablar
             done();
           } });
@@ -992,7 +992,7 @@ export async function mount(el, params = {}) {
       if (hasVoice()) {
         const t0 = Date.now();
         const ok = tts.speak(lines[i], { onend: () => {
-          if (my !== tok) return;
+          if (my !== tok || document.hidden) return;
           const spent = Date.now() - t0;
           yourTurn(spent < 300 ? est(lines[i]) : spent);
         } });
@@ -1000,7 +1000,10 @@ export async function mount(el, params = {}) {
       }
       wait(() => yourTurn(est(lines[i])), est(lines[i]));
     }
-    viewOffs.push(() => stop());
+    // Si la app se va al fondo (otra app, pantalla apagada), la oración se detiene: no sigue rezando sola.
+    const onVis = () => { if (document.hidden && mode) stop(); };
+    document.addEventListener('visibilitychange', onVis);
+    viewOffs.push(() => { document.removeEventListener('visibilitychange', onVis); stop(); });
     return box;
   }
 

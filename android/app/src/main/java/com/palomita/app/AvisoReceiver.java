@@ -13,6 +13,9 @@ public class AvisoReceiver extends BroadcastReceiver {
         String title = intent.getStringExtra("title");
         String text = intent.getStringExtra("text");
         if (id == null) id = "aviso";
+        // Llegó tarde (la Misa o la catequesis ya empezó, o ya es el día): ese aviso ya no sirve.
+        long expires = intent.getLongExtra("expires", 0);
+        if (expires > 0 && System.currentTimeMillis() >= expires) return;
         Avisos.post(ctx, id, title == null ? "Palomita" : title, text == null ? "" : text);
     }
 }

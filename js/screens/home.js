@@ -59,6 +59,7 @@ function stubWorld() {
   const dove = { setMood: noop, setSleeping: noop, lookAt: noop, play: () => 1, setTalking: noop, setDirt: noop };
   return { dove, ROOMS: ROOMS.map(r => r.id), room: 'sala', setRoom(id) { this.room = id; return Promise.resolve(); }, setLights: noop, setCandle: noop, start: noop, stop: noop, resize: noop,
     setPaused: noop, on: () => noop, project: () => ({ x: innerWidth / 2, y: innerHeight * 0.3 }), hitDove: () => 'belly', wear: noop,
+    setBed: noop, setDoveVisible: noop, doveVisible: true, water: noop, screenOf: () => null, snapshot: () => null, setGrowth: noop,
     fx: new Proxy({}, { get: () => noop }) };
 }
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -171,7 +172,7 @@ export async function mount(el, params = {}) {
     bubble.style.top = `${Math.max(150, p.y - 8)}px`;
   }
   function say(text, ms = 4200) {
-    if (!alive || !text) return;
+    if (!alive || !text || world.doveVisible === false) return;   // dormida en otro cuarto: no habla
     bubble.textContent = text;
     bubble.hidden = false;
     placeBubble();
@@ -204,7 +205,7 @@ export async function mount(el, params = {}) {
   // ── Habitaciones ──
   function setRoom(id, { silent = false } = {}) {
     // Si está dormida, sigue durmiendo en su camita mientras el niño recorre la casa.
-    if (id !== 'bano' && foam > 0) { foam = 0; world.fx.foam(0); }
+    if (id !== 'bano' && foam > 0) { foam = 0; washSoaped = false; world.fx.foam(0); }
     room = id;
     world.setRoom(id);
     placeDove();
@@ -221,6 +222,7 @@ export async function mount(el, params = {}) {
   function renderTray() {
     clear(tray);
     tray.dataset.room = room;
+    avisoBox.hidden = room === 'bano';   // en pantallas bajas el aviso taparía la regadera
     if (room === 'sala') {
       tray.append(trayButton('🎾', 'Jugar', playWithDove));
       if (!worldFailed) tray.append(trayButton('📷', 'Foto', takePhoto));
@@ -233,8 +235,11 @@ export async function mount(el, params = {}) {
         h('button', { type: 'button', class: 'home-food home-food--add', 'aria-label': 'Comprar comida', onclick: () => { sfx('tap'); go('shop', { tab: 'comida' }); } }, '➕'));
       tray.append(strip, trayButton('🙏', 'Bendecir', blessTable, { cls: 'home-tool--small' }));
     } else if (room === 'bano') {
-      // Sin botones: la regadera y el jabón se mueven con el dedo dentro del baño.
-      tray.append(h('p', { class: 'home-bath-hint' }, h('span', { 'aria-hidden': 'true' }, '🧼'), ' Arrastra el jabón · luego la regadera ', h('span', { 'aria-hidden': 'true' }, '🚿')));
+      // Sin botones a la vista: la regadera y el jabón se mueven con el dedo dentro del baño (o se tocan).
+      // Para quien usa lector de pantalla quedan dos botones invisibles que hacen lo mismo.
+      tray.append(h('p', { class: 'home-bath-hint' }, h('span', { 'aria-hidden': 'true' }, '🧼'), ' Arrastra el jabón · luego la regadera ', h('span', { 'aria-hidden': 'true' }, '🚿')),
+        h('button', { type: 'button', class: 'sr-only', onclick: () => { if (!isAsleep()) addFoam(0.25); } }, 'Enjabonar a la palomita'),
+        h('button', { type: 'button', class: 'sr-only', onclick: () => { if (!isAsleep()) world.water(3); } }, 'Abrir la regadera'));
     } else if (room === 'dormitorio') {
       const sleeping = state.get().sleeping;
       tray.append(trayButton(sleeping ? '☀️' : '💡', sleeping ? 'Despertar' : 'Apagar la luz', () => (sleeping ? wake() : goToSleep()), { kind: sleeping ? 'accent' : '', cls: 'home-tool--wide' }));
@@ -254,10 +259,10 @@ export async function mount(el, params = {}) {
   // ── Fotos de la palomita ──
   let photoBusy = false;
   function takePhoto() {
-    if (photoBusy) return;
+    if (photoBusy || isAsleep()) return;
     photoBusy = true;
     hideBubble();
-    if (!state.get().sleeping) dove.play(pick(['wave', 'giggle', 'flap']));
+    dove.play(pick(['wave', 'giggle', 'flap']));
     const flash = h('div', { class: 'home-flash', 'aria-hidden': 'true' });
     setTimeout(() => {
       if (!alive) { photoBusy = false; return; }
@@ -343,7 +348,8 @@ export async function mount(el, params = {}) {
   function toggleListen() {
     const on = !wantsListen();
     state.setSetting('listen', on);
-    if (on) { say('¡Háblame y te repito! 👂', 3000); }
+    if (on && state.get().sleeping) toast('Cuando despierte te escucho 👂', { icon: '😴' });
+    else if (on) say('¡Háblame y te repito! 👂', 3000);
     else say('Ya no te escucho 🤐', 2500);
     paintEar();
     syncListen();
@@ -385,7 +391,8 @@ export async function mount(el, params = {}) {
     world.setGrowth?.(g.scale, { animate: animate && (grew || Math.abs((world.growth ?? g.scale) - g.scale) > 0.005) });
     if (grew && alive) {
       sfx('levelup');
-      say(`¡Mira, crecí! Ahora soy ${g.name.toLowerCase()} 🎉`, 5000);
+      if (world.doveVisible === false) toast(`¡${state.get().name} creció! Ahora es ${g.name.toLowerCase()}`, { icon: '🎉' });
+      else say(`¡Mira, crecí! Ahora soy ${g.name.toLowerCase()} 🎉`, 5000);
       if (!state.get().sleeping) setTimeout(() => alive && dove.play('flap'), 600);
     }
     growthStage = g.stage;
@@ -501,7 +508,7 @@ export async function mount(el, params = {}) {
     world.setLights(!on);
     dove.setSleeping(on);
     world.fx.zzz(on);
-    if (on && foam > 0) { foam = 0; world.fx.foam(0); }
+    if (on && foam > 0) { foam = 0; washSoaped = false; world.fx.foam(0); }
     placeDove({ instant });
     hideBubble();
     renderTray();
@@ -619,7 +626,7 @@ export async function mount(el, params = {}) {
     if (id === 'ball') { sfx('jump'); if (!isAsleep(false)) { dove.play('hop'); joy(1); } }
     else if (id === 'duck') sfx('chirp');
     else if (id === 'shower') { world.water(3); }
-    else if (id === 'soap') { if (!isAsleep(false)) say('Arrastra el jabón hasta mí 🧼', 2600); }
+    else if (id === 'soap') { if (!isAsleep(false)) { addFoam(0.25); dove.play('giggle'); } }   // tocar el jabón también enjabona
     else if (id === 'lamp') { sfx('tap'); state.get().sleeping ? wake() : goToSleep(); }
     else if (id === 'candle') { sfx('sparkle'); world.setCandle(true); say('¡Qué linda luz! 🕯️', 2600); }
     else if (id === 'bible') { sfx('page'); go('bible'); }
@@ -634,8 +641,27 @@ export async function mount(el, params = {}) {
   offs.push(state.on('wear', applyWear));
   offs.push(state.on('inventory', () => { if (room === 'cocina') renderTray(); }));
 
+  // ── Inicio ──
+  try {
+    refreshTop(); refreshMeters(); refreshDove(); applyWear(); paintAviso(); paintFigus();
+    offs.push(stickers.on('packs', paintFigus));
+    try { reminders.sync(); } catch (e) { console.warn(e); }
+    world.setRoom(room, { instant: true });
+    for (const b of tabs.children) b.classList.toggle('is-on', b.dataset.room === room);
+    applySleep(!!state.get().sleeping, { instant: true });
+    world.resize(); world.start();
+    renderTray();
+  } catch (e) {
+    // Si la pantalla no llega a montarse, no deja nada escuchando por detrás.
+    alive = false;
+    for (const off of offs) off();
+    try { world.stop(); } catch { /* nada */ }
+    throw e;
+  }
+
   // ── Latido de la pantalla (4 veces por segundo) ──
   const STEP = 0.25;
+  // (empieza después de preparar la pantalla: si algo falla al montar, no queda un reloj suelto)
   const timer = setInterval(() => {
     if (!alive || document.hidden) return;
     joyBudget = Math.min(8, joyBudget + STEP * (8 / 60));
@@ -649,16 +675,6 @@ export async function mount(el, params = {}) {
     if (talking || earState === 'hearing') nextTalk = Math.max(nextTalk, 6);
     syncListen();
   }, STEP * 1000);
-
-  // ── Inicio ──
-  refreshTop(); refreshMeters(); refreshDove(); applyWear(); paintAviso(); paintFigus();
-  offs.push(stickers.on('packs', paintFigus));
-  try { reminders.sync(); } catch (e) { console.warn(e); }
-  world.setRoom(room, { instant: true });
-  for (const b of tabs.children) b.classList.toggle('is-on', b.dataset.room === room);
-  applySleep(!!state.get().sleeping, { instant: true });
-  world.resize(); world.start();
-  renderTray();
 
   paintEar();
   const welcomeFlow = async () => {

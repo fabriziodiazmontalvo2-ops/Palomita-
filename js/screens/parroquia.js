@@ -81,6 +81,17 @@ export async function mount(el, params = {}) {
     if (keepScroll) sh.scroll.scrollTop = y;
   }
   const refresh = () => show(tab, { keepScroll: true });
+  // Después de marcar una Misa o anotar una fecha: si los avisos están apagados o falta el permiso del teléfono,
+  // se dice (y se pide el permiso) en vez de prometer un aviso que no va a llegar.
+  async function confirmAviso(okText, icon) {
+    if (!R.avisos().on) { toast('Los avisos están apagados. Enciéndelos en la pestaña «Avisos».', { icon: '🔕' }); return; }
+    if (R.nativeAvailable() && R.permissionState() !== 'granted') {
+      const ok = await R.requestPermission();
+      if (life.dead) return;
+      if (!ok) { toast('Para avisarte, permite las notificaciones de Palomita en los ajustes del teléfono.', { icon: 'ℹ️' }); return; }
+    }
+    toast(okText, { icon });
+  }
   const goTab = (id, label, icon) => button(label, { kind: 'sun', block: true, icon, sound: 'pop', onClick: () => { show(id); tabs.button(id)?.focus({ preventScroll: true }); } });
 
   // ── Pregunta para grandes (para anotar horarios y fechas) ──
@@ -201,7 +212,7 @@ export async function mount(el, params = {}) {
             if (await confirmDialog(`¿Borramos la Misa del ${DAYS[m.day].toLowerCase()} a las ${R.fmtTime(m.time)}?`, { yes: 'Sí, borrar', no: 'No' })) { R.removeMass(m.id); refresh(); }
           } }, '🗑️')) : null,
         h('button', { type: 'button', class: 'pq-bell', 'aria-pressed': String(m.remind), 'aria-label': m.remind ? 'Ya te avisamos de esta Misa. Toca para no avisar.' : 'Avísame de esta Misa',
-          onclick: () => { sfx(m.remind ? 'tap' : 'bell'); R.setRemind(m.id, !m.remind); if (!m.remind) toast('¡Te avisaremos de esta Misa!', { icon: '🔔' }); refresh(); } },
+          onclick: () => { const on = !m.remind; sfx(on ? 'bell' : 'tap'); R.setRemind(m.id, on); refresh(); if (on) confirmAviso('¡Te avisaremos de esta Misa!', '🔔'); } },
         h('span', { 'aria-hidden': 'true' }, m.remind ? '🔔' : '🔕'), h('span', null, m.remind ? 'Me avisa' : 'Avísame')))))));
     return [
       h('div', { class: 'pq-intro' },
@@ -311,8 +322,8 @@ export async function mount(el, params = {}) {
           const v = { date: mode === 'dia' ? date.value : null, weekly: mode === 'semana' ? Number(wday.value) : null, time: time.value, note: note.value.trim() };
           const ok = c ? R.updateClass(c.id, v) : R.addClass(v);
           if (!ok) { msg.textContent = 'Revisa la fecha y la hora, por favor.'; sfx('wrong'); return false; }
-          toast(c ? 'Fecha actualizada' : '¡Fecha agregada!', { icon: '📖' });
           refresh();
+          confirmAviso(c ? 'Fecha actualizada. Te avisaremos.' : '¡Fecha agregada! Te avisaremos.', '📖');
           return true;
         } },
       ],
@@ -358,6 +369,10 @@ export async function mount(el, params = {}) {
           : h('p', { class: 'pq-small' }, 'No hay nada anotado para los próximos días. Marca una Misa con 🔔 o anota tu catequesis.')),
     ];
   }
+
+  // Al volver del cuadro de permiso del teléfono (o de sus ajustes), la pestaña Avisos se repinta con lo que hay ahora.
+  life.on(document, 'visibilitychange', () => { if (!document.hidden && tab === 'avisos') refresh(); });
+  life.add(R.onChange(() => { if (tab === 'avisos' && !life.dead) refresh(); }));
 
   R.sync();
   show(TABS.some(t => t.id === params.tab) ? params.tab : 'inicio');
