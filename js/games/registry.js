@@ -24,7 +24,7 @@ export const GAMES = [
   },
   {
     id: 'sembrador', scoreIcon: '🌾', title: 'El sembrador', parable: 'sembrador', icon: '🌾', colors: ['#f0a93b', '#e2643a'],
-    how: ['Toca la pantalla para soltar una semilla.', 'Haz que caiga en la tierra buena: ahí crece el trigo.', 'En el camino, las piedras y las espinas no crece.'],
+    how: ['Toca la pantalla para soltar una semilla.', 'Apunta a la tierra buena: ahí crece el trigo.', 'Tienes 26 semillas: en el camino, las piedras y las espinas se pierden.'],
     hud: { time: 60 }, goal: 12, goalText: 'Siembra 12 semillas en tierra buena', coinRate: 2.5, maxCoins: 45,
     load: () => import('./sembrador.js'),
   },
