@@ -343,6 +343,14 @@ export function createWorld(canvas) {
     },
     // Avanza la simulación sin reloj real (pruebas y capturas).
     simulate(seconds, step = 1 / 60) { for (let i = 0; i < Math.round(seconds / step); i++) tick(step); renderer.render(scene, camera); },
+    // Foto de la escena (JPEG, ancho máximo `width`). Se dibuja un cuadro nuevo y se copia en el acto.
+    snapshot(width = 480) {
+      renderer.render(scene, camera);
+      const src = renderer.domElement, k = Math.min(1, width / src.width);
+      const c = document.createElement('canvas'); c.width = Math.round(src.width * k); c.height = Math.round(src.height * k);
+      c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+      return c;
+    },
     stats() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; },
     dispose() {
       running = false; cancelAnimationFrame(raf); ro?.disconnect();

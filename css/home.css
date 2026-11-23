@@ -100,7 +100,7 @@
 .home-level__row { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
 .home-level__stage { font-size: 0.66rem; font-weight: 800; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Orejita: la palomita está escuchando */
-.home-ear { appearance: none; border: 0; cursor: pointer; pointer-events: auto; position: absolute; left: 50%; top: calc(var(--safe-t) + 150px); transform: translateX(-50%);
+.home-ear { appearance: none; border: 0; cursor: pointer; pointer-events: auto; flex: none;
   width: 48px; height: 48px; border-radius: 50%; font-size: 1.4rem; background: rgba(255, 255, 255, 0.85); box-shadow: 0 3px 0 var(--paper-edge); opacity: 0.75; }
 .home-ear.is-on { opacity: 1; background: #e9f8e6; box-shadow: 0 3px 0 var(--leaf), 0 0 0 4px rgba(108, 192, 112, 0.25); }
 .home-ear.is-hearing { animation: pulse 0.6s infinite; background: #fff1c9; }
@@ -119,3 +119,9 @@
 .home-arrival.is-ready .home-arrival__hint { opacity: 1; transform: none; animation: pulse 1.2s 0.4s infinite; }
 .home-level__name { flex: none; max-width: 70%; }
 .home-level__stage { flex: 1; min-width: 0; }
+.home-flash { position: absolute; inset: 0; background: #fff; z-index: 6; pointer-events: none; animation: home-flash 0.45s ease-out forwards; }
+@keyframes home-flash { from { opacity: 0.95; } to { opacity: 0; } }
+.home-album { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.home-album__item { appearance: none; border: 0; padding: 4px; background: var(--white); border-radius: 12px; cursor: pointer; box-shadow: 0 3px 0 var(--paper-edge); }
+.home-album__item img { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 8px; }
+.home-album__big { display: block; width: 100%; border-radius: 14px; box-shadow: 0 4px 12px var(--shade); }

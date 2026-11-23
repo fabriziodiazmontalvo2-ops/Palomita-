@@ -7,6 +7,7 @@ import { h, clear, button, modal, toast, meter } from '../core/ui.js';
 import { go } from '../core/router.js';
 import { FOODS, food } from '../data/items.js';
 import * as talkback from '../pet/talkback.js';
+import * as photos from '../core/photos.js';
 import { growthFor } from '../pet/arrival.js';
 import { music } from '../core/audio.js';
 import { dailyGiftDue, showDailyGift, showChest, takeLevelUps } from '../core/rewards.js';
@@ -116,12 +117,12 @@ export async function mount(el, params = {}) {
     h('div', { class: 'home__top' },
       h('div', { class: 'home-level' }, h('span', { class: 'home-level__badge' }, lvl), h('div', { class: 'home-level__col' }, h('span', { class: 'home-level__row' }, nameEl, stageEl), xpBar)),
       coins,
+      earBtn,
       h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Ajustes', onclick: () => { sfx('tap'); go('settings'); } }, '⚙️')),
     metersRow,
     h('div', { class: 'home__sides' },
       h('div', { class: 'home__side-col' }, side('🎮', 'Juegos', () => go('games')), side('⛪', 'Catequesis', () => go('catequesis')), side('🛍️', 'Tienda', () => go('shop'))),
       h('div', { class: 'home__side-col' }, side('📖', 'Biblia', () => go('bible')), verseBtn, giftBtn)),
-    earBtn,
     bubble,
     h('div', { class: 'home__bottom' }, tray, tabs)));
 
@@ -206,6 +207,8 @@ export async function mount(el, params = {}) {
     tray.dataset.room = room;
     if (room === 'sala') {
       tray.append(trayButton('🎾', 'Jugar', playWithDove));
+      if (!worldFailed) tray.append(trayButton('📷', 'Foto', takePhoto));
+      tray.append(trayButton('🖼️', 'Álbum', openAlbum));
       tray.append(trayButton('🎮', 'Juegos', () => go('games'), { kind: 'accent' }));
     } else if (room === 'cocina') {
       const have = FOODS.filter(f => state.countItem(f.id) > 0);
@@ -233,6 +236,54 @@ export async function mount(el, params = {}) {
     world.fx.notes(); sfx('chirp');
     if (playCool <= 0) { joy(4); state.addStat('energia', -1); playCool = 4; }
   }
+  // ── Fotos de la palomita ──
+  let photoBusy = false;
+  function takePhoto() {
+    if (photoBusy) return;
+    photoBusy = true;
+    hideBubble();
+    if (!state.get().sleeping) dove.play(pick(['wave', 'giggle', 'flap']));
+    const flash = h('div', { class: 'home-flash', 'aria-hidden': 'true' });
+    setTimeout(() => {
+      if (!alive) { photoBusy = false; return; }
+      let shot = null;
+      try { shot = world.snapshot(480); } catch (e) { console.warn(e); }
+      sfx('shutter');
+      el.append(flash); setTimeout(() => flash.remove(), 450);
+      photoBusy = false;
+      if (!shot) return;
+      // Marco con el nombre y la fecha.
+      const W = shot.width, H = shot.height + 70;
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const g = c.getContext('2d');
+      g.fillStyle = '#fffaf0'; g.fillRect(0, 0, W, H);
+      g.drawImage(shot, 0, 0);
+      g.fillStyle = '#3d2b24'; g.textAlign = 'center';
+      g.font = '800 26px "Baloo 2", sans-serif';
+      g.fillText(`${state.get().name} 🕊️`, W / 2, shot.height + 32);
+      g.font = '700 16px Nunito, sans-serif'; g.fillStyle = '#7a655c';
+      g.fillText(new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' }), W / 2, shot.height + 56);
+      const ok = photos.add(c.toDataURL('image/jpeg', 0.78), state.get().name);
+      toast(ok ? '¡Foto guardada en el álbum!' : 'No hay espacio para más fotos', { icon: '📷' });
+      if (ok && state.dailyOnce('photo')) { joy(3); state.addXp(2); }
+    }, 550);
+  }
+  function openAlbum() {
+    const list = photos.list();
+    const body = list.length
+      ? h('div', { class: 'home-album' }, list.map(p => h('button', { type: 'button', class: 'home-album__item', 'aria-label': 'Ver foto', onclick: () => viewPhoto(p, m) }, h('img', { src: p.src, alt: '' }))))
+      : h('p', { style: { textAlign: 'center' } }, 'Todavía no hay fotos. Toca 📷 Foto para sacarle una a tu palomita.');
+    const m = modal({ title: 'Mi álbum', icon: '🖼️', body: [body, list.length ? h('p', { class: 'home-prayer__note' }, `Hasta ${photos.MAX_PHOTOS} fotos. Se guardan solo en este teléfono.`) : null], buttons: [{ label: 'Cerrar', kind: 'sun' }] });
+  }
+  function viewPhoto(p, parent) {
+    parent.close();
+    const m = modal({ title: 'Foto', body: h('img', { src: p.src, alt: `Foto de ${state.get().name}`, class: 'home-album__big' }),
+      buttons: [{ label: 'Borrar', kind: 'ghost', small: true, keepOpen: true, onClick: async () => {
+        const { confirmDialog } = await import('../core/ui.js');
+        if (await confirmDialog('¿Borramos esta foto?', { yes: 'Sí, borrar', no: 'No' })) { photos.remove(p.at); m.close(); openAlbum(); }
+      } }, { label: 'Volver', kind: 'sun', onClick: () => setTimeout(openAlbum, 0) }] });
+  }
+
   // ── La palomita repite lo que oye (sin botones) ──
   function wantsListen() { return state.setting('listen') === true && talkback.available(); }
   function shouldListen() {

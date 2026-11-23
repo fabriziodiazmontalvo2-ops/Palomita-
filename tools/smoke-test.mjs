@@ -24,7 +24,7 @@ const SAVE = {
   stats: { hambre: 55, energia: 70, limpieza: 45, alegria: 60, fe: 40 }, sleeping: false,
   coins: 400, xp: 0, level: 3, inventory: { pan: 3, agua: 2, manzana: 2, uvas: 1 }, owned: [], wearing: { head: null, neck: null, beak: null },
   decor: {}, games: {}, read: {}, quiz: {}, prayers: {}, daily: { date: '', done: {} }, days: 1,
-  settings: { sound: false, music: false, voice: false }, flags: { onboarded: true, tutorialHome: true },
+  settings: { sound: false, music: false, voice: false, listen: false }, flags: { onboarded: true, tutorialHome: true, arrived: true, micAsked: true },
 };
 
 const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -80,6 +80,7 @@ console.log('Bienvenida');
 const SCREENS = [
   ['home', {}], ['games', {}], ['bible', {}], ['bible', { tab: 'parabolas' }], ['bible', { tab: 'oraciones' }],
   ['bible', { tab: 'catecismo' }], ['bible', { tab: 'versiculos' }], ['shop', {}], ['shop', { tab: 'accesorios' }], ['settings', {}],
+  ['levels', { game: 'noe' }], ['catequesis', {}], ['confesion', {}], ['misa', {}], ['reto', {}],
 ];
 for (const vp of [{ width: 360, height: 640 }, { width: 390, height: 844 }, { width: 540, height: 750 }]) {
   console.log(`Pantallas ${vp.width}×${vp.height}`);
@@ -90,6 +91,7 @@ for (const vp of [{ width: 360, height: 640 }, { width: 390, height: 844 }, { wi
     await page.evaluate(([n, p]) => { window.__screenError = null; return window.__palomita.go(n, p); }, [name, params]);
     await page.waitForTimeout(name === 'home' ? 1800 : 700);
     await page.screenshot({ path: path.join(outDir, `02-${vp.width}-${String(++i).padStart(2, '0')}-${name}${params.tab ? '-' + params.tab : ''}.png`) });
+    await page.evaluate(() => document.querySelectorAll('.modal-scrim').forEach(m => m.remove()));
     await checkLayout(page, where); flush(errors, where);
   }
   await ctx.close();
@@ -116,7 +118,7 @@ console.log('Minijuegos');
     if (st.err) note(where, `error: ${String(st.err).split('\n')[0]}`);
     if (st.phase === 'playing' || st.phase === 'paused') await page.evaluate(() => { window.__game.resume?.(); window.__game.finish({ won: true }); });
     await page.waitForFunction(() => !window.__game || ['result', 'message', 'error'].includes(window.__game.phase), null, { timeout: 8000 }).catch(() => note(where, 'no llegó a los resultados'));
-    const msgBtn = page.locator('.game-panel .btn', { hasText: 'Ver el mensaje' });
+    const msgBtn = page.locator('.game-panel .btn', { hasText: 'Mensaje' });
     if (await msgBtn.count()) { await msgBtn.click(); await page.waitForTimeout(300); await page.screenshot({ path: path.join(outDir, `03-mensaje-${id}.png`) }); }
     await page.evaluate(() => window.__game?.exit());
     await page.waitForTimeout(150);

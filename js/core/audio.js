@@ -104,6 +104,7 @@ const SFX = {
   bell: () => { tone(N.C6, 0.9, { type: 'sine', vol: 0.3 }); tone(N.C6 * 2.01, 0.6, { type: 'sine', vol: 0.08 }); tone(N.G5, 1.0, { type: 'sine', vol: 0.15, at: 0.02 }); },
   page: () => noise(0.14, { vol: 0.14, freq: 2500, q: 0.4, slide: -1500 }),
   snore: () => noise(0.5, { vol: 0.12, freq: 180, q: 2, slide: 80 }),
+  shutter: () => { noise(0.05, { vol: 0.35, freq: 3000, q: 0.5 }); noise(0.07, { vol: 0.3, freq: 1800, q: 0.6, at: 0.09 }); },
 };
 
 export function sfx(name) {
