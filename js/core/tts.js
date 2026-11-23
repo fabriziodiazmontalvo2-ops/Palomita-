@@ -67,7 +67,7 @@ function lru(map, key, make, max) {
 // esa frase la lee la voz del teléfono. Si falló, se olvida para volver a intentarlo la próxima vez.
 function loadPack(name) {
   return lru(packs, name, () => {
-    const p = fetch(VOZ + name + '.bin')
+    const p = fetch(VOZ + name + '.ogg')
       .then(r => { if (!r.ok) throw new Error('voz'); return r.arrayBuffer(); })
       .then(ab => {
         if (ab.byteLength < 4 || new Uint8Array(ab, 0, 4).join() !== '79,103,103,83') throw new Error('voz');   // «OggS»

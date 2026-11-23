@@ -1,5 +1,5 @@
 // Junta todo lo que la app lee en voz alta, agrupado por documento (una historia, una lección, una oración…).
-// Cada grupo se graba en un solo paquete de audio (assets/voz/<grupo>.bin) para que la app cargue de una vez
+// Cada grupo se graba en un solo paquete de audio (assets/voz/<grupo>.ogg) para que la app cargue de una vez
 // todo lo que necesita al abrir esa historia.
 //
 //   node tools/narration-texts.mjs            → resumen (grupos, frases y caracteres)

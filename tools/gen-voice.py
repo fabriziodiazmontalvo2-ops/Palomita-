@@ -5,7 +5,7 @@ Uso:
   node tools/narration-texts.mjs --json > /tmp/narracion.json
   python3 tools/gen-voice.py /tmp/narracion.json <modelo.onnx> assets/voz [--jobs 3]
 
-Cada grupo se guarda como un paquete assets/voz/<grupo>.bin: los audios Ogg Opus de sus frases, uno detrás de
+Cada grupo se guarda como un paquete assets/voz/<grupo>.ogg: los audios Ogg Opus de sus frases, uno detrás de
 otro. assets/voz/index.json dice, para cada paquete, qué frases trae y cuántos bytes ocupa cada una.
 Las frases que ya están grabadas (mismo texto) se reutilizan, así que volver a correrlo solo graba lo nuevo.
 """
@@ -87,12 +87,12 @@ def main():
     # Paquetes por grupo + índice.
     index = []
     for f in os.listdir(dest):
-        if f.endswith('.bin'):
+        if f.endswith('.ogg') or f.endswith('.bin'):
             os.unlink(os.path.join(dest, f))
     total = 0
     for g in groups:
         parts = []
-        with open(os.path.join(dest, g['group'] + '.bin'), 'wb') as out:
+        with open(os.path.join(dest, g['group'] + '.ogg'), 'wb') as out:
             for s in g['sentences']:
                 data = open(os.path.join(cache, s['key'] + '.ogg'), 'rb').read()
                 out.write(data)
