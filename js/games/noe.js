@@ -63,7 +63,7 @@ export default {
   id: 'noe',
   // Meta: ramitas por nivel (1 → 100). El juego hace su propio final: al juntarlas sale el arcoíris y termina.
   levels: {
-    goal: [12, 80], curve: 1, lives: 3, selfEnd: true,
+    goal: [18, 100], curve: 1, lives: 3, selfEnd: true,
     goalLabel: n => `Junta ${n} ramitas de olivo`,
   },
   create(api) {
@@ -81,6 +81,7 @@ export default {
     const theme = LV > 80 ? THEMES.night : LV > 60 ? THEMES.sunset : THEMES.day;
     const night = theme === THEMES.night;
     const Tnom = lerp(24, 85, E);   // duración aproximada del nivel (para la rampa interna)
+    const HB = lerp(0.8, 1, clamp(E * 4));   // en los primeros niveles el choque con las nubes perdona un poco más
     // Rampa dentro del nivel: 0 al empezar → 1 cerca del final (mitad tiempo, mitad ramitas).
     const ramp = sec => clamp(0.5 * api.score / GOAL + 0.5 * sec / Tnom);
     const speedAt = sec => lerp(lerp(86, 148, E), lerp(100, 176, E), ramp(sec));   // avance en px/s
@@ -120,7 +121,7 @@ export default {
     let t = 0, dist = 0, clearS = 0, launch = 0.9, splashCd = 0, splashed = false, flapT = 0;
     let planN = 0, nextX = 330, plan = null, sinceLow = 1, sinceHigh = 0, arkX = 66;
     let tunnelLeft = 0, tunnelCd = 2, ravenT = fresh === 'raven' ? 5 : lerp(14, 8, fk('raven')), shieldCd = fresh === 'shield' ? 3 : 12;
-    let goldSeen = false, finale = 0, curWind = 0, inShower = false;
+    let goldSeen = false, moveSeen = false, tunnelSeen = false, finale = 0, curWind = 0, inShower = false;
     const told = { rain: false, sun: false, bow: false };
     let sky = null, skyH = 0, skyG = null;
 
@@ -167,7 +168,8 @@ export default {
       const cTop = api.top + 30, cBot = waterY - 24;   // límites para el centro de una nube
       if (tunnelLeft > 0) return planTunnel(prevY, spd, false);
       if (tunnelCd > 0) tunnelCd--;
-      if (has('tunnel') && n >= 3 && tunnelCd <= 0 && (fresh === 'tunnel' || api.rand() < lerp(0.14, 0.24, fk('tunnel')))) {
+      if (has('tunnel') && n >= 3 && tunnelCd <= 0 && ((fresh === 'tunnel' && !tunnelSeen) || api.rand() < lerp(0.14, 0.24, fk('tunnel')))) {
+        tunnelSeen = true;
         tunnelLeft = api.randInt(4, Math.round(lerp(5, 7, fk('tunnel'))));
         tunnelCd = Math.round(lerp(7, 5, fk('tunnel')));
         return planTunnel(prevY, spd, true);
@@ -178,18 +180,19 @@ export default {
       if (has('wind') && n >= 2 && ((fresh === 'wind' && early) || api.rand() < lerp(0.28, 0.45, fk('wind')))) {
         wind = (api.rand() < 0.5 ? -1 : 1) * lerp(300, 440, fk('wind'));
       } else if (has('rain') && n >= 2 && ((fresh === 'rain' && early) || api.rand() < lerp(0.2, 0.32, fk('rain')))) shower = true;
-      const tGap = Math.max(0.8, lerp(1.7, 0.95, E) - 0.12 * u + api.randRange(0, 0.25));   // segundos sin nubes entre dos oleadas
+      const tGap = Math.max(0.8, lerp(1.85, 0.95, E) - 0.12 * u + api.randRange(0, 0.25));   // segundos sin nubes entre dos oleadas
       const D = 2 * EXT + spd * tGap;                                                     // distancia desde la oleada anterior
       const reach = Math.max(50, tGap * 165 * vs * 0.72 * (wind ? 0.85 : 1) * (shower ? 0.85 : 1));   // lo que la paloma puede subir o bajar en ese rato
-      const minFree = Math.min(lerp(lerp(178, 124, E), lerp(160, 104, E), u), band * 0.4);   // hueco mínimo para el centro de la paloma
+      const minFree = Math.min(lerp(lerp(190, 124, E), lerp(172, 104, E), u), band * 0.4);   // hueco mínimo para el centro de la paloma
       let count = 1;
-      if (n >= 3) {
+      if (n >= 3 && LV > 5) {   // niveles 1–5 (tutorial): una sola nube por oleada
         const ce = 1 + 1.55 * E + 0.5 * u * (0.2 + E);
         count = Math.floor(ce) + (api.rand() < ce % 1 ? 1 : 0);
         if (band > 500 && api.rand() < 0.5) count++;
       }
       count = Math.min(count, Math.max(1, Math.floor((band - minFree) / 88)));
-      const pMove = has('move') && n >= 2 ? ((fresh === 'move' && early) ? 1 : lerp(0.3, 0.6, fk('move')) * (0.7 + 0.3 * u)) : 0;   // nubes que suben y bajan
+      const pMove = has('move') && n >= 2 ? ((fresh === 'move' && !moveSeen) ? 1 : lerp(0.3, 0.6, fk('move')) * (0.7 + 0.3 * u)) : 0;   // nubes que suben y bajan
+      const pPath = n <= 2 ? lerp(0.1, 0.45, E) : lerp(0.25, 0.55, E);   // las primeras nubes del nivel casi nunca tapan el camino
       const ampLo = lerp(18, 26, fk('move')), ampHi = lerp(28, 42, fk('move'));
       const wantBolt = has('bolt') && n >= 2 && ((fresh === 'bolt' && early) || api.rand() < lerp(0.22, 0.42, fk('bolt')));
       const wantHill = has('peak') && n >= 2 && ((fresh === 'peak' && early) || api.rand() < lerp(0.25, 0.45, fk('peak')));
@@ -208,12 +211,12 @@ export default {
           const role = forced[i];
           if (role === 'high' && !boltIn) { tryList.push(makeBolt(cTop)); boltIn = true; continue; }
           if (role === 'low' && !hillIn) { tryList.push(makeHill()); hillIn = true; continue; }
-          const s = api.randRange(0.95, 1.2);
+          const s = api.randRange(lerp(0.88, 0.95, E), lerp(1.05, 1.2, E));   // nubes algo más chicas en los primeros niveles
           let amp = api.rand() < pMove ? api.randRange(ampLo, ampHi) : 0;
           let cy;
           if (role === 'low') { cy = api.randRange(waterY - 46, cBot); amp = 0; }
           else if (role === 'high') { cy = cTop + api.randRange(0, 12); amp = 0; }
-          else if (api.rand() < lerp(0.3, 0.55, E)) cy = prevY + api.randRange(-28, 28);   // justo en el camino: hay que esquivarla
+          else if (api.rand() < pPath) cy = prevY + api.randRange(-28, 28);   // justo en el camino: hay que esquivarla
           else cy = api.randRange(cTop, cBot);
           if (cBot - cTop < 2 * amp + 10) amp = 0;
           tryList.push({ kind: 'cloud', dx: api.randRange(-30, 30), y: clamp(cy, cTop + amp, cBot - amp), s, amp });
@@ -242,13 +245,14 @@ export default {
         list = [{ kind: 'cloud', dx: 0, y: prevY > (yTop + yBot) / 2 ? cTop + 6 : cBot - 6, s: 1, amp: 0 }];
         y = prevY; wind = 0; shower = false;
       }
+      if (list.some(c => c.amp > 0)) moveSeen = true;
       sinceLow = list.some(c => c.kind === 'hill' || (c.kind === 'cloud' && c.y + c.amp >= waterY - 50)) ? 0 : sinceLow + 1;
       sinceHigh = list.some(c => c.kind === 'bolt' || (c.kind === 'cloud' && c.y - c.amp <= cTop + 16)) ? 0 : sinceHigh + 1;
       return { obs: list, y, D, wind, shower };
     }
     // Nube de rayo: arriba, con un rayo que caerá hasta "tip".
     function makeBolt(cTop) {
-      const s = api.randRange(1.0, 1.15), y = cTop + api.randRange(-4, 6);
+      const s = api.randRange(1.0, 1.15), y = cTop + api.randRange(4, 10);
       return { kind: 'bolt', dx: api.randRange(-20, 20), y, s, amp: 0, tip: y + band * api.randRange(0.28, lerp(0.42, 0.52, fk('bolt'))) };
     }
     // Cima de un monte que asoma del agua.
@@ -260,9 +264,17 @@ export default {
       tunnelLeft--;
       const k = fk('tunnel');
       const G = Math.min(lerp(128, 102, k), band * 0.45);   // pasillo libre para el centro de la paloma
-      const D = first ? 2 * EXT + spd * lerp(1.4, 1.05, E) : api.randRange(lerp(150, 136, k), lerp(166, 150, k));
-      const drift = first ? 40 : lerp(22, 34, k);
-      const y = clamp(prevY + api.randRange(-drift, drift), yTop + G / 2 + 4, yBot - G / 2 - 4);
+      const mid = (yTop + yBot) / 2, span = band * 0.22;     // el pasillo va por el medio del cielo: paredes arriba y abajo
+      const lo = Math.max(yTop + G / 2 + 4, mid - span), hi = Math.min(yBot - G / 2 - 4, mid + span);
+      let y, D;
+      if (first) {   // entrada: un tramo normal que lleva hacia el medio (con tiempo de sobra para llegar)
+        y = clamp(lerp(prevY, mid, 0.75) + api.randRange(-15, 15), lo, hi);
+        const need = Math.abs(y - prevY) / (165 * vs * 0.72);
+        D = 2 * EXT + spd * Math.max(lerp(1.4, 1.05, E), need + 0.15);
+      } else {
+        y = clamp(prevY + api.randRange(-1, 1) * lerp(22, 34, k), lo, hi);
+        D = api.randRange(lerp(150, 136, k), lerp(166, 150, k));
+      }
       const obs = [];
       if (y - G / 2 > yTop + 8) obs.push({ kind: 'wall', side: 'top', dx: api.randRange(-6, 6), edge: y - G / 2 });
       if (y + G / 2 < yBot - 8) obs.push({ kind: 'wall', side: 'bot', dx: api.randRange(-6, 6), edge: y + G / 2 });
@@ -276,7 +288,7 @@ export default {
       if (tight) pts.push([(x0 + x1) / 2, (y0 + y1) / 2]);   // dentro del túnel: una por tramo
       else {
         const xa = x0 + EXT - 8, xb = x1 - EXT + 8, dy = y1 - y0;
-        const few = api.rand() < lerp(0, 0.45, E);   // en niveles altos hay menos ramitas por tramo
+        const few = api.rand() < lerp(0, 0.8, E);   // en niveles altos hay menos ramitas por tramo
         if (Math.abs(dy) < 34) {
           const ym = (y0 + y1) / 2;
           if (api.rand() < 0.5) {   // fila
@@ -297,7 +309,7 @@ export default {
       // la lucecita que protege: en medio del camino, cada tanto
       if (has('shield') && shieldCd <= 0 && pts.length >= 2) { kinds[Math.floor(pts.length / 2)] = 'shield'; shieldCd = api.randRange(lerp(20, 15, fk('shield')), lerp(28, 21, fk('shield'))); }
       // premio por pasar justo por el hueco: ramita normal o dorada (vale 3)
-      if (has('gold') && (!goldSeen || api.rand() < lerp(0.3, 0.45, fk('gold')))) { pts.push([x1, y1]); kinds.push('gold'); goldSeen = true; }
+      if (has('gold') && (!goldSeen || api.rand() < lerp(0.32, 0.22, fk('gold')))) { pts.push([x1, y1]); kinds.push('gold'); goldSeen = true; }
       else if (api.rand() < 0.15) { pts.push([x1, y1]); kinds.push('olive'); }
       const grp = { n: kinds.filter(k => k === 'olive').length, got: 0 };
       pts.forEach(([x, y], i) => olives.push({ x, y: clamp(y, yTop + 6, yBot - 8), ph: api.randRange(0, TAU), grp, kind: kinds[i] }));
@@ -490,26 +502,27 @@ export default {
       kit.circle(g, b.x - 8 * b.s, b.y + 2 * b.s, 2.2 * b.s, '#262b3a'); kit.circle(g, b.x + 10 * b.s, b.y + 2 * b.s, 2.2 * b.s, '#262b3a');
       if (!b.on && b.warn >= 0) kit.text(g, '⚡', b.x + 26 * b.s, b.y - 14 * b.s, { size: 16 });
     }
+    // Pared del túnel: columna de nubes abultada, con una nube con carita en la punta (donde pasa la paloma).
     function drawWall(g, w) {
-      const top = api.top;
-      g.save();
-      if (w.side === 'top') {
-        for (let yy = w.edge - R + 2, i = 0; yy > top - 30; yy -= 27, i++) {
-          const ox = Math.sin(w.seed + i * 1.7) * 6;
-          kit.cloud(g, w.x + ox, yy - 14, 1.02, 1, '#59627a');
-          kit.cloud(g, w.x + ox, yy - 17, 1.02, 1, '#7b859c');
+      const dir = w.side === 'top' ? -1 : 1;
+      const inner = w.edge + dir * (R - 3), outer = dir < 0 ? api.top - 40 : waterY + 30;
+      const ya = Math.min(inner, outer), yb = Math.max(inner, outer);
+      for (const [col, off] of [['#59627a', 3], ['#7b859c', 0]]) {
+        g.fillStyle = col; g.beginPath();
+        g.rect(w.x - 27, ya + off, 54, yb - ya);
+        for (let i = 0, yy = ya + 12; yy + 24 <= yb; i++, yy += 22) {
+          const l = w.x - 25 + Math.sin(w.seed + i) * 3, r = w.x + 25 + Math.sin(w.seed * 1.3 + i) * 3;
+          g.moveTo(l + 13, yy + off); g.arc(l, yy + off, 13, 0, TAU);
+          g.moveTo(r + 13, yy + 11 + off); g.arc(r, yy + 11 + off, 13, 0, TAU);
         }
-      } else {
-        for (let yy = w.edge + R - 2, i = 0; yy < waterY + 20; yy += 27, i++) {
-          const ox = Math.sin(w.seed + i * 1.7) * 6;
-          kit.cloud(g, w.x + ox, yy + 4, 1.02, 1, '#59627a');
-          kit.cloud(g, w.x + ox, yy + 1, 1.02, 1, '#7b859c');
-        }
+        g.fill();
       }
-      g.restore();
+      const cy = dir < 0 ? inner - 16 : inner + 22;
+      kit.cloud(g, w.x, cy + 3, 1, 1, '#59627a'); kit.cloud(g, w.x, cy, 1, 1, '#7b859c');
+      kit.circle(g, w.x - 8, cy + 2, 2.2, '#2f3547'); kit.circle(g, w.x + 10, cy + 2, 2.2, '#2f3547');
     }
     function drawRaven(g, r) {
-      g.save(); g.translate(r.x, r.y); g.scale(-1, 1);   // mira hacia la izquierda: viene hacia la paloma
+      g.save(); g.translate(r.x, r.y); g.scale(-1.15, 1.15);   // mira hacia la izquierda: viene hacia la paloma
       const fl = Math.sin(t * 13 + r.ph);
       g.fillStyle = '#2c2934';
       g.beginPath(); g.moveTo(-14, 0); g.lineTo(-24, -5); g.lineTo(-23, 5); g.closePath(); g.fill();   // cola
@@ -593,8 +606,8 @@ export default {
           if (c.zap > 0) c.zap -= dt;
           if (c.x < -70) { clouds.splice(i, 1); continue; }
           if (safe || Math.abs(c.x - px) > 70) continue;
-          const ex = (px - (c.x + c.s)) / (30 * c.s + R), ey = (py - (c.y - 2 * c.s)) / (16 * c.s + R);
-          const bx = px - (c.x + c.s), by = py - (c.y + 28 * c.s), br = 7 * c.s + R;
+          const ex = (px - (c.x + c.s)) / (30 * c.s * HB + R), ey = (py - (c.y - 2 * c.s)) / (16 * c.s * HB + R);
+          const bx = px - (c.x + c.s), by = py - (c.y + 28 * c.s * HB), br = 7 * c.s * HB + R;
           if (ex * ex + ey * ey < 1 || bx * bx + by * by < br * br) hit(dove.y < c.y ? -1 : 1, c);
         }
         const warnT = lerp(1.4, 0.8, fk('bolt'));

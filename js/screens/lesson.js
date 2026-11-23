@@ -7,7 +7,7 @@
 // y el cuestionario de la lección.
 import * as state from '../core/state.js';
 import * as tts from '../core/tts.js';
-import { h, clear, button, iconButton, reduceMotion } from '../core/ui.js';
+import { h, clear, button, reduceMotion } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { go, back } from '../core/router.js';
 import { arr, txt, deco, clamp, BGS, voiceReady, loadLessons, lifecycle, shell, soon, rewardRow, grant, celebrate, quiz, smooth } from './catequesis.js';
@@ -19,7 +19,8 @@ let mutedThisSession = false;   // el 🔇 del reproductor dura mientras la app 
 
 const num = (v, d) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const sayOf = sc => txt(sc.say).trim() || txt(sc.caption).trim();
-const timeFor = sc => 2500 + 55 * sayOf(sc).length;              // sin voz
+const capOf = sc => txt(sc.caption).trim() || sayOf(sc);
+const timeFor = sc => 2500 + 55 * capOf(sc).length;              // sin voz: el tiempo de leer el subtítulo
 const voiceGuess = sc => 900 + 62 * sayOf(sc).length;             // lo que suele tardar la voz (solo para la barra)
 
 export async function mount(el, params = {}) {
@@ -64,7 +65,7 @@ export async function mount(el, params = {}) {
 
   const segs = h('div', { class: 'ls-segs', 'aria-hidden': 'true' }, scenes.map(() => h('span', { class: 'ls-seg' }, h('i'))));
   const caption = h('p', { class: 'ls-caption', 'aria-live': 'polite' }, txt(L.summary));
-  const counter = h('span', { class: 'ls-count', 'aria-live': 'off' });
+  const counter = h('span', { class: 'ls-count' });                 // para lectores de pantalla (la barra superior ya lo muestra)
 
   const ctl = (icon, label, fn, cls = '') => h('button', { type: 'button', class: `ls-btn ${cls}`.trim(), 'aria-label': label, title: label, onclick: e => { e.stopPropagation(); fn(); } }, deco(icon));
   const prevBtn = ctl('⏮', 'Escena anterior', () => { sfx('tap'); prev(); });
@@ -99,7 +100,7 @@ export async function mount(el, params = {}) {
     sceneBox.append(layer);
     // El fundido: la escena nueva aparece encima y la anterior se quita después.
     if (old.length) life.later(() => old.forEach(o => o.remove()), reduceMotion() || !fade ? 0 : 700);
-    caption.textContent = txt(sc.caption) || sayOf(sc);
+    caption.textContent = capOf(sc);
     caption.classList.remove('is-new');
     void caption.offsetWidth;
     caption.classList.add('is-new');
@@ -308,7 +309,7 @@ export async function mount(el, params = {}) {
           button('Ver la lección', { kind: 'ghost', small: true, icon: '🎬', onClick: replay }),
           nextLessonBtn(true)));
       } });
-    sh.setChip({ icon: '🎯', text: 'Preguntas', label: 'Preguntas de la lección' });
+    sh.setChip(null);
     sh.fill(
       h('header', { class: 'ls-qhead' },
         h('span', { class: 'ls-qhead__icon', 'aria-hidden': 'true' }, txt(L.emoji) || '🎬'),

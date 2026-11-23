@@ -230,7 +230,7 @@ export async function mount(el, params = {}) {
           speakBtn(() => txt(d.text), { compact: true, label: 'Escuchar este globito' })));
     };
     function paint() {
-      clear(list).append(dialogue.slice(0, shown).map(bubble));
+      clear(list).append(...dialogue.slice(0, shown).map(bubble));
       list.lastChild?.classList.add('is-new');
       clear(ctrl);
       if (shown < dialogue.length) {

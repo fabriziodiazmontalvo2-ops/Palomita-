@@ -252,3 +252,42 @@
 .bb-burst { position: absolute; left: 50%; top: 45%; width: 0; height: 0; pointer-events: none; z-index: 4; }
 .bb-burst span { position: absolute; font-size: 1.6rem; animation: bb-fly 1.2s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
 @keyframes bb-fly { from { transform: translate(-50%, -50%) scale(0.3); opacity: 1; } to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)) scale(1.2); opacity: 0; } }
+
+/* ───────── Estante de milagros y avance por estante ───────── */
+.bb-shelf__meter { height: 10px; margin-top: -4px; }
+.bb-shelf--mi .bb-row { border-bottom-color: #d9c7f5; }
+.bb-shelf--mi .bb-shelf__head { padding: 8px 10px; border-radius: var(--r-md); background: linear-gradient(135deg, #f1e9ff, #fff6dc); }
+
+/* ───────── Mi camino por unidades ───────── */
+.bb-units { display: flex; flex-direction: column; gap: 18px; }
+.bb-unit { display: flex; flex-direction: column; gap: 12px; }
+.bb-unit__head { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--r-md); background: var(--u-bg, #eef7ff); }
+.bb-unit--creo { --u-bg: #e3f3ff; }
+.bb-unit--celebro { --u-bg: #fff1c9; }
+.bb-unit--vivo { --u-bg: #ffe8ee; }
+.bb-unit--rezo { --u-bg: #f1e9ff; }
+.bb-unit__icon { font-size: 1.9rem; flex: none; }
+.bb-unit__names { flex: 1; min-width: 0; }
+.bb-unit__names h2 { font-size: var(--fs-lg); }
+.bb-unit__names p { font-size: var(--fs-sm); color: var(--ink-soft); }
+.bb-footnote { font-size: var(--fs-xs); font-weight: 700; color: var(--ink-soft); text-align: center; padding: 0 8px; }
+
+/* ───────── Oraciones: escuchar y rezar juntos ───────── */
+.bb .btn--sm { min-height: 48px; }
+.bb-phead--prayer { position: relative; }
+.bb-phead--prayer .bb-font { position: absolute; top: 10px; right: var(--gutter-r); margin: 0; }
+.bb-kar { display: flex; flex-direction: column; gap: 8px; }
+.bb-kar__row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.bb-kar__btn { min-height: 52px; padding: 8px 10px; font-size: var(--fs-md); }
+.bb-kar__btn.is-on { --btn-bg: var(--coral); --btn-edge: var(--coral-deep); }
+.bb-kar__status { min-height: 1.3em; text-align: center; font-size: var(--fs-sm); font-weight: 800; color: var(--grape-deep); }
+.bb-kar__status:empty { display: none; }
+.bb-line { position: relative; padding: 4px 8px; transition: background 0.25s, color 0.25s, transform 0.25s, opacity 0.25s; }
+.bb-lines.is-kar .bb-line { opacity: 0.55; }
+.bb-lines.is-kar .bb-line.is-past { opacity: 0.8; }
+.bb-lines.is-kar .bb-line.is-say { opacity: 1; background: #fff1c9; box-shadow: inset 0 0 0 3px var(--sun); transform: scale(1.03); }
+.bb-lines.is-kar .bb-line.is-you { opacity: 1; background: #f1e9ff; box-shadow: inset 0 0 0 3px var(--grape); margin-top: 14px; }
+.bb-you { position: absolute; top: -13px; right: 8px; display: inline-flex; flex-direction: column; gap: 2px; padding: 3px 10px 4px; border-radius: var(--r-pill); background: var(--grape); color: var(--white);
+  font-family: var(--font-display); font-weight: 800; font-size: 0.78rem; line-height: 1.1; box-shadow: 0 3px 8px var(--shade); animation: pop-in 0.3s cubic-bezier(0.2, 1.5, 0.4, 1) both; pointer-events: none; }
+.bb-you i { display: block; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.9); transform-origin: left; animation: bb-wait var(--wait, 3000ms) linear forwards; }
+@keyframes bb-wait { from { transform: scaleX(1); } to { transform: scaleX(0); } }

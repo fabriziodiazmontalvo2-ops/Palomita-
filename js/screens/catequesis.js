@@ -363,11 +363,10 @@ export async function mount(el, params = {}) {
     for (const t of ['todo', 'at', 'jesus', 'parabolas', 'sacramentos', 'misa', 'oraciones', 'maria', 'confesion', 'camino']) if ((Number(state.flag(`reto:best:${t}`)) || 0) >= 6) retos++;
     const kid = txt(state.get().kid).trim();
 
-    const row = (icon, label, n, total, color) => h('div', { class: 'ct-prog' },
-      h('span', { class: 'ct-prog__icon', 'aria-hidden': 'true' }, icon),
-      h('div', { class: 'ct-prog__main' },
-        h('div', { class: 'ct-prog__top' }, h('span', null, label), h('b', null, total ? `${n}/${total}` : '—')),
-        progressMeter(total ? (n / total) * 100 : 0, color, `${label}: ${n} de ${total}`)));
+    const stat = (icon, label, n, total, color) => h('div', { class: 'ct-stat' },
+      h('span', { class: 'ct-stat__top' }, deco(icon), h('b', null, total ? `${n}/${total}` : '—')),
+      h('span', { class: 'ct-stat__label' }, label),
+      progressMeter(total ? (n / total) * 100 : 0, color, `${label}: ${n} de ${total}`));
 
     const card = ({ title, sub, bg, actors, onClick, note, wide = false, play = false, c }) => {
       const b = h('button', { type: 'button', class: `ct-card${wide ? ' ct-card--wide' : ''}`, onclick: () => { sfx('pop'); onClick(); } },
@@ -384,19 +383,20 @@ export async function mount(el, params = {}) {
       h('div', { class: 'ct-hello__dove', 'aria-hidden': 'true' }, '🕊️'),
       h('div', { class: 'ct-hello__text' },
         h('h2', null, kid ? `¡Hola, ${kid}!` : '¡Hola!'),
-        h('p', null, 'Aquí aprendes y te preparas con alegría para recibir a Jesús en tu Primera Comunión.')));
+        h('p', null, 'Aprende y prepárate con alegría para recibir a Jesús en tu Primera Comunión.')));
 
     const progress = h('section', { class: 'ct-panel ct-progress', 'aria-label': 'Mi avance' },
-      h('h2', { class: 'ct-h2' }, deco('🌱'), 'Mi avance'),
-      row('🎬', 'Lecciones vistas', seen, lessons.length, 'var(--coral)'),
-      row('👣', 'Temas de mi camino', topicsDone, topics.length, 'var(--leaf)'),
-      row('🏆', 'Retos superados', retos, RETO_TOPICS, 'var(--grape)'));
+      h('h2', { class: 'ct-progress__title' }, deco('🌱'), 'Mi avance'),
+      h('div', { class: 'ct-stats' },
+        stat('🎬', 'Lecciones vistas', seen, lessons.length, 'var(--coral)'),
+        stat('👣', 'Temas del camino', topicsDone, topics.length, 'var(--leaf)'),
+        stat('🏆', 'Retos superados', retos, RETO_TOPICS, 'var(--grape)')));
 
     const learn = h('section', { class: 'ct-group', 'aria-label': 'Aprendo' },
       h('h2', { class: 'ct-group__title' }, deco('📚'), 'Aprendo'),
       h('div', { class: 'ct-grid' },
         card({ wide: true, play: true, title: 'Lecciones animadas', sub: 'Mira y escucha, como un video, y luego responde.', bg: 'amanecer', c: '#ff8a5c',
-          actors: [{ e: '🧒', x: 20, y: 70, s: 1.1 }, { e: '✝️', x: 50, y: 58, s: 1.25 }, { e: '🕊️', x: 82, y: 30, s: 0.9, anim: 'float' }, { e: '👧', x: 80, y: 74, s: 1 }],
+          actors: [{ e: '🧒', x: 22, y: 70, s: 1.1 }, { e: '⛪', x: 76, y: 60, s: 1.05 }, { e: '🕊️', x: 18, y: 26, s: 0.85, anim: 'float' }, { e: '🌟', x: 88, y: 22, s: 0.7, anim: 'twinkle' }],
           note: lessons.length ? `${seen} de ${lessons.length} vistas` : 'Muy pronto', onClick: () => { show('lecciones'); } }),
         card({ title: 'Mi camino', sub: 'Los temas para tu Primera Comunión', bg: 'campo', c: '#3f9a52',
           actors: [{ e: '⛪', x: 72, y: 56, s: 1.25 }, { e: '👣', x: 28, y: 76, s: 0.85 }, { e: '🌈', x: 30, y: 26, s: 0.8 }],

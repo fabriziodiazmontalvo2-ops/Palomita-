@@ -7,7 +7,7 @@
 // posarse en sus ramas, como cuenta la parábola.
 //
 // Niveles (api.level 1..100, api.difficulty 0..1):
-//   · La meta (api.goal) va de 12 a 60 gotas y rayos (levels.goal). Al llegar, el árbol crece y llegan los pajaritos;
+//   · La meta (api.goal) va de 12 a 56 gotas y rayos (levels.goal). Al llegar, el árbol crece y llegan los pajaritos;
 //     después el juego llama api.end({ won: true }) (selfEnd).
 //   · Con la dificultad suben la velocidad de caída, la frecuencia, la proporción de cosas malas, cuántas apuntan a la
 //     planta y la fuerza del viento; bajan los márgenes para atrapar y el tamaño de la maceta. Dentro de cada partida
@@ -23,7 +23,7 @@ const NOVEDADES = [
   { lv: 41, text: '¡Nuevo: nubes de lluvia 🌧️! Síguelas' },
   { lv: 51, text: '¡Nuevo: granizo! Cae rápido, esquívalo' },
   { lv: 61, text: '¡Nuevo: la mariquita 🐞 te protege!' },
-  { lv: 71, text: '¡Nuevo: saltamontes 🦗 que saltan de lado!' },
+  { lv: 71, text: '¡Nuevo: saltamontes que saltan de lado!' },
   { lv: 81, text: '¡Nuevo: rocío 💖 que devuelve una vida!' },
   { lv: 91, text: '¡Gran final: ráfagas de viento! 🌬️' },
 ];
@@ -47,7 +47,7 @@ const FALL_K = { hail: 1.55, gold: 1.1, lady: 0.8, dew: 0.9 };
 export default {
   id: 'mostaza',
   levels: {
-    goal: [12, 60],
+    goal: [12, 56],
     curve: 1.1,
     lives: 3,
     selfEnd: true,
@@ -77,11 +77,13 @@ export default {
     let introDone = !introBad;
 
     // ── Ajustes que dependen del nivel (D = 0 en el nivel 1, 1 en el nivel 100) ──
+    const Dh = clamp((D - 0.6) / 0.4);   // empujón extra en los niveles difíciles (≈ 60 → 100)
     const P = {
-      fall0: lerp(3.25, 2.15, D), fall1: lerp(2.8, 1.78, D), fallTall: lerp(0.9, 0.45, D),  // segundos de caída (inicio → fin de partida)
-      every0: lerp(1.45, 0.8, D), every1: lerp(1.2, 0.66, D),                               // segundos entre apariciones
-      badP: lerp(0.1, 0.34, D), aimP: lerp(0.12, 0.5, D),                                   // prob. de algo malo / de que apunte a la planta
-      maxBads: D < 0.05 ? 1 : D < 0.25 ? 2 : D < 0.6 ? 3 : 4,
+      fall0: lerp(3.25, 2.15, D) - 0.2 * Dh, fall1: lerp(2.8, 1.78, D) - 0.2 * Dh,          // segundos de caída (inicio → fin de partida)
+      fallTall: lerp(0.9, 0.45, D),
+      every0: lerp(1.45, 0.74, D), every1: lerp(1.2, 0.6, D),                               // segundos entre apariciones
+      badP: lerp(0.1, 0.4, D) + 0.04 * Dh, aimP: lerp(0.12, 0.6, D) + 0.05 * Dh,           // prob. de algo malo / de que apunte a la planta
+      maxBads: D < 0.05 ? 1 : D < 0.25 ? 2 : D < 0.6 ? 3 : D < 0.85 ? 4 : 5,
       maxBadRun: D < 0.45 ? 2 : 3,
       forceBad: D < 0.05 ? 9 : 7,
       badFrom: lerp(7, 2.5, D), badScore: D < 0.05 ? 3 : 1,
@@ -275,7 +277,7 @@ export default {
 
     // ¿Choca la posición x (con su vaivén wa) con algo recién salido? (Nada malo pegadito a algo bueno.)
     function crowded(x, wa, bad, hop) {
-      const minSep = L.potHalf * 2 + 36;
+      const minSep = L.potHalf * 2 + lerp(36, 12, Dh);   // en los niveles difíciles lo malo puede caer más cerca de lo bueno
       for (const it of items) {
         if (it.state !== 'fall' || it.y > L.spawnY + 110) continue;
         const sep = (it.good !== !bad ? minSep : 34) + wa + it.wa;
@@ -610,7 +612,7 @@ export default {
         gr.addColorStop(0, '#93b4d8'); gr.addColorStop(0.65, '#d3e2ef'); gr.addColorStop(1, '#f6f2e3');
         g.fillStyle = gr; g.fillRect(0, 0, W, H);
       } else kit.sky(g, W, H, WARM ? 'sunset' : SCENE === 'afternoon' ? 'dawn' : 'day');
-      if (WARM) kit.sun(g, W - 74, L.groundY - 96, 27, t);
+      if (WARM) kit.sun(g, W - 78, L.groundY - 34, 30, t);   // sol poniente, medio escondido tras las colinas
       else kit.sun(g, W - 52, top + 44, SCENE === 'cloudy' ? 19 : 22, t);
       const span = Math.max(120, L.groundY - top - 120);
       const cloudCol = SCENE === 'cloudy' ? '#f1f5fa' : WARM ? '#fff1e2' : '#ffffff';
@@ -627,7 +629,7 @@ export default {
         const y = Math.min(H - 6, L.groundY + d.dy);
         if (d.flower) kit.flower(g, d.x, y, d.s, d.color); else kit.grass(g, d.x, y, d.s, PAL.leafDeep);
       }
-      if (WARM) { g.fillStyle = 'rgba(255, 150, 80, 0.09)'; g.fillRect(0, 0, W, H); }
+      if (WARM) { g.save(); g.fillStyle = 'rgba(255, 150, 80, 0.09)'; g.fillRect(0, 0, W, H); g.restore(); }
     }
 
     // Rayitas de viento (y hojitas) que van hacia donde sopla; en el aviso de ráfaga, una flecha grande.
@@ -657,15 +659,15 @@ export default {
       }
       if (warnG) {
         // Flecha de aviso del lado de donde viene la ráfaga.
-        const pulse = gust.phase === 'warn' ? 0.6 + 0.4 * Math.sin(t * 14) : 0.55;
+        const pulse = gust.phase === 'warn' ? 0.75 + 0.25 * Math.sin(t * 14) : 0.6;
         const ax = dir > 0 ? 44 : W - 44, ay = top + 72;
         g.save();
         g.globalAlpha = pulse;
         g.translate(ax, ay); g.scale(dir, 1);
-        g.fillStyle = '#ffffff';
+        g.fillStyle = '#ffffff'; g.strokeStyle = 'rgba(61, 43, 36, 0.35)'; g.lineWidth = 2.5; g.lineJoin = 'round';
         g.beginPath();
         g.moveTo(-24, -7); g.lineTo(6, -7); g.lineTo(6, -16); g.lineTo(26, 0); g.lineTo(6, 16); g.lineTo(6, 7); g.lineTo(-24, 7);
-        g.closePath(); g.fill();
+        g.closePath(); g.stroke(); g.fill();
         g.restore();
       }
     }
@@ -849,8 +851,9 @@ export default {
       g.beginPath(); g.ellipse(px, cy, (rx + wob) * k, (ry - wob) * k, 0, 0, 6.2832); g.fill(); g.stroke();
       g.fillStyle = 'rgba(255, 255, 255, 0.5)';
       g.beginPath(); g.ellipse(px - rx * 0.45 * k, cy - ry * 0.55 * k, 7 * k, 4 * k, -0.6, 0, 6.2832); g.fill();
-      g.restore();
+      g.fillStyle = '#000';
       kit.emoji(g, '🐞', px + rx * 0.72 * k, cy - ry * 0.72 * k, 17);
+      g.restore();
     }
 
     // Cardo espinoso (la «mala hierba»): bolita morada con púas, hojas oscuras y cara de gruñón.
@@ -898,11 +901,34 @@ export default {
       g.restore();
     }
 
+    // Saltamontes verde de perfil (mira hacia donde va a saltar) con ceño de gruñón.
+    function drawHopper(g, x, y, s, dir, rot, crouch) {
+      g.save();
+      g.translate(x, y); g.rotate(rot); g.scale(dir * s, s * (1 - Math.abs(crouch) * 0.8));
+      g.strokeStyle = '#3f8a35'; g.lineCap = 'round'; g.lineJoin = 'round';
+      g.lineWidth = 3.4;
+      g.beginPath(); g.moveTo(-3, 2); g.lineTo(-11, -10); g.lineTo(-18, 9); g.stroke();       // pata grande de saltar
+      g.lineWidth = 2.2;
+      g.beginPath(); g.moveTo(5, 4); g.lineTo(9, 11); g.moveTo(0, 5); g.lineTo(-1, 11); g.stroke();
+      kit.ellipse(g, -2, 0, 13.5, 7.2, '#7cc94f');
+      kit.ellipse(g, -5, -2.6, 8.5, 3.2, '#5fae3c', -0.1);
+      kit.circle(g, 11, -2, 6.8, '#8fd65c');
+      kit.circle(g, 13, -3.4, 2.6, '#ffffff');
+      kit.circle(g, 13.7, -3.1, 1.3, '#2b1d16');
+      g.lineWidth = 1.6; g.strokeStyle = '#2f5d2a';
+      g.beginPath(); g.moveTo(10.2, -7.4); g.lineTo(15.8, -5.6); g.stroke();                  // ceño
+      g.beginPath(); g.moveTo(15, 1.6); g.lineTo(12.5, 2.2); g.stroke();                      // boquita
+      g.lineWidth = 1.3; g.strokeStyle = '#3f8a35';
+      g.beginPath(); g.moveTo(12, -8.4); g.quadraticCurveTo(16, -16, 22, -15.5); g.moveTo(9.5, -8.4); g.quadraticCurveTo(11.5, -17, 16.5, -19.5); g.stroke();
+      g.restore();
+    }
+
     function drawItem(g, it) {
       const s = it.age < 0.25 ? Math.max(0.05, ease.outBack(it.age / 0.25)) : 1;
       const a = it.state === 'fall' ? 1 : clamp(it.life / it.max);
       g.save();
       g.globalAlpha = a;
+      g.fillStyle = '#000';   // los emojis toman la transparencia del color de relleno: que sea opaco
       switch (it.kind) {
         case 'drop':
           kit.circle(g, it.x, it.y + 1, 19 * s, 'rgba(255,255,255,0.3)');
@@ -950,7 +976,7 @@ export default {
           const toHop = (it.hopY - it.y) / it.vy;
           const crouch = it.state === 'fall' && it.hopU < 0 && toHop < 0.45 ? Math.sin(it.age * 30) * 0.12 : 0;
           kit.circle(g, it.x, it.y - arc, 20 * s, 'rgba(120, 40, 60, 0.16)');
-          kit.emoji(g, '🦗', it.x, it.y - arc, 30 * s, { rot: it.rot + crouch, flip: dir > 0 });
+          drawHopper(g, it.x, it.y - arc, 1.05 * s, dir, it.rot, crouch);
           if (it.state === 'fall' && it.hopU < 0) {
             // Flechitas: hacia dónde va a saltar.
             g.strokeStyle = 'rgba(255,255,255,0.95)'; g.lineWidth = 2.6; g.lineCap = 'round'; g.lineJoin = 'round';

@@ -5,6 +5,11 @@
 // del pasaje citado. Las fórmulas del sacramento (absolución, Acto de contrición) van con su texto
 // habitual; el Acto de contrición es idéntico al de js/data/prayers.js (id: acto-de-contricion).
 // El examen de conciencia está escrito en primera persona, para que el niño se lo pregunte a sí mismo.
+// Cada pregunta nombra una falta (nunca una virtud), porque la pantalla ofrece «Esto me pasó» y pasa
+// la pregunta a «Mi lista secreta» para contársela al sacerdote.
+// Los diálogos de los pasos son ejemplos para ensayar, salvo las fórmulas del sacramento: el saludo
+// «Ave María Purísima» / «Sin pecado concebida» (costumbre), el Acto de contrición, la absolución y la
+// despedida («Da gracias al Señor porque es bueno» / «El Señor ha perdonado tus pecados. Vete en paz»).
 //
 // Forma: CONFESSION = {
 //   intro: { title, paragraphs: [2–4] },
@@ -20,7 +25,7 @@ export const CONFESSION = {
     paragraphs: [
       'La Reconciliación es el sacramento en el que Jesús perdona nuestros pecados por medio del sacerdote. También la llamamos Confesión o Penitencia. Es un regalo de Jesús resucitado, que dijo a sus apóstoles: «A quienes ustedes les perdonen los pecados, les quedarán perdonados» (Juan 20, 23).',
       'Pecar es alejarnos del amor de Dios y de los demás. Pero Dios nunca deja de querernos. Es como el papá de la parábola, que vio a su hijo cuando todavía estaba lejos, corrió a su encuentro y lo abrazó (Lucas 15, 20). Así te espera Jesús en la confesión: con los brazos abiertos.',
-      'No tengas miedo. Es normal sentir nervios la primera vez, pero el sacerdote te recibe con cariño y te ayuda si no sabes qué decir. No vas a recibir un castigo, sino un abrazo. Jesús contó que en el cielo hay fiesta por cada persona que vuelve a Dios (Lucas 15, 7). ¡Esa fiesta también es por ti!',
+      'No tengas miedo. Es normal sentir nervios la primera vez, pero el sacerdote te recibe con cariño y te ayuda si no sabes qué decir. No vas a recibir un castigo, sino un abrazo. Jesús contó que en el cielo hay una gran alegría por cada persona que vuelve a Dios (Lucas 15, 7). ¡Esa alegría también es por ti!',
       'Y algo muy importante: el sacerdote jamás puede contarle a nadie lo que le dices en la confesión. Ni a tus papás, ni a tu catequista, ni a nadie, nunca. Es el secreto de confesión, un secreto sagrado. Por eso puedes hablarle con toda confianza, como si hablaras con el mismo Jesús.',
     ],
   },
@@ -34,14 +39,14 @@ export const CONFESSION = {
       title: 'Con Dios',
       emoji: '🙏',
       questions: [
-        '¿Recé por las mañanas o por las noches?',
-        '¿Le di gracias a Dios por las cosas buenas de cada día?',
+        '¿Dejé de rezar por flojera, en la mañana o en la noche?',
+        '¿Dejé pasar el día sin darle gracias a Dios por lo bueno que me da?',
         '¿Me olvidé de Dios por estar con el celular, la tele o los videojuegos?',
         '¿Dije el nombre de Dios, de Jesús o de la Virgen de broma o con rabia?',
         '¿Me burlé de la oración, de la iglesia o de las cosas de Dios?',
         '¿Me quejé o me porté mal para no ir a Misa el domingo?',
-        '¿Estuve atento en la Misa, o me puse a jugar y a conversar?',
-        '¿Me porté con respeto en la iglesia y en la catequesis?',
+        '¿Me puse a jugar o a conversar en la Misa en vez de rezar?',
+        '¿Hice desorden o falté el respeto en la iglesia o en la catequesis?',
       ],
     },
     {
@@ -49,14 +54,14 @@ export const CONFESSION = {
       title: 'En mi casa',
       emoji: '🏠',
       questions: [
-        '¿Obedecí a mis papás o a quienes me cuidan, a la primera y sin renegar?',
+        '¿Desobedecí a mis papás o a quienes me cuidan, o les hice caso renegando?',
         '¿Les contesté mal o les falté el respeto a mis papás, a mis abuelos o a otros mayores?',
         '¿Peleé con mis hermanos o mis primos, o los molesté a propósito?',
-        '¿Ayudé en las tareas de la casa, como tender mi cama u ordenar mis cosas?',
+        '¿Me negué a ayudar en la casa, como tender mi cama u ordenar mis cosas?',
         '¿Dije mentiras en mi casa para no tener problemas?',
         '¿Tomé algo sin permiso, como plata o golosinas?',
-        '¿Compartí mis cosas con mis hermanos?',
-        '¿Fui agradecido con mi familia y con la comida que hay en la mesa?',
+        '¿Fui egoísta y no quise compartir mis cosas con mis hermanos?',
+        '¿Me quejé de la comida o no valoré lo que mi familia hace por mí?',
       ],
     },
     {
@@ -64,9 +69,9 @@ export const CONFESSION = {
       title: 'En el colegio',
       emoji: '🎒',
       questions: [
-        '¿Hice mis tareas con esfuerzo, o fui flojo?',
-        '¿Respeté y obedecí a mis profesores?',
-        '¿Puse atención en clase, o interrumpí y no dejé aprender a los demás?',
+        '¿Me dio flojera hacer mis tareas y no me esforcé?',
+        '¿Desobedecí a mis profesores o les falté el respeto?',
+        '¿Interrumpí la clase o no dejé aprender a los demás?',
         '¿Copié en un examen o en una tarea?',
         '¿Me burlé de algún compañero o le puse apodos feos?',
         '¿Dejé a alguien solo o lo aparté del juego a propósito?',
@@ -79,14 +84,14 @@ export const CONFESSION = {
       title: 'Con mis amigos',
       emoji: '🤝',
       questions: [
-        '¿Fui un buen amigo, o solo pensé en mí?',
-        '¿Compartí mis juguetes y mis cosas?',
+        '¿Solo pensé en mí y no en lo que necesitaban mis amigos?',
+        '¿Tuve envidia de mis amigos por sus cosas o porque les iba bien?',
         '¿Hice trampa en los juegos?',
         '¿Dije lisuras o palabras feas?',
         '¿Hablé mal de alguien a sus espaldas o inventé chismes?',
         '¿Me dejé llevar por otros para hacer algo que estaba mal?',
-        '¿Supe perdonar cuando un amigo me pidió perdón?',
-        '¿Ayudé a algún amigo que estaba triste o que me necesitaba?',
+        '¿Me negué a perdonar a un amigo que me pidió perdón?',
+        '¿Ignoré a un amigo que estaba triste o que necesitaba mi ayuda?',
       ],
     },
     {
@@ -94,14 +99,14 @@ export const CONFESSION = {
       title: 'Conmigo mismo',
       emoji: '💛',
       questions: [
-        '¿Cuidé mi cuerpo y respeté el de los demás?',
+        '¿Dejé de cuidar mi cuerpo o no respeté el cuerpo de los demás?',
         '¿Miré o escuché cosas que no eran buenas?',
         '¿Usé el celular o internet a escondidas, sin permiso de mis papás?',
-        '¿Dije siempre la verdad, aunque me costara?',
+        '¿Inventé cosas o exageré para quedar bien con los demás?',
         '¿Me creí más que los demás o presumí de mis cosas?',
-        '¿Fui caprichoso y quise todo para mí?',
+        '¿Hice berrinches o quise todo para mí?',
         '¿Me enojé tanto que dije o hice cosas que lastimaron a otros?',
-        '¿Cuidé los regalos de Dios: mi salud, mis cosas y la naturaleza?',
+        '¿Desperdicié la comida o maltraté mis cosas, los animales o la naturaleza?',
       ],
     },
   ],
@@ -133,7 +138,7 @@ export const CONFESSION = {
       id: 'esperar',
       title: 'Espera tu turno con calma',
       emoji: '⏳',
-      text: 'Mientras esperas en la fila o en la banca, reza en silencio y respira tranquilo. Si estás nervioso, cuéntaselo a Jesús: Él está contigo. Tu catequista y el sacerdote te van a ayudar. Y si en ese momento se te olvida algo, no pasa nada: el sacerdote te irá guiando con preguntas sencillas.',
+      text: 'Mientras esperas en la fila o en la banca, reza en silencio y respira tranquilo. Si estás nervioso, cuéntaselo a Jesús: Él está contigo. Tu catequista y el sacerdote te van a ayudar. Y si en ese momento se te olvida algo, no pasa nada: el sacerdote te puede ayudar con algunas preguntas sencillas.',
     },
     {
       id: 'confesionario',
@@ -166,7 +171,7 @@ export const CONFESSION = {
       id: 'contricion',
       title: 'Reza el Acto de contrición',
       emoji: '🤗',
-      text: 'Luego el sacerdote te pedirá que reces el Acto de contrición. Con esta oración le dices a Jesús, de todo corazón, que te duele haberte alejado de su amor y que quieres volver a su abrazo. Apréndela de memoria; y si te pones nervioso y se te olvida, el sacerdote te ayudará.',
+      text: 'Luego el sacerdote te pedirá que reces el Acto de contrición. Con esta oración le dices a Jesús, de todo corazón, que te duele haberte alejado de su amor y que quieres volver a su abrazo. Apréndela de memoria. Si en tu parroquia aprendiste otra versión, también vale. Y si te pones nervioso y se te olvida, el sacerdote te ayudará.',
       dialogue: [
         { who: 'yo', text: 'Jesús, mi Señor y Redentor: yo me arrepiento de todos los pecados que he cometido hasta hoy, y me pesa de todo corazón, porque con ellos ofendí a un Dios tan bueno.' },
         { who: 'yo', text: 'Propongo firmemente no volver a pecar, y confío en que, por tu infinita misericordia, me has de conceder el perdón de mis culpas y me has de llevar a la vida eterna. Amén.' },
@@ -186,11 +191,11 @@ export const CONFESSION = {
       id: 'despedida',
       title: 'Vete en paz',
       emoji: '👋',
-      text: 'Para despedirse, en muchas parroquias es costumbre que el sacerdote diga «Vete en paz», o bien «Da gracias al Señor porque es bueno», y tú respondes «Porque es eterna su misericordia», que son palabras de los salmos. Dale las gracias y sal con calma y con alegría.',
+      text: 'Al final, el sacerdote se despide de ti. En muchas parroquias es costumbre que diga «Da gracias al Señor porque es bueno», y tú respondes «Porque es eterna su misericordia», que son palabras de los salmos (Salmo 136, 1). Luego te dice «Vete en paz». Dale las gracias y sal con calma y con alegría.',
       dialogue: [
         { who: 'sacerdote', text: 'Da gracias al Señor porque es bueno.' },
         { who: 'yo', text: 'Porque es eterna su misericordia.' },
-        { who: 'sacerdote', text: 'Vete en paz.' },
+        { who: 'sacerdote', text: 'El Señor ha perdonado tus pecados. Vete en paz.' },
         { who: 'yo', text: 'Gracias, padre.' },
       ],
     },
@@ -214,7 +219,7 @@ export const CONFESSION = {
       q: '¿Cómo te recibe Dios cuando vuelves a Él en la confesión?',
       options: ['Con un abrazo, como el papá del hijo pródigo', 'Con cara de enojo', 'Con un castigo muy duro'],
       answer: 0,
-      explain: 'Dios es un Padre bueno que corre a abrazarte, como el papá de la parábola. ¡En el cielo hay fiesta cada vez que alguien vuelve a Él!',
+      explain: 'Dios es un Padre bueno que corre a abrazarte, como el papá de la parábola. ¡En el cielo hay una gran alegría cada vez que alguien vuelve a Él!',
     },
     {
       q: '¿Qué es el examen de conciencia?',

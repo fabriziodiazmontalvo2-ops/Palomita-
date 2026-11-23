@@ -184,7 +184,7 @@ export const PRAYERS = [
       'Señor mío y Dios mío.',
       'Sagrado Corazón de Jesús, en ti confío.',
       'Dulce Corazón de María, sé la salvación mía.',
-      'Ave María purísima, sin pecado concebida.',
+      'Ave María Purísima, sin pecado concebida.',
     ],
     note: 'Se llaman jaculatorias: oraciones muy cortas, como flechas de cariño que suben al cielo. Elige una y repítela en tu corazón durante el día.',
   },

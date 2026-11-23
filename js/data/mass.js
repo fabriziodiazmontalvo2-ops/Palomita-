@@ -4,7 +4,11 @@
 // América Latina (forma «ustedes»). Cuando una oración es muy larga para un globo de diálogo,
 // se corta con «…» y la oración completa está en js/data/prayers.js.
 // En «priest» va lo que dice quien preside o guía ese momento (el sacerdote, el diácono o el lector);
-// en «people», lo que respondemos todos.
+// en «people», lo que respondemos todos. Un «priest» que empieza con «…» es solo el final de una oración
+// más larga del sacerdote (colecta, oración sobre las ofrendas, embolismo, oración por la paz).
+// «Éste es…» lleva tilde en las dos fórmulas porque así está impreso en el Misal; el resto de la app
+// sigue la ortografía actual («Esta es mi Sangre»).
+// Las posturas son las habituales; donde varían según la parroquia, lo dice el «tip» (OGMR 43).
 //
 // Forma: MASS = {
 //   intro,
@@ -50,7 +54,7 @@ export const MASS = {
       emoji: '💜',
       group: 'inicio',
       posture: 'de pie',
-      text: 'Antes de escuchar a Dios y de acercarnos a su mesa, reconocemos con sencillez que a veces no hemos amado bien. Hacemos un momento de silencio y rezamos todos juntos el «Yo confieso». Dios, que es un Padre bueno, nos recibe siempre con un abrazo.',
+      text: 'Antes de escuchar a Dios y de acercarnos a su mesa, reconocemos con sencillez que a veces no hemos amado bien. Hacemos un momento de silencio y muchas veces rezamos todos juntos el «Yo confieso». Dios, que es un Padre bueno, nos recibe siempre con un abrazo.',
       dialogues: [
         { priest: 'Hermanos: para celebrar dignamente estos sagrados misterios, reconozcamos nuestros pecados.', people: 'Yo confieso ante Dios todopoderoso y ante ustedes, hermanos, que he pecado mucho de pensamiento, palabra, obra y omisión. Por mi culpa, por mi culpa, por mi gran culpa…' },
         { priest: 'Dios todopoderoso tenga misericordia de nosotros, perdone nuestros pecados y nos lleve a la vida eterna.', people: 'Amén.' },
@@ -100,7 +104,7 @@ export const MASS = {
       emoji: '📜',
       group: 'palabra',
       posture: 'sentados',
-      text: 'Nos sentamos para escuchar a Dios, que nos habla en la Biblia. Casi siempre es un pasaje del Antiguo Testamento, que cuenta lo que Dios hizo con su pueblo antes de que naciera Jesús. Escucha con atención: ¡Dios tiene algo que decirte hoy!',
+      text: 'Nos sentamos para escuchar a Dios, que nos habla en la Biblia. Los domingos suele ser un pasaje del Antiguo Testamento, que cuenta lo que Dios hizo con su pueblo antes de que naciera Jesús. Escucha con atención: ¡Dios tiene algo que decirte hoy!',
       dialogues: [
         { priest: 'Palabra de Dios.', people: 'Te alabamos, Señor.' },
       ],
@@ -143,7 +147,7 @@ export const MASS = {
       emoji: '📖',
       group: 'palabra',
       posture: 'de pie',
-      text: 'Es el momento más importante de la Liturgia de la Palabra: ¡habla Jesús! El sacerdote o el diácono lee lo que Jesús hizo y enseñó, según uno de los cuatro evangelistas: Mateo, Marcos, Lucas o Juan. Al oír su nombre, nos hacemos tres crucecitas con el pulgar: en la frente, en la boca y en el pecho.',
+      text: 'Es el momento más importante de la Liturgia de la Palabra: ¡habla Jesús! El sacerdote o el diácono lee lo que Jesús hizo y enseñó, según uno de los evangelistas: Mateo, Marcos, Lucas o Juan. Cuando dice «Lectura del santo Evangelio…», nos hacemos tres crucecitas con el pulgar: en la frente, en la boca y en el pecho.',
       dialogues: [
         { priest: 'El Señor esté con ustedes.', people: 'Y con tu espíritu.' },
         { priest: 'Lectura del santo Evangelio según san Lucas.', people: 'Gloria a ti, Señor.' },
@@ -288,8 +292,9 @@ export const MASS = {
       emoji: '🤝',
       group: 'comunion',
       posture: 'de pie',
-      text: 'El sacerdote pide a Jesús la paz y la unidad para toda la Iglesia, y nos desea su paz. Luego nos damos la paz con quienes están cerca, con un saludo sencillo y una sonrisa. ¡Antes de recibir a Jesús, queremos estar en paz con todos!',
+      text: 'El sacerdote pide a Jesús la paz y la unidad para toda la Iglesia, y respondemos «Amén». Después nos desea la paz del Señor y nos damos la paz con quienes están cerca, con un saludo sencillo y una sonrisa. ¡Antes de recibir a Jesús, queremos estar en paz con todos!',
       dialogues: [
+        { priest: '…Tú que vives y reinas por los siglos de los siglos.', people: 'Amén.' },
         { priest: 'La paz del Señor esté siempre con ustedes.', people: 'Y con tu espíritu.' },
       ],
       tip: 'Basta con saludar a los que tienes cerca, sin salir de tu lugar. Puedes decir, por ejemplo: «La paz esté contigo».',
@@ -302,7 +307,7 @@ export const MASS = {
       posture: 'de pie',
       text: 'Mientras el sacerdote parte la Hostia consagrada, cantamos o rezamos: «Cordero de Dios, que quitas el pecado del mundo, ten piedad de nosotros». Lo decimos tres veces, y la última terminamos con «danos la paz». Así llamó Juan el Bautista a Jesús (Juan 1, 29).',
       dialogues: [],
-      tip: 'Jesús parte el pan para compartirlo, como en la Última Cena. Todos comemos del mismo Pan y formamos una sola familia.',
+      tip: 'El sacerdote parte el Pan, como hizo Jesús en la Última Cena. Todos comemos del mismo Pan y formamos una sola familia (1 Corintios 10, 17).',
     },
     {
       id: 'dichosos-los-invitados',
@@ -382,7 +387,7 @@ export const MASS = {
     title: 'Cómo me acerco a comulgar',
     steps: [
       { emoji: '⏳', text: 'Desde una hora antes de comulgar no como ni bebo nada, salvo agua o medicinas si las necesito. Es el ayuno eucarístico: mi manera de decirle a Jesús que tengo hambre de Él.' },
-      { emoji: '🤍', text: 'Llego con el corazón en paz con Dios. Por eso me confieso antes de mi Primera Comunión, y vuelvo a confesarme cada vez que me alejo de su amor.' },
+      { emoji: '🤍', text: 'Llego con el corazón en paz con Dios. Por eso me confieso antes de mi Primera Comunión. Y si algún día me alejo de Él con un pecado grave, primero recibo su abrazo en la confesión y después comulgo.' },
       { emoji: '🙏', text: 'Cuando llega el momento, camino en la fila con calma y con las manos juntas, sin empujar ni conversar, pensando en Jesús, que me espera.' },
       { emoji: '🙇', text: 'Al llegar mi turno, antes de recibirlo, hago una pequeña inclinación de cabeza: es mi saludo de respeto y de amor a Jesús.' },
       { emoji: '🗣️', text: 'Me muestran la Hostia y me dicen «El Cuerpo de Cristo». Respondo bien claro: «Amén». Quiere decir: «¡Sí, creo que eres Tú, Jesús!».' },
@@ -437,7 +442,7 @@ export const MASS = {
       explain: 'Comulgas allí mismo, frente al sacerdote o al ministro. Jesús se te da como alimento: ¡lo recibes enseguida y con mucho cariño!',
     },
     {
-      q: '¿Qué decimos cuando el sacerdote nos muestra la Hostia antes de la Comunión?',
+      q: 'El sacerdote muestra la Hostia y dice «Dichosos los invitados a la cena del Señor». ¿Qué respondemos?',
       options: ['«Y con tu espíritu»', '«Señor, no soy digno de que entres en mi casa…»', '«Te alabamos, Señor»'],
       answer: 1,
       explain: 'Decimos «Señor, no soy digno de que entres en mi casa, pero una palabra tuya bastará para sanarme». ¡Jesús quiere entrar en tu corazón!',

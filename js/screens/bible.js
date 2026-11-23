@@ -1,9 +1,11 @@
 // Pantalla "Mi Biblia": la sección de lectura de Palomita.
 //
-//   Pestañas: historias (Antiguo y Nuevo Testamento) · parábolas · oraciones · catecismo ("Mi camino") · versículos.
+//   Pestañas: historias (Antiguo Testamento, Nuevo Testamento y Milagros de Jesús) · parábolas · oraciones
+//   (con «Escuchar» renglón por renglón y «Rezar juntos») · catecismo ("Mi camino", por unidades) · versículos.
 //   mount(el, params)
 //     params.tab     'historias' | 'parabolas' | 'oraciones' | 'catecismo' | 'versiculos'
 //     params.story / params.parable / params.prayer / params.topic   id de una lectura para abrirla directamente
+//     params.shelf   'at' | 'nt' | 'mi'  (opcional, con params.story: estante de la historia)
 //
 // Los contenidos (js/data/*.js) se cargan con import() dinámico: si un archivo todavía no existe,
 // su pestaña muestra "Muy pronto" y nada se rompe. Todos los textos se insertan como texto, nunca como HTML.
@@ -27,9 +29,20 @@ const TAB_IDS = TABS.map(t => t.id);
 const TAB_OF = { story: 'historias', parable: 'parabolas', prayer: 'oraciones', topic: 'catecismo' };
 
 const SHELVES = [
-  { key: 'at', title: 'Antiguo Testamento', sub: 'Dios prepara a su pueblo', icon: '📜' },
-  { key: 'nt', title: 'Nuevo Testamento', sub: 'Jesús está con nosotros', icon: '✨' },
+  { key: 'at', title: 'Antiguo Testamento', sub: 'Dios prepara a su pueblo', icon: '📜', color: 'var(--sun-deep)' },
+  { key: 'nt', title: 'Nuevo Testamento', sub: 'Jesús está con nosotros', icon: '✨', color: 'var(--sky-deep)' },
+  { key: 'mi', title: 'Milagros de Jesús', sub: 'Jesús sana, ayuda y cuida', icon: '🌟', color: 'var(--grape)' },
 ];
+const SHELF_KEYS = SHELVES.map(sh => sh.key);
+
+// Unidades del camino a la Primera Comunión.
+const UNITS = [
+  { key: 'creo', title: 'Creo', sub: 'Lo que creemos', icon: '✝️' },
+  { key: 'celebro', title: 'Celebro', sub: 'Los sacramentos', icon: '🍞' },
+  { key: 'vivo', title: 'Vivo', sub: 'Vivir como Jesús', icon: '❤️' },
+  { key: 'rezo', title: 'Rezo', sub: 'Hablar con Dios', icon: '🙏' },
+];
+const UNIT_KEYS = UNITS.map(u => u.key);
 
 const PRAYER_GROUPS = [
   { key: 'basicas', title: 'Las primeras oraciones' },
@@ -77,6 +90,7 @@ const PRIZE = {
 const LOADERS = {
   at: () => import('../data/bible-at.js').then(m => m.STORIES_AT),
   nt: () => import('../data/bible-nt.js').then(m => m.STORIES_NT),
+  mi: () => import('../data/bible-milagros.js').then(m => m.STORIES_MILAGROS),
   parables: () => import('../data/parables.js').then(m => m.PARABLES),
   prayers: () => import('../data/prayers.js').then(m => m.PRAYERS),
   catechism: () => import('../data/catechism.js').then(m => m.CATECHISM),
@@ -225,7 +239,8 @@ export async function mount(el, params = {}) {
       return b;
     }));
   const scroll = h('div', { class: 'scroll bb-scroll', id: 'bb-panel', tabindex: '-1' });
-  const stopPill = h('button', { type: 'button', class: 'bb-stop', hidden: true, onclick: () => { sfx('tap'); tts.stop(); } }, deco('⏹️'), 'Detener la voz');
+  let stopHook = null;      // lo que detiene la lectura en curso (voz o resaltado por tiempo)
+  const stopPill = h('button', { type: 'button', class: 'bb-stop', hidden: true, onclick: () => { sfx('tap'); if (stopHook) stopHook(); else tts.stop(); } }, deco('⏹️'), 'Detener');
   const page = h('div', { class: 'bb-page' }, scroll, stopPill);
   const root = h('div', { class: 'bb' },
     h('header', { class: 'topbar bb-top' }, iconButton('↩️', 'Volver', () => goBack()), titleEl, chip),
@@ -313,7 +328,7 @@ export async function mount(el, params = {}) {
   // ── Navegación interna ──
   const VIEWS = {
     index: v => INDEX[v.tab](),
-    story: v => storyView(v.id),
+    story: v => storyView(v.id, v.shelf),
     parable: v => parableView(v.id),
     prayer: v => prayerView(v.id),
     topic: v => topicView(v.id),
@@ -331,8 +346,10 @@ export async function mount(el, params = {}) {
     view = next;
     // Recordar el lugar: si el niño va a un juego y vuelve, la Biblia se abre donde la dejó.
     for (const k of Object.keys(TAB_OF)) delete params[k];
+    delete params.shelf;
     params.tab = next.tab;
     if (next.kind !== 'index') params[next.kind] = next.id;
+    if (next.kind === 'story' && next.shelf) params.shelf = next.shelf;
     root.dataset.view = next.kind === 'index' ? 'index' : 'reader';
     for (const [id, b] of tabBtns) {
       const sel = id === next.tab;
@@ -516,16 +533,18 @@ export async function mount(el, params = {}) {
   // ───────────────────────── 1. Historias ─────────────────────────
 
   async function stories() {
-    const [at, nt] = await Promise.all([load('at'), load('nt')]);
-    const lists = { at: arr(at).filter(s => s.id), nt: arr(nt).filter(s => s.id) };
-    return { lists, all: [...lists.at.map(s => ({ s, shelf: SHELVES[0] })), ...lists.nt.map(s => ({ s, shelf: SHELVES[1] }))] };
+    const data = await Promise.all(SHELF_KEYS.map(k => load(k)));
+    const lists = {};
+    SHELF_KEYS.forEach((k, i) => { lists[k] = arr(data[i]).filter(s => s.id); });
+    return { lists, all: SHELVES.flatMap(sh => lists[sh.key].map(s => ({ s, shelf: sh }))) };
   }
+  const openStory = (id, shelf) => { sfx('page'); return show({ kind: 'story', tab: 'historias', id: String(id), shelf }); };
 
-  function storyCard(s) {
+  function storyCard(s, shelfKey) {
     const read = state.isRead(s.id);
     const star = state.quizDone(`story:${s.id}`);
-    return h('button', { type: 'button', class: `bb-card${read ? ' is-read' : ''}`, dataset: { story: s.id },
-      'aria-label': `${txt(s.title)}. ${txt(s.ref)}.${read ? ' Ya la leíste.' : ''}`, onclick: () => open('story', s.id) },
+    return h('button', { type: 'button', class: `bb-card${read ? ' is-read' : ''}`, dataset: { story: s.id, shelf: shelfKey },
+      'aria-label': `${txt(s.title)}. ${txt(s.ref)}.${read ? ' Ya la leíste.' : ''}`, onclick: () => openStory(s.id, shelfKey) },
     art(s.art, 'card'),
     read ? h('span', { class: 'bb-card__done', 'aria-hidden': 'true' }) : null,
     star ? h('span', { class: 'bb-card__star', 'aria-hidden': 'true' }, '⭐') : null,
@@ -536,7 +555,7 @@ export async function mount(el, params = {}) {
 
   function shelf(sh, list) {
     const done = list.filter(s => state.isRead(s.id)).length;
-    const sec = h('section', { class: 'bb-shelf', 'aria-label': sh.title },
+    const sec = h('section', { class: `bb-shelf bb-shelf--${sh.key}`, 'aria-label': sh.title, dataset: { shelf: sh.key } },
       h('div', { class: 'bb-shelf__head' },
         h('span', { class: 'bb-shelf__icon', 'aria-hidden': 'true' }, sh.icon),
         h('div', { class: 'bb-shelf__names' }, h('h2', null, sh.title), h('p', null, sh.sub)),
@@ -545,8 +564,17 @@ export async function mount(el, params = {}) {
       sec.append(h('p', { class: 'bb-shelf__soon' }, deco('🪺'), 'Muy pronto habrá historias en este estante.'));
       return sec;
     }
+    // Avance propio de cada estante.
+    const m = meter((done / list.length) * 100, sh.color);
+    m.classList.add('bb-shelf__meter');
+    m.setAttribute('role', 'progressbar');
+    m.setAttribute('aria-valuemin', '0');
+    m.setAttribute('aria-valuemax', '100');
+    m.setAttribute('aria-valuenow', String(Math.round((done / list.length) * 100)));
+    m.setAttribute('aria-label', `${sh.title}: ${done} de ${list.length} leídas`);
+    sec.append(m);
     // Las tarjetas van de dos en dos: cada pareja se apoya en su tabla del estante.
-    for (let i = 0; i < list.length; i += 2) sec.append(h('div', { class: 'bb-row' }, list.slice(i, i + 2).map(storyCard)));
+    for (let i = 0; i < list.length; i += 2) sec.append(h('div', { class: 'bb-row' }, list.slice(i, i + 2).map(s => storyCard(s, sh.key))));
     return sec;
   }
 
@@ -554,9 +582,10 @@ export async function mount(el, params = {}) {
     const { lists, all } = await stories();
     if (!all.length) return { body: soon('Muy pronto', 'Las historias de la Biblia están por llegar a tus estantes.', '📚') };
     const read = all.filter(x => state.isRead(x.s.id)).length;
-    const upNext = all.find(x => !state.isRead(x.s.id))?.s;
+    const nextItem = all.find(x => !state.isRead(x.s.id));
+    const upNext = nextItem?.s;
     const feature = upNext
-      ? h('button', { type: 'button', class: 'bb-feature', onclick: () => open('story', upNext.id) },
+      ? h('button', { type: 'button', class: 'bb-feature', onclick: () => openStory(upNext.id, nextItem.shelf.key) },
         art(upNext.art, 'thumb'),
         h('span', { class: 'bb-feature__body' },
           h('span', { class: 'eyebrow' }, read ? 'Sigue leyendo' : 'Empieza aquí'),
@@ -574,16 +603,19 @@ export async function mount(el, params = {}) {
     };
   }
 
-  async function storyView(id) {
-    const { all } = await stories();
-    const i = all.findIndex(x => x.s.id === id);
-    if (i < 0) return null;
-    const { s, shelf: sh } = all[i];
+  async function storyView(id, shelfKey) {
+    const { lists, all } = await stories();
+    const hit = all.find(x => x.s.id === id && (!shelfKey || x.shelf.key === shelfKey)) || all.find(x => x.s.id === id);
+    if (!hit) return null;
+    const { s, shelf: sh } = hit;
+    // Anterior / Siguiente dentro del mismo estante.
+    const list = lists[sh.key];
+    const i = list.indexOf(s);
     const paragraphs = arr(s.paragraphs).map(txt);
-    const link = x => x && { title: txt(x.s.title), go: () => show({ kind: 'story', tab: 'historias', id: x.s.id }) };
+    const link = x => x && { title: txt(x.title), go: () => show({ kind: 'story', tab: 'historias', id: x.id, shelf: sh.key }) };
     return {
-      title: 'Historias',
-      chip: { text: `${i + 1} de ${all.length}`, label: `Historia ${i + 1} de ${all.length}` },
+      title: sh.key === 'mi' ? 'Milagros' : 'Historias',
+      chip: { icon: sh.icon, text: `${i + 1} de ${list.length}`, label: `${sh.title}: historia ${i + 1} de ${list.length}` },
       body: h('article', { class: 'bb-reader' },
         art(s.art, 'hero'),
         h('div', { class: 'bb-reader__body' },
@@ -596,7 +628,7 @@ export async function mount(el, params = {}) {
           note('think', '💭', 'Para pensar', s.think),
           note('pray', '🙏', 'Oración', s.prayer),
           ending({ readId: s.id, quizKey: `story:${s.id}`, quiz: s.quiz, what: 'esta historia' }),
-          navRow(link(all[i - 1]), link(all[i + 1])))),
+          navRow(link(list[i - 1]), link(list[i + 1])))),
     };
   }
 
@@ -758,6 +790,7 @@ export async function mount(el, params = {}) {
     } }, deco('🧠'), h('span', null, 'Aprender de memoria'));
     const lineBox = h('div', { class: 'bb-lines' }, lineEls);
     const learnBox = h('div', { class: 'bb-learn' }, learnToggle, learnPanel);
+    const karaoke = prayerKaraoke(lines, lineEls, lineBox);
 
     function paintLearn() {
       const cut = learning ? LEARN_STEPS[level] : 0;
@@ -805,12 +838,13 @@ export async function mount(el, params = {}) {
       title: 'Oraciones',
       chip: prayedToday(p.id) ? { icon: '🙏', text: 'hoy', label: 'Ya rezaste esta oración hoy' } : null,
       body: h('article', { class: `bb-reader bb-prayer bb-group--${g.key}` },
-        h('header', { class: 'bb-phead' },
+        h('header', { class: 'bb-phead bb-phead--prayer' },
           h('div', { class: 'bb-phead__emoji', 'aria-hidden': 'true' }, txt(p.emoji)),
           h('p', { class: 'eyebrow' }, g.title),
-          h('h2', { class: 'bb-reader__title' }, txt(p.title))),
+          h('h2', { class: 'bb-reader__title' }, txt(p.title)),
+          fontControl()),
         h('div', { class: 'bb-reader__body' },
-          tools(() => [txt(p.title), ...lines]),
+          karaoke,
           lineBox,
           learnBox,
           note('tip', '💡', '¿Sabías que…?', p.note),
@@ -819,15 +853,185 @@ export async function mount(el, params = {}) {
     };
   }
 
+  // «Escuchar»: la voz lee la oración renglón por renglón y se resalta el renglón que suena.
+  // «Rezar juntos»: la voz dice un renglón, luego una pausa visible («Ahora tú», ~ el doble de lo que duró) para que el
+  // niño lo repita, y sigue. Sin voz en el teléfono, el resaltado avanza por tiempo.
+  function prayerKaraoke(lines, lineEls, lineBox) {
+    const hasVoice = () => tts.available() && state.setting('voice') !== false;
+    const est = line => 700 + 72 * txt(line).length;            // lo que tarda en leerse un renglón (sin voz)
+    let mode = null, tok = 0;
+    const timers = new Set();
+    const wait = (fn, ms) => { const id = later(() => { timers.delete(id); fn(); }, ms); timers.add(id); };
+    const you = h('span', { class: 'bb-you', 'aria-hidden': 'true' }, h('span', null, '🗣️ Ahora tú'), h('i'));
+    const status = h('p', { class: 'bb-kar__status', role: 'status', 'aria-live': 'polite' });
+    const mk = (cls, icon, label) => {
+      const b = h('button', { type: 'button', class: `btn btn--sm ${cls}`, 'aria-pressed': 'false' }, deco(icon), h('span', null, label));
+      b.dataset.icon = icon; b.dataset.label = label;
+      return b;
+    };
+    const listenBtn = mk('btn--sky bb-kar__btn', hasVoice() ? '🔊' : '📖', hasVoice() ? 'Escuchar' : 'Leer conmigo');
+    const togetherBtn = mk('btn--grape bb-kar__btn', '🗣️', 'Rezar juntos');
+    listenBtn.addEventListener('click', () => { sfx('tap'); toggle('listen'); });
+    togetherBtn.addEventListener('click', () => { sfx('tap'); toggle('together'); });
+    const box = h('div', { class: 'bb-kar' }, h('div', { class: 'bb-kar__row' }, listenBtn, togetherBtn), status);
+    let visible = true;
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(es => { visible = es[es.length - 1].isIntersecting; paintPill(); }, { root: scroll });
+      io.observe(box);
+      viewOffs.push(() => io.disconnect());
+    }
+    const paintPill = () => { stopPill.hidden = !(mode && !visible); };
+
+    function mark(i, how) {
+      lineEls.forEach((row, k) => {
+        row.classList.toggle('is-say', k === i && how === 'say');
+        row.classList.toggle('is-you', k === i && how === 'you');
+        row.classList.toggle('is-past', i >= 0 && k < i);
+      });
+      lineBox.classList.toggle('is-kar', i >= 0);
+      if (i < 0) { you.remove(); return; }
+      const row = lineEls[i];
+      if (how === 'you') row.append(you); else you.remove();
+      const r = row.getBoundingClientRect(), sr = scroll.getBoundingClientRect();
+      if (r.top < sr.top + 60 || r.bottom > sr.bottom - 80) row.scrollIntoView({ behavior: smooth(), block: 'center' });
+    }
+    function paint() {
+      for (const [b, m] of [[listenBtn, 'listen'], [togetherBtn, 'together']]) {
+        const on = mode === m;
+        b.firstChild.textContent = on ? '⏹️' : b.dataset.icon;
+        b.lastChild.textContent = on ? 'Detener' : b.dataset.label;
+        b.setAttribute('aria-pressed', String(on));
+        b.classList.toggle('is-on', on);
+      }
+      paintPill();
+    }
+    function stop(msg = '') {
+      tok++;
+      for (const id of timers) clearTimeout(id);
+      timers.clear();
+      const was = mode;
+      mode = null;
+      stopHook = null;
+      if (was) tts.stop();
+      mark(-1);
+      status.textContent = msg;
+      paint();
+    }
+    function done() {
+      stop('¡Muy bien! Ahora di «Amén» con el corazón.');
+      sfx('sparkle');
+    }
+    function toggle(m) {
+      if (mode === m) { stop(); return; }
+      stop();
+      mode = m;
+      stopHook = () => stop();
+      const my = tok;
+      paint();
+      if (m === 'listen') listen(my); else together(my, 0);
+    }
+    // Escuchar: toda la oración seguida.
+    function listen(my) {
+      status.textContent = hasVoice() ? 'Escucha y sigue el renglón que brilla.' : 'Lee despacio el renglón que brilla.';
+      if (hasVoice()) {
+        const t0 = Date.now();
+        let heard = false;
+        const ok = tts.speak(lines, { keepLines: true,
+          onIndex: i => { if (my === tok) { heard = true; mark(i, 'say'); } },
+          onend: () => {
+            if (my !== tok) return;
+            if (!heard && Date.now() - t0 < 400) { byTime(my, 0); return; }   // la voz no pudo hablar
+            done();
+          } });
+        if (ok) { mark(0, 'say'); return; }
+      }
+      byTime(my, 0);
+    }
+    function byTime(my, i) {
+      if (my !== tok) return;
+      if (i >= lines.length) { done(); return; }
+      mark(i, 'say');
+      wait(() => byTime(my, i + 1), est(lines[i]));
+    }
+    // Rezar juntos: un renglón la voz, luego «Ahora tú».
+    function together(my, i) {
+      if (my !== tok) return;
+      if (i >= lines.length) { done(); return; }
+      status.textContent = 'Escucha el renglón… y luego repítelo tú.';
+      mark(i, 'say');
+      const yourTurn = ms => {
+        if (my !== tok) return;
+        const pause = Math.max(1800, Math.min(10000, ms * 2));
+        you.style.setProperty('--wait', `${pause}ms`);
+        you.lastChild.remove();
+        you.append(h('i'));                 // reinicia la barrita que se va vaciando
+        mark(i, 'you');
+        status.textContent = '¡Ahora tú! Repite el renglón.';
+        wait(() => together(my, i + 1), pause);
+      };
+      if (hasVoice()) {
+        const t0 = Date.now();
+        const ok = tts.speak(lines[i], { onend: () => {
+          if (my !== tok) return;
+          const spent = Date.now() - t0;
+          yourTurn(spent < 300 ? est(lines[i]) : spent);
+        } });
+        if (ok) return;
+      }
+      wait(() => yourTurn(est(lines[i])), est(lines[i]));
+    }
+    viewOffs.push(() => stop());
+    return box;
+  }
+
   // ───────────────────────── 4. Catecismo: "Mi camino a la Primera Comunión" ─────────────────────────
 
   const topicDone = c => state.quizDone(`cat:${c.id}`);
+  // Los temas se ordenan por unidad (Creo · Celebro · Vivo · Rezo) sin perder el orden de cada unidad;
+  // el camino numerado, «Sigue aquí» y Anterior/Siguiente usan este mismo orden.
+  async function topics() {
+    const list = arr(await load('catechism')).filter(c => c.id);
+    const rank = c => { const r = UNIT_KEYS.indexOf(c.unit); return r < 0 ? UNIT_KEYS.length : r; };
+    return list.map((c, i) => [c, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(p => p[0]);
+  }
 
   async function indexCatecismo() {
-    const list = arr(await load('catechism')).filter(c => c.id);
+    const list = await topics();
     if (!list.length) return { body: soon('Muy pronto', 'Tu camino a la Primera Comunión se está preparando.', '⛪') };
     const done = list.filter(topicDone).length;
     const nextId = list.find(c => !topicDone(c))?.id;
+    const step = (c, i) => {
+      const isDone = topicDone(c), isNext = c.id === nextId;
+      const status = isDone ? 'Terminada' : isNext ? 'Sigue aquí' : '';
+      return h('li', { class: `bb-step${isDone ? ' is-done' : ''}${isNext ? ' is-next' : ''}` },
+        h('button', { type: 'button', class: 'bb-step__btn', dataset: { topic: c.id },
+          'aria-label': `Etapa ${i + 1}: ${txt(c.title)}.${status ? ` ${status}.` : ''}`, onclick: () => open('topic', c.id) },
+        h('span', { class: 'bb-stone', 'aria-hidden': 'true' }, String(i + 1), isDone ? h('span', { class: 'bb-stone__star' }, '⭐') : null),
+        h('span', { class: 'bb-step__card' },
+          h('span', { class: 'bb-step__emoji', 'aria-hidden': 'true' }, txt(c.emoji)),
+          h('span', { class: 'bb-step__names' },
+            status ? h('span', { class: 'bb-step__status' }, status) : null,
+            h('span', { class: 'bb-step__title' }, txt(c.title))))),
+        trailIcon());
+    };
+    // Encabezados por unidad solo si los temas traen su unidad.
+    const hasUnits = list.some(c => UNIT_KEYS.includes(c.unit));
+    let path;
+    if (!hasUnits) path = h('ol', { class: 'bb-path' }, list.map(step));
+    else {
+      const groups = [...UNITS, { key: '', title: 'Más temas', sub: 'Para seguir creciendo', icon: '🌟' }]
+        .map(u => ({ u, items: list.filter(c => (u.key ? c.unit === u.key : !UNIT_KEYS.includes(c.unit))) }))
+        .filter(g => g.items.length);
+      path = h('div', { class: 'bb-units' }, groups.map(({ u, items }) => {
+        const n = items.filter(topicDone).length;
+        return h('section', { class: `bb-unit bb-unit--${u.key || 'mas'}`, 'aria-label': u.title },
+          h('header', { class: 'bb-unit__head' },
+            h('span', { class: 'bb-unit__icon', 'aria-hidden': 'true' }, u.icon),
+            h('div', { class: 'bb-unit__names' }, h('h2', null, u.title), h('p', null, u.sub)),
+            h('span', { class: 'bb-count', 'aria-label': `Terminadas ${n} de ${items.length}` }, `${n}/${items.length}`)),
+          h('ol', { class: 'bb-path' }, items.map(c => step(c, list.indexOf(c)))));
+      }));
+    }
     return {
       chip: { icon: '⛪', text: `${done}/${list.length}`, label: `Etapas terminadas: ${done} de ${list.length}` },
       body: [
@@ -835,42 +1039,31 @@ export async function mount(el, params = {}) {
           h('h2', null, 'Mi camino a la Primera Comunión'),
           h('p', null, 'Paso a paso te preparas para recibir a Jesús. En cada etapa lees, aprendes y respondes tres preguntas.')),
         progressCard({ icon: '👣', title: `Llevas ${done} de ${plural(list.length, 'etapa', 'etapas')}`, value: (done / list.length) * 100, color: 'var(--leaf)' }),
-        h('ol', { class: 'bb-path' }, list.map((c, i) => {
-          const isDone = topicDone(c), isNext = c.id === nextId;
-          const status = isDone ? 'Terminada' : isNext ? 'Sigue aquí' : '';
-          return h('li', { class: `bb-step${isDone ? ' is-done' : ''}${isNext ? ' is-next' : ''}` },
-            h('button', { type: 'button', class: 'bb-step__btn', dataset: { topic: c.id },
-              'aria-label': `Etapa ${i + 1}: ${txt(c.title)}.${status ? ` ${status}.` : ''}`, onclick: () => open('topic', c.id) },
-            h('span', { class: 'bb-stone', 'aria-hidden': 'true' }, String(i + 1), isDone ? h('span', { class: 'bb-stone__star' }, '⭐') : null),
-            h('span', { class: 'bb-step__card' },
-              h('span', { class: 'bb-step__emoji', 'aria-hidden': 'true' }, txt(c.emoji)),
-              h('span', { class: 'bb-step__names' },
-                status ? h('span', { class: 'bb-step__status' }, status) : null,
-                h('span', { class: 'bb-step__title' }, txt(c.title))))),
-            trailIcon());
-        })),
+        path,
         h('div', { class: `bb-goal${done === list.length ? ' is-won' : ''}` },
           h('div', { class: 'bb-goal__icon', 'aria-hidden': 'true' }, '🎉'),
           h('h3', null, done === list.length ? '¡Recorriste todo el camino!' : '¡Mi Primera Comunión!'),
           h('p', null, 'Al final del camino te espera Jesús en la Eucaristía.')),
+        h('p', { class: 'bb-footnote' }, 'Temario general según el Catecismo. Tu catequista puede indicarte el orden de tu parroquia.'),
       ],
     };
   }
 
   async function topicView(id) {
-    const list = arr(await load('catechism')).filter(c => c.id);
+    const list = await topics();
     const i = list.findIndex(c => c.id === id);
     if (i < 0) return null;
     const c = list[i];
     const items = arr(c.items).filter(it => it && (it.title || it.text));
     const link = (x, n) => x && { title: `${n}. ${txt(x.title)}`, go: () => show({ kind: 'topic', tab: 'catecismo', id: x.id }) };
+    const unit = UNITS.find(u => u.key === c.unit);
     return {
       title: 'Mi camino',
       chip: { icon: topicDone(c) ? '⭐' : '', text: `${i + 1} de ${list.length}`, label: `Etapa ${i + 1} de ${list.length}` },
       body: h('article', { class: 'bb-reader bb-topic' },
         h('header', { class: 'bb-phead bb-phead--topic' },
           h('div', { class: 'bb-phead__emoji', 'aria-hidden': 'true' }, txt(c.emoji)),
-          h('p', { class: 'eyebrow' }, `Etapa ${i + 1} de ${list.length}`),
+          h('p', { class: 'eyebrow' }, `Etapa ${i + 1} de ${list.length}${unit ? ` · ${unit.title}` : ''}`),
           h('h2', { class: 'bb-reader__title' }, txt(c.title))),
         h('div', { class: 'bb-reader__body' },
           tools(() => [txt(c.title), txt(c.intro), ...items.flatMap(it => [txt(it.title), txt(it.text)]), txt(c.closing)]),
@@ -980,7 +1173,7 @@ export async function mount(el, params = {}) {
   };
 
   // ── Primera vista según los parámetros ──
-  const first = params.story ? { kind: 'story', id: String(params.story) }
+  const first = params.story ? { kind: 'story', id: String(params.story), shelf: SHELF_KEYS.includes(params.shelf) ? params.shelf : undefined }
     : params.parable ? { kind: 'parable', id: String(params.parable) }
       : params.prayer ? { kind: 'prayer', id: String(params.prayer) }
         : params.topic ? { kind: 'topic', id: String(params.topic) }
