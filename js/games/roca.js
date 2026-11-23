@@ -18,7 +18,11 @@
 //   46 ráfagas de viento sin tormenta               56 noche con ventanitas encendidas
 //   66 piso travieso (a ratos corre y a ratos frena) 76 amanecer: el viento cambia de lado
 //   86 campanario: un balcón cada 10 pisos          91 la gran tormenta (todo junto)
-// El techito del final cambia según el nivel (rojo, azul, con cruz, cúpula, campanario, dorado con estrella).
+// En el nivel en que se presenta una novedad, sale sí o sí en el segundo piso (SHOW).
+// El techito del final cambia según el nivel (rojo, azul, con cruz, cúpula, campanario, dorado con estrella); en el
+// final la cámara se aleja hasta mostrar toda la casa sobre la roca, sale el arcoíris y la palomita se posa en el techo.
+// Curva medida con bots (niños de 7–10): 1–5 casi tutorial, 6–30 suave, 30–70 retador, 70–100 difícil pero justo.
+// Duración de una partida ganada: ≈ 23 s (nivel 1) … ≈ 70 s (nivel 100).
 //
 // Movimiento con paso fijo (STEP) para que la predicción de debug.landingAt(t) coincida con lo que de verdad pasa.
 
@@ -40,6 +44,7 @@ const NEWS = {
   76: '¡Nuevo: amanecer 🌄! El viento cambia de lado',
   86: '¡Nuevo: campanario 🔔! Cada 10 pisos, un balcón',
   91: '¡La gran tormenta ⛈️! Lluvia, ríos y viento… ¡la roca no se mueve!',
+  100: '¡Nivel 100! 🏆 La casa más alta sobre la roca',
 };
 
 export default {
@@ -77,6 +82,8 @@ export default {
     const STORM_EVERY = HAS.great ? 3 : LV >= 21 ? Math.round(lerp(4.6, 3.4, D)) : 5;
     const SCENE = LV >= 76 ? 'dawn' : LV >= 56 ? 'night' : LV >= 41 ? 'sunset' : LV >= 21 ? 'tarde' : 'day';
     const COLORS = ['#ffb38a', '#ffd97a', '#a8dcf5', '#c7b5f2', '#ffb0c8', '#a8e0a0'];
+    // En el nivel en que se presenta una novedad, sale sí o sí en el segundo piso (para que se vea lo que anuncia el cartel).
+    const SHOW = { 6: 'stone', 11: 'heart', 26: 'fast', 31: 'swing', 36: 'narrow', 46: 'gust', 66: 'trav' }[LV] || null;
     const ROOF = LV >= 91 ? 'gold' : LV >= 76 ? 'bell' : LV >= 56 ? 'dome' : LV >= 41 ? 'cross' : LV >= 21 ? 'blue' : 'red';
 
     let t = 0, cam = 0, acc = 0;
@@ -133,17 +140,20 @@ export default {
     function newBlock() {
       const top = topOf(), n = floors.length;
       sinceStone++; sinceHeart++;
+      const show = n === 1 ? SHOW : null;
       let kind = 'normal';
-      if (HAS.stone && n > 0 && sinceStone >= STONE_EVERY && (top.w < START_W * 0.6 || sinceStone >= STONE_EVERY * 2)) kind = 'stone';
+      if (show === 'stone' || show === 'heart' || show === 'narrow') kind = show;
+      else if (HAS.stone && n > 0 && sinceStone >= STONE_EVERY && (top.w < START_W * 0.6 || sinceStone >= STONE_EVERY * 2)) kind = 'stone';
       else if (HAS.heart && n > 0 && api.lives < MAXL && sinceHeart >= 5 && api.rand() < 0.45) kind = 'heart';
       else if (HAS.narrow && n > 1 && top.w > MIN_W * 1.45 && api.rand() < lerp(0.1, 0.2, D)) kind = 'narrow';
       if (kind === 'stone') sinceStone = 0;
       if (kind === 'heart') sinceHeart = 0;
       const w = kind === 'stone' ? START_W : kind === 'narrow' ? Math.max(MIN_W, Math.round(top.w * 0.68)) : top.w;
       let motion = 'line';
-      if (n > 0 && HAS.swing && kind !== 'stone' && api.rand() < lerp(0.3, 0.42, D)) motion = 'swing';
-      else if (n > 0 && HAS.trav && api.rand() < 0.25) motion = 'trav';
-      const fast = n > 0 && HAS.fast && motion === 'line' && kind === 'normal' && api.rand() < lerp(0.18, 0.3, D);
+      if (show === 'swing' || show === 'trav') motion = show;
+      else if (n > 0 && !show && HAS.swing && kind !== 'stone' && api.rand() < lerp(0.3, 0.42, D)) motion = 'swing';
+      else if (n > 0 && !show && HAS.trav && api.rand() < 0.25) motion = 'trav';
+      const fast = show === 'fast' || (n > 0 && !show && HAS.fast && motion === 'line' && kind === 'normal' && api.rand() < lerp(0.18, 0.3, D));
       const v = V0 * (1 + Math.min(0.3, n * RAMP));
       const dir = api.rand() < 0.5 ? 1 : -1;
       const amp = (W - w) / 2 - 8;
@@ -157,11 +167,11 @@ export default {
       if (motion === 'swing') cur.x = W / 2 + amp * Math.sin(cur.ph);
       blocks++;
       // ráfaga de viento sin tormenta
-      if (HAS.gust && n > 0 && storm <= 0 && wind.left <= 0 && api.rand() < lerp(0.12, 0.28, D)) {
+      if (show === 'gust' || (HAS.gust && n > 0 && storm <= 0 && wind.left <= 0 && api.rand() < lerp(0.12, 0.28, D))) {
         wind.v = (api.rand() < 0.5 ? 1 : -1) * WIND * 0.75; wind.left = 2.6; wind.flipAt = -1;
         api.floatText(W / 2, sy(slideY() - FH - 34), '🍃 ¡Ráfaga!', { color: '#eafff0', size: 18 });
       }
-      const label = kind === 'stone' ? '🪨 ¡Piso de roca!' : kind === 'heart' ? '💛 ¡Piso con corazón!' : kind === 'narrow' ? 'Piso angosto'
+      const label = kind === 'stone' ? '🪨 ¡Piso de roca!' : kind === 'heart' ? '💛 ¡Piso con corazón!' : kind === 'narrow' ? '📏 Piso angosto'
         : fast ? '⚡ ¡Veloz!' : null;
       if (label) api.floatText(clamp(cur.x, 80, W - 80), sy(slideY() - FH - 14), label, { color: '#fff3b0', size: 16 });
     }
@@ -218,7 +228,7 @@ export default {
       } else api.sfx(cur.kind === 'stone' ? 'step' : 'pop');
       if (cur.kind === 'heart') {
         if (off <= TOL_P * 1.6 && api.lives < MAXL) { api.addLife(); api.floatText(x, sy(y - FH - 36), '💛 ¡Una vida más!', { color: '#fff3b0', size: 18 }); }
-        else if (off <= TOL_P * 1.6) api.burst(x, sy(y - FH / 2), { emoji: '💛', count: 3, speed: 60, size: 16 });
+        else if (off <= TOL_P * 1.6) { api.burst(x, sy(y - FH / 2), { emoji: '💛', count: 3, speed: 60, size: 16 }); api.floatText(x, sy(y - FH - 36), '💛 ¡Muy bien!', { color: '#fff3b0', size: 18 }); }
       }
       if (cur.balcony) api.sfx('bell');
       floors.push({ x, w, color: cur.color, pop: 0, kind: cur.kind, balcony: cur.balcony });
@@ -230,7 +240,8 @@ export default {
       newBlock();
     }
 
-    // ── Final: techito y la gran prueba ──
+    // ── Final: techito, la gran prueba y la palomita que se posa en el techo ──
+    const FIN_CALM = 2.6;               // segundos (desde que cae el techo) en que pasa la tormenta
     function startFinale() {
       fin = { t: 0, roofY: stackY(floors.length) - 240, roofVy: 0, landT: -1, storm: false, calm: false, done: false };
       wind.v = 0; wind.left = 0; wind.flipAt = -1;
@@ -248,13 +259,14 @@ export default {
         return;
       }
       const k = fin.t - fin.landT;
-      if (k > 0.2 && !fin.storm) { fin.storm = true; startStorm(2.4); caption = 'Cayó la lluvia, crecieron los ríos y soplaron los vientos…'; }
-      if (k > 2.4 && !fin.calm) {
+      if (k > 0.2 && !fin.storm) { fin.storm = true; startStorm(2.5); caption = 'Cayó la lluvia, crecieron los ríos y soplaron los vientos…'; }
+      if (k > FIN_CALM && !fin.calm) {
         fin.calm = true; caption = '¡La casa no se cayó: estaba sobre la roca!';
         api.sfx('sparkle');
         api.burst(W / 2, api.top + 120, { emoji: '✨', count: 6, speed: 120, size: 18, life: 1 });
       }
-      if (k > 3.4 && !fin.done) { fin.done = true; api.end({ won: true }); }
+      if (fin.calm && !fin.coo && k > FIN_CALM + 0.9) { fin.coo = true; api.sfx('coo'); }
+      if (k > FIN_CALM + 1.5 && !fin.done) { fin.done = true; api.end({ won: true }); }
     }
 
     if (NEWS[LV]) api.hint(NEWS[LV], LV <= 3 ? 3000 : 3600);
@@ -307,7 +319,6 @@ export default {
         g.fillStyle = ROOF === 'gold' ? '#fff3b0' : '#fff8e6';
         g.fillRect(x - 1.5, crossY - 18, 3, 18); g.fillRect(x - 6, crossY - 13, 12, 3);
       }
-      if (ROOF === 'red') kit.emoji(g, '🚩', x + 6, y - 46 * s, 16);
       if (ROOF === 'gold') kit.star(g, x, crossY - 26, 7, '#fff3b0', t);
     }
     function drawSky(g, H) {
@@ -321,6 +332,33 @@ export default {
       else if (SCENE === 'dawn') kit.sun(g, 70, api.top + 150, 26, t);
       else kit.sun(g, 300, api.top + 44, 22, t);
       if (SCENE !== 'night') kit.cloud(g, 70 + Math.sin(t * 0.2) * 20, api.top + 50, 0.9, 0.9);
+    }
+
+    // Vista: en el juego la cámara sigue la torre (z = 1); en el final se aleja para mostrar toda la casa sobre la roca.
+    // pantalla = (W/2 + (x − W/2)·z, y·z + oy)
+    function view() {
+      if (!fin || fin.landT < 0) return { z: 1, oy: -cam, q: 0 };
+      const q = ease.inOut(clamp((fin.t - fin.landT - 0.2) / 1.2));
+      const top = stackY(floors.length) - 100, bot = L.rockTop + 80;
+      const a0 = api.top + 74, a1 = api.H - 10;
+      const zf = Math.min(1, (a1 - a0) / (bot - top));
+      const oyf = (a0 + a1) / 2 - ((top + bot) / 2) * zf;
+      return { z: lerp(1, zf, q), oy: lerp(-cam, oyf, q), q };
+    }
+    // Punto del techo donde se posa la palomita (mundo) y su tamaño.
+    function perch() {
+      const f = floors[floors.length - 1], hw = f.w / 2 + 10, dx = -hw * 0.5;
+      const rise = ROOF === 'dome' || ROOF === 'gold' ? 34 * Math.sqrt(Math.max(0, 1 - (dx / (hw * 0.85)) ** 2)) : 36 * (1 - Math.abs(dx) / hw);
+      return { x: f.x + dx, y: fin.roofY - rise + 2 };
+    }
+    function drawDove(g, z) {
+      const k = fin.t - fin.landT - FIN_CALM - 0.05;
+      if (k <= 0) return;
+      const p = clamp(k / 0.9), e = ease.outCubic(p), P = perch();
+      const s = 0.45 / Math.pow(Math.max(0.25, z), 0.75);
+      const sx = P.x - 230, syy = P.y - 170;
+      const x = lerp(sx, P.x, e), y = lerp(syy, P.y, e) - Math.sin(e * Math.PI) * 30 - 22 * s;
+      kit.dove(g, x, y, s, { dir: 1, flap: p < 1 ? (Math.sin(t * 20) + 1) / 2 : 0.1, feet: p >= 1, tilt: p < 1 ? 0.15 : 0, carry: 'olive' });
     }
 
     return {
@@ -362,16 +400,22 @@ export default {
         const tint = Math.max(dark * 0.85, HAS.great ? 0.22 : 0);
         if (tint > 0) { g.save(); g.globalAlpha = tint; kit.sky(g, W, H, 'storm'); g.restore(); }
         if (fin && fin.calm) {
-          const a = clamp((fin.t - fin.landT - 2.4) * 2);
+          const a = clamp((fin.t - fin.landT - FIN_CALM) * 2);
           kit.rainbow(g, W / 2, api.top + 250, 150, 6, 0.8 * a);
         }
-        g.save(); g.translate(0, -cam * 0.35);
-        kit.hills(g, W, H + 300, L.rockTop - 30, 16, SCENE === 'night' ? '#5f8a72' : SCENE === 'sunset' ? '#c9c98a' : '#bfe3a0', 40, 0.012);
+        const V = view();
+        const X0 = W / 2 - W / 2 / V.z - 6, X1 = W / 2 + W / 2 / V.z + 6;   // x del mundo visibles
+        // colinas (con parallax mientras se juega)
+        const oyH = lerp(-cam * 0.35, V.oy, V.q);
+        g.save(); g.translate(W / 2, oyH); g.scale(V.z, V.z); g.translate(-W / 2, 0); g.translate(X0, 0);
+        kit.hills(g, X1 - X0, (H - oyH) / V.z + 20, L.rockTop - 30, 16, SCENE === 'night' ? '#5f8a72' : SCENE === 'sunset' ? '#c9c98a' : '#bfe3a0', 40 + X0, 0.012);
         g.restore();
-        g.save(); g.translate(0, -cam);
+        g.save(); g.translate(W / 2, V.oy); g.scale(V.z, V.z); g.translate(-W / 2, 0);
         // mar y arena al fondo, con la casita sobre arena
         const waterY = L.rockTop + 34 - flood * 38;
-        kit.water(g, W, H + 200, waterY, t, SCENE === 'night' ? '#4f86c9' : '#7cc8f5', SCENE === 'night' ? '#2b5c9e' : '#3f9fe0');
+        g.save(); g.translate(X0, 0);
+        kit.water(g, X1 - X0, (H - V.oy) / V.z + 20, waterY, t, SCENE === 'night' ? '#4f86c9' : '#7cc8f5', SCENE === 'night' ? '#2b5c9e' : '#3f9fe0');
+        g.restore();
         g.fillStyle = PAL.sand; g.beginPath(); g.ellipse(52, L.rockTop + 40, 62, 22, 0, 0, 6.28); g.fill();
         if (sandGone < 1) {
           g.save(); g.translate(52 - sandGone * 70, L.rockTop + 22 + sandGone * 34); g.rotate(-sandGone * 0.9); g.globalAlpha = 1 - sandGone;
@@ -388,7 +432,7 @@ export default {
         g.lineTo(rx + L.rockW / 2 - 30, ry + 2); g.quadraticCurveTo(rx + L.rockW / 2 - 6, ry + 30, rx + L.rockW / 2 - 20, ry + 150); g.closePath(); g.fill();
         kit.ellipse(g, rx - 30, ry + 22, 26, 6, 'rgba(255,255,255,0.3)', -0.1);
         // la torre (con un leve vaivén en la tormenta); solo los pisos que se ven
-        const yMin = cam - FH * 2, yMax = cam + H + FH;
+        const yMin = -V.oy / V.z - FH * 2, yMax = (H - V.oy) / V.z + FH;
         for (let i = 0; i < floors.length; i++) {
           const f = floors[i], y = stackY(i);
           if (y < yMin || y - FH > yMax) continue;
@@ -402,6 +446,7 @@ export default {
           const f = floors[floors.length - 1];
           g.save(); g.translate(sway * (floors.length + 1) * 0.12, 0);
           drawRoof(g, f, fin.roofY, 1);
+          if (fin.calm) drawDove(g, V.z);
           g.restore();
         }
         // piso en juego
@@ -458,7 +503,7 @@ export default {
             const y = api.top + 90 + ((i * 97) % Math.max(60, H - api.top - 200)) + Math.sin(t * 3 + i) * 8;
             kit.ellipse(g, x, y, 5, 2.5, i % 2 ? '#8fd16a' : '#6cc070', t * 4 + i);
           }
-          const cx = W / 2, cy = api.top + 20;
+          const cx = 66, cy = api.top + 20;
           kit.fillRR(g, cx - 52, cy - 13, 104, 26, 13, 'rgba(255,255,255,0.88)');
           kit.text(g, s > 0 ? '💨 viento ›››' : '‹‹‹ viento 💨', cx, cy + 1, { size: 14, color: PAL.ink });
         }
