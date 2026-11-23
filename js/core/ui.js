@@ -64,6 +64,8 @@ export function modal({ title = '', body = '', buttons = [], dismissible = true,
     scrim.remove();
     done(value);
   }
+  // Para el botón «atrás» del teléfono: cerrar como si se tocara fuera (solo si se puede cerrar así).
+  scrim.__close = dismissible ? () => close() : null;
   overlayRoot().append(scrim);
   box.querySelector('button')?.focus({ preventScroll: true });
   return { el: box, close, closed };

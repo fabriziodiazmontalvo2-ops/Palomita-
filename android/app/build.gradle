@@ -1,0 +1,47 @@
+// App de Android de Palomita: una pantalla completa con la app web empaquetada dentro (funciona sin internet).
+// Antes de compilar, tools/build-apk.sh copia dist/palomita.html a src/main/assets/index.html.
+plugins { id 'com.android.application' }
+
+// Firma: si existe android/keystore.properties (no se sube al repositorio) se usa esa llave;
+// si no, se firma con la llave de depuración del equipo.
+def ksFile = rootProject.file('keystore.properties')
+def ks = new Properties()
+if (ksFile.exists()) ksFile.withInputStream { ks.load(it) }
+
+android {
+    namespace 'com.palomita.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.palomita.app'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+    signingConfigs {
+        release {
+            if (ksFile.exists()) {
+                storeFile rootProject.file(ks['storeFile'])
+                storePassword ks['storePassword']
+                keyAlias ks['keyAlias']
+                keyPassword ks['keyPassword']
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig ksFile.exists() ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    androidResources { noCompress 'html' }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.11.0'
+}

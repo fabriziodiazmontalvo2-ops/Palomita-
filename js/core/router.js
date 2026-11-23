@@ -17,6 +17,10 @@ let home = 'home';
 
 export function register(name, loader) { screens.set(name, loader); }
 export function setHome(name) { home = name; }
+// "Atrás" dentro de la pantalla actual (p. ej. de una historia al índice de la Biblia). true si la pantalla lo usó.
+export function screenBack() {
+  try { return !!active?.handle?.back?.(); } catch (e) { console.error(e); return false; }
+}
 export function current() { return active ? { name: active.name, params: active.params } : null; }
 
 function container() { return document.getElementById('screen'); }

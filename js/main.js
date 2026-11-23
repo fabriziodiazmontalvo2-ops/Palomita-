@@ -3,8 +3,8 @@ import * as state from './core/state.js';
 import * as audio from './core/audio.js';
 import * as tts from './core/tts.js';
 import { fitApp, toast } from './core/ui.js';
-import { register, go, back, setHome, current } from './core/router.js';
-import { startGame, isRunning } from './games/engine.js';
+import { register, go, back, setHome, current, screenBack } from './core/router.js';
+import { startGame, isRunning, handleBack } from './games/engine.js';
 
 register('home', () => import('./screens/home.js'));
 register('welcome', () => import('./screens/welcome.js'));
@@ -20,6 +20,24 @@ let hiddenAt = 0;
 function applySettings() {
   audio.setSound(state.setting('sound') !== false);
   audio.setMusic(state.setting('music') !== false);
+}
+
+// Botón "atrás" de Android (lo llama la app nativa). Devuelve true si Palomita lo manejó; false = salir de la app.
+function androidBack() {
+  const scrims = document.querySelectorAll('.modal-scrim');
+  if (scrims.length) {
+    const top = scrims[scrims.length - 1];
+    if (top.__close) { top.__close(); return true; }
+    const btns = top.querySelectorAll('.modal__actions .btn');
+    const btn = top.querySelector('.modal__actions .btn--ghost') || btns[btns.length - 1];
+    if (btn) btn.click(); else top.remove();
+    return true;
+  }
+  if (handleBack()) return true;
+  if (screenBack()) return true;
+  const cur = current();
+  if (cur && cur.name !== 'home' && cur.name !== 'welcome') { back(); return true; }
+  return false;
 }
 
 async function boot() {
@@ -46,7 +64,7 @@ async function boot() {
   window.addEventListener('pagehide', () => state.save());
 
   // Para pruebas y depuración.
-  window.__palomita = { state, audio, go, back, current, startGame };
+  window.__palomita = { state, audio, go, back, current, startGame, androidBack };
 
   // Espera breve a las tipografías para que nada "salte" al aparecer.
   try { await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]); } catch { /* sigue */ }

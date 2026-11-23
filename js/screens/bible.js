@@ -989,6 +989,7 @@ export async function mount(el, params = {}) {
   await show(first);
 
   return {
+    back() { if (!view || view.kind === 'index') return false; goBack(); return true; },
     unmount() {
       dead = true;
       token++;

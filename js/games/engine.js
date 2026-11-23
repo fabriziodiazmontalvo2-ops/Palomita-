@@ -79,6 +79,12 @@ function mulberry32(a) {
 
 export function isRunning() { return !!current; }
 export function stopGame() { current?.exit(); }
+// Botón "atrás" del teléfono: en juego pausa; en pausa o en los paneles, sale del juego. Devuelve true si lo usó.
+export function handleBack() {
+  if (!current) return false;
+  if (current.phase === 'playing') current.pause(); else current.exit();
+  return true;
+}
 
 // Inicia un minijuego. opts: { onExit(), skipIntro, seed }
 export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {

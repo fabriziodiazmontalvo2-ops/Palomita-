@@ -10,6 +10,9 @@ let active = false;
 let endCb = null;
 
 const synth = () => (typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null);
+// En la app de Android la voz la pone el teléfono (TextToSpeech) por medio de un puente nativo.
+const bridge = () => (typeof window !== 'undefined' && window.PalomitaAndroid ? window.PalomitaAndroid : null);
+if (typeof window !== 'undefined') window.__palomitaTtsDone = () => { if (active && bridge()) finish(); };
 
 function pickVoice() {
   const s = synth();
@@ -21,6 +24,8 @@ function pickVoice() {
 }
 
 export function available() {
+  const b = bridge();
+  if (b) { try { return !!b.ttsAvailable(); } catch { return false; } }
   return !!synth() && typeof window.SpeechSynthesisUtterance === 'function';
 }
 
@@ -65,6 +70,11 @@ export function speak(text, { onend } = {}) {
   endCb = onend || null;
   active = true;
   duck(true);
+  const b = bridge();
+  if (b) {
+    try { b.speak(JSON.stringify(queue)); queue = []; } catch { finish(); return false; }
+    return true;
+  }
   try { s.cancel(); } catch { /* nada */ }
   next();
   return true;
@@ -75,6 +85,7 @@ export function stop() {
   active = false; queue = []; endCb = null;
   duck(false);
   try { s?.cancel(); } catch { /* nada */ }
+  try { bridge()?.stopSpeaking(); } catch { /* nada */ }
   if (cbWas) { try { cbWas(); } catch { /* nada */ } }
 }
 export function speaking() { return active; }
