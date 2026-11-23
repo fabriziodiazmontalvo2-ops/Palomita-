@@ -36,10 +36,12 @@ let DATA = null;
 
 async function loadData() {
   if (DATA) return DATA;
-  const get = (p, k, fb) => import(p).then(m => m[k] || fb).catch(() => fb);
+  // Las rutas van escritas tal cual (no en una variable) para que el empaquetador pueda incluir estos archivos.
+  const safe = (promise, k, fb) => promise.then(m => m[k] || fb).catch(() => fb);
+  const phrasesMod = import('../data/phrases.js');
   const [phrases, facts, verses, prayers] = await Promise.all([
-    get('../data/phrases.js', 'PHRASES', null), get('../data/phrases.js', 'FOOD_FACTS', {}),
-    get('../data/verses.js', 'VERSES', FALLBACK_VERSES), get('../data/prayers.js', 'PRAYERS', []),
+    safe(phrasesMod, 'PHRASES', null), safe(phrasesMod, 'FOOD_FACTS', {}),
+    safe(import('../data/verses.js'), 'VERSES', FALLBACK_VERSES), safe(import('../data/prayers.js'), 'PRAYERS', []),
   ]);
   DATA = { phrases: { ...FALLBACK_PHRASES, ...(phrases || {}) }, facts: facts || {}, verses: verses?.length ? verses : FALLBACK_VERSES, prayers: prayers || [] };
   return DATA;
