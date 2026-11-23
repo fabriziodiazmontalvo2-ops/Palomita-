@@ -5,6 +5,12 @@ import { sfx } from './audio.js';
 import { h, modal, toast } from './ui.js';
 import { FOODS, ACCESSORIES, accessory } from '../data/items.js';
 import { MEDALS, isChest } from '../games/levels.js';
+import { grantPack } from './stickers.js';
+
+// Un sobre de figuritas (álbum «Mis figuritas»). Si el álbum no se puede guardar, simplemente no se da.
+function packItem(reason) {
+  try { grantPack(1, reason); return { icon: '✉️', text: '+1 sobre de figuritas' }; } catch { return null; }
+}
 
 const COIN = state.COIN.icon;
 
@@ -61,7 +67,7 @@ export function grantLevel(game, n, rec, { won }) {
   if (won && rec.firstClear && isChest(n)) {
     const extra = 20 + Math.floor(n / 2);
     state.addCoins(extra);
-    const chestItems = [{ icon: COIN, text: `+${extra} ${state.COIN.name}` }, ...giveFoods(randomFoods(2, state.get().level + 2))];
+    const chestItems = [{ icon: COIN, text: `+${extra} ${state.COIN.name}` }, ...giveFoods(randomFoods(2, state.get().level + 2)), packItem('Cofre')].filter(Boolean);
     if (rec.medal && MEDALS[rec.medal]) chestItems.unshift({ icon: MEDALS[rec.medal].icon, text: MEDALS[rec.medal].name, big: true });
     chest = { title: `¡Cofre del nivel ${n}!`, icon: '🎁', items: chestItems };
   }
@@ -143,6 +149,8 @@ export function claimDailyGift() {
     const f = FOODS.find(x => x.id === id);
     if (f) items.push({ icon: f.emoji, text: `${f.name} ×${n}` });
   }
+  const pk = packItem('Regalo del día');
+  if (pk) items.push(pk);
   return { day: idx, items };
 }
 export function showDailyGift() {

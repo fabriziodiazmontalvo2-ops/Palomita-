@@ -15,7 +15,7 @@ import * as tts from '../core/tts.js';
 import { h, clear, button, iconButton, toast, meter, reduceMotion } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { go, back } from '../core/router.js';
-import { sceneEl, SCENE_IDS, isFloating } from '../art/scenes.js';
+import { sceneEl, SCENE_IDS, isFloating, hasOrb } from '../art/scenes.js';
 
 // ───────────────────────── Datos fijos de la pantalla ─────────────────────────
 
@@ -152,7 +152,7 @@ function art(spec, size = 'card') {
   const sky = [], ground = [];
   for (const e of arr(spec?.emojis).map(txt).filter(Boolean).slice(0, size === 'mini' ? 1 : 4)) (isFloating(e) ? sky : ground).push(e);
   if (!ground.length && sky.length) ground.push(sky.shift());
-  const box = sceneEl(bg, { shape: size === 'hero' ? 'hero' : 'card', ambient: size === 'hero' ? 'full' : false, cls: `bb-art bb-art--${size}` });
+  const box = sceneEl(bg, { shape: size === 'hero' ? 'hero' : 'card', ambient: size === 'hero' ? 'full' : false, cls: `bb-art bb-art--${size}`, orb: !hasOrb([...sky, ...ground]) });
   const G = { 1: [[50, 1.3]], 2: [[36, 1.22], [70, 0.9]], 3: [[50, 1.2], [19, 0.82], [81, 0.82]], 4: [[38, 1.14], [13, 0.72], [63, 0.92], [88, 0.72]] }[ground.length] || [];
   const K = { 1: [[80, 14]], 2: [[17, 16], [83, 10]], 3: [[15, 18], [85, 10], [50, 6]] }[sky.length] || [];
   const piece = (e, kind, x, k, y) => {

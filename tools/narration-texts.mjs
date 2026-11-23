@@ -19,6 +19,7 @@ import { PRAYERS } from '../js/data/prayers.js';
 import { VERSES } from '../js/data/verses.js';
 import { TRIVIA } from '../js/data/trivia.js';
 import { PARISH, ABOUT } from '../js/data/parroquia.js';
+import { STICKERS } from '../js/data/stickers.js';
 
 const arr = v => (Array.isArray(v) ? v.filter(x => x !== null && x !== undefined) : []);
 const txt = v => (typeof v === 'string' ? v : v === null || v === undefined ? '' : String(v));
@@ -55,6 +56,7 @@ for (const l of arr(LESSONS)) {
 for (const p of arr(PRAYERS)) add(`or-${p.id}`, arr(p.lines));
 add('versiculos', arr(VERSES).map(v => v.text));
 add('parroquia', [PARISH?.name, ...arr(ABOUT?.parish?.text), ABOUT?.patron?.title, ...arr(ABOUT?.patron?.text), PARISH?.motto?.text]);
+add('figuritas', arr(STICKERS).flatMap(s => [s.title, s.caption]));
 for (let i = 0; i < arr(TRIVIA).length; i += 24) add(`trivia-${i / 24 + 1}`, quiz(arr(TRIVIA).slice(i, i + 24)));
 
 // Cada frase se graba una sola vez, en el primer grupo donde aparece.

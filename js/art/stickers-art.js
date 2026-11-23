@@ -1217,19 +1217,21 @@ export async function paintSticker(canvas, sticker) {
 }
 
 // ───────────── Caché de imágenes listas ─────────────
+// Miniaturas: caben las 48 (unos 2–3 MB en total). Grandes: solo las últimas 4.
 const urls = new Map();          // clave → Promise<string>
-const order = [];
-const LIMIT = 30;
-function remember(key, p) {
-  urls.set(key, p); order.push(key);
-  while (order.length > LIMIT) {
-    const old = order.shift();
+const order = { 1: [], 2: [] };
+const LIMIT = { 1: 64, 2: 4 };
+function remember(key, size, p) {
+  urls.set(key, p); order[size].push(key);
+  while (order[size].length > LIMIT[size]) {
+    const old = order[size].shift();
     const op = urls.get(old); urls.delete(old);
-    op?.then(u => { try { URL.revokeObjectURL(u); } catch { /* nada */ } }).catch(() => {});
+    op?.then(u => { if (u.startsWith('blob:')) setTimeout(() => { try { URL.revokeObjectURL(u); } catch { /* nada */ } }, 4000); }).catch(() => {});
   }
 }
 export function stickerURL(sticker, { big = false } = {}) {
-  const key = `${sticker.id}@${big ? 2 : 1}`;
+  const size = big ? 2 : 1;
+  const key = `${sticker.id}@${size}`;
   if (urls.has(key)) return urls.get(key);
   const p = (async () => {
     const c = document.createElement('canvas');
@@ -1239,11 +1241,11 @@ export function stickerURL(sticker, { big = false } = {}) {
     if (blob) return URL.createObjectURL(blob);
     return c.toDataURL('image/png');
   })();
-  remember(key, p);
+  remember(key, size, p);
   p.catch(() => { urls.delete(key); });
   return p;
 }
 export function releaseAll() {
   for (const p of urls.values()) p.then(u => { try { URL.revokeObjectURL(u); } catch { /* nada */ } }).catch(() => {});
-  urls.clear(); order.length = 0;
+  urls.clear(); order[1].length = 0; order[2].length = 0;
 }

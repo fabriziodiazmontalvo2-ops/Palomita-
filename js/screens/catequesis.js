@@ -12,7 +12,7 @@ import * as tts from '../core/tts.js';
 import { h, clear, button, iconButton, meter, reduceMotion } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { go, back } from '../core/router.js';
-import { sceneEl, SCENE_IDS, isFloating } from '../art/scenes.js';
+import { sceneEl, SCENE_IDS, isFloating, hasOrb } from '../art/scenes.js';
 
 // ───────────────────────── Utilidades compartidas ─────────────────────────
 
@@ -322,7 +322,7 @@ export function quiz(questions, { key, prize = { coins: 10 }, perfectOnly = true
 // Los que están en el suelo llevan su sombrita. cls con «wide» o «hero» pide la imagen grande (tarjetas anchas, portadas).
 export function miniScene(bg, actors, cls = '') {
   const big = /wide|hero/.test(cls);
-  const box = sceneEl(BGS.includes(bg) ? bg : 'cielo', { shape: big ? 'hero' : 'card', ambient: 'lite', cls: `ct-bg ${cls}`.trim() });
+  const box = sceneEl(BGS.includes(bg) ? bg : 'cielo', { shape: big ? 'hero' : 'card', ambient: 'lite', cls: `ct-bg ${cls}`.trim(), orb: !hasOrb(actors.map(a => a.e)) });
   for (const a of actors) {
     const grounded = (Number(a.y) || 0) >= 56 && !a.anim && !isFloating(a.e);
     const s = h('span', { class: `ct-mini${a.anim ? ` ct-mini--${a.anim}` : ''}${grounded ? ' is-ground' : ''}` }, a.e);

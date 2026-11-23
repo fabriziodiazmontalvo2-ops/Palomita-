@@ -15,7 +15,7 @@ import { sfx } from '../core/audio.js';
 import { back } from '../core/router.js';
 import { showChest } from '../core/rewards.js';
 import { lifecycle, shell, tabBar, speakBtn, celebrate, progressMeter, deco } from './catequesis.js';
-import { PAGES, STICKERS, RARITY, PACK_PRICE, TRADE_COST, PAGE_PRIZE } from '../data/stickers.js';
+import { PAGES, STICKERS, RARITY, PACK_PRICE, TRADE_COST, TRADE_COINS, PAGE_PRIZE } from '../data/stickers.js';
 import { stickerURL } from '../art/stickers-art.js';
 
 const TABS = [
@@ -150,7 +150,7 @@ export async function mount(el, params = {}) {
   }
   function slot(s) {
     if (!album.has(s.id)) {
-      return h('div', { class: 'fg-slot', 'aria-label': `Espacio ${s.n}: ${s.title} (te falta)` },
+      return h('div', { class: 'fg-slot', role: 'img', 'aria-label': `Espacio ${s.n}: ${s.title} (te falta)` },
         h('span', { class: 'fg-slot__hint', 'aria-hidden': 'true' }, s.hint),
         h('span', { class: 'fg-slot__n' }, String(s.n)),
         h('span', { class: 'fg-slot__t' }, s.title));
@@ -313,17 +313,18 @@ export async function mount(el, params = {}) {
     const d = album.duplicates();
     const total = d.reduce((a, x) => a + x.extra, 0);
     const miss = album.missing().length;
-    const can = total >= TRADE_COST && miss > 0;
-    const tradeBtn = button(`Cambiar ${TRADE_COST} repetidas por 1 nueva`, { kind: 'sun', block: true, icon: '🔁', sound: null, attrs: { disabled: !can }, onClick: trade });
+    const can = total >= TRADE_COST;
+    const tradeBtn = button(miss ? `Cambiar ${TRADE_COST} repetidas por 1 nueva` : `Cambiar ${TRADE_COST} repetidas por ${TRADE_COINS} ${state.COIN.icon}`,
+      { kind: 'sun', block: true, icon: '🔁', sound: null, attrs: { disabled: !can }, onClick: trade });
     return [
       h('div', { class: 'fg-trade' },
         h('h2', null, '¿Te salió repetida?'),
-        h('p', null, `Junta ${TRADE_COST} figuritas repetidas y cámbialas por una que te falte.`),
+        h('p', null, miss ? `Junta ${TRADE_COST} figuritas repetidas y cámbialas por una que te falte.` : `¡Tu álbum está completo! Cambia ${TRADE_COST} repetidas por ${TRADE_COINS} ${state.COIN.name}.`),
         h('div', { class: 'fg-trade__meter' },
           progressMeter(Math.min(100, (total / TRADE_COST) * 100), 'var(--grape)', `${total} repetidas`),
           h('span', null, `${Math.min(total, TRADE_COST)}/${TRADE_COST}`)),
         tradeBtn,
-        !miss ? h('p', { class: 'fg-trade__note' }, '¡Ya tienes todas las figuritas! 🏆') : total < TRADE_COST ? h('p', { class: 'fg-trade__note' }, `Tienes ${total} ${total === 1 ? 'repetida' : 'repetidas'}.`) : null),
+        total < TRADE_COST ? h('p', { class: 'fg-trade__note' }, `Tienes ${total} ${total === 1 ? 'repetida' : 'repetidas'}.`) : null),
       d.length
         ? h('div', { class: 'fg-dupes' }, d.map(x => h('div', { class: 'fg-dupes__item' }, stickerThumb(x.sticker, { small: true, onClick: () => openBig(x.sticker) }), h('span', { class: 'fg-x' }, `+${x.extra}`))))
         : h('p', { class: 'fg-empty' }, deco('🗂️'), ' Aquí aparecerán tus figuritas repetidas.'),
@@ -333,6 +334,7 @@ export async function mount(el, params = {}) {
     const r = album.tradeDuplicates();
     if (!r) return;
     sfx('good');
+    if (r.coins) { sfx('coin'); toast(`+${r.coins} ${state.COIN.name}`, { icon: state.COIN.icon }); show('repetidas'); return; }
     const s = r.sticker;
     pasted.add(s.id);
     const card = revealCard({ sticker: s, isNew: true, count: 1 }, 0, null);

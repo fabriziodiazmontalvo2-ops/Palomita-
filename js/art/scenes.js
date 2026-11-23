@@ -6,6 +6,7 @@
 //                                           el primer plano (z-index), así el pasto les tapa un poquito los pies.
 //        shape   'card' (tarjetas, 1,6:1) · 'hero' (portadas, 1,6:1) · 'stage' (lecciones, 4:3)
 //        ambient false | 'lite' (solo nubes y estrellas) | 'full'
+//        orb     false → sin sol ni luna pintados (cuando la escena trae los suyos como emoji; ver hasOrb)
 //   SCENE_IDS        todos los fondos que existen (los datos usan estos nombres en `bg`)
 //   isFloating(e)    true si el emoji «vuela» (sol, estrellas, aves…) y no lleva sombra en el suelo
 //
@@ -17,8 +18,11 @@ export const SCENE_IDS = ['cielo', 'noche', 'desierto', 'mar', 'jardin', 'dorado
   'cenaculo', 'rio', 'monte', 'ciudad', 'iglesia'];
 const DARK = new Set(['noche', 'tormenta', 'cenaculo']);
 const FLOATING = new Set(['🌞', '☀', '🌙', '🌛', '🌜', '⭐', '🌟', '✨', '💫', '🌠', '☁', '⛅', '🌤', '🌥', '🌦', '🌧', '⛈', '🌈', '⚡', '🌬',
-  '🕊', '🐦', '👼', '🎶', '🎵', '❤', '💛', '💜', '💙', '💚', '🧡', '🍃', '🎉', '🌅', '🔥', '💨', '🔔', '💭', '❓']);
-export const isFloating = e => FLOATING.has(String(e || '').replace(/️/g, ''));
+  '🕊', '🐦', '👼', '🎶', '🎵', '❤', '💛', '💜', '💙', '💚', '🧡', '🍃', '🎉', '🌅', '💨', '💭', '❓']);
+export const isFloating = e => FLOATING.has(String(e || '').replace(/\uFE0F/g, ''));
+// Si la escena ya trae su propio sol o luna (emoji), el paisaje se pinta sin el suyo: así no salen dos.
+const ORBS = new Set(['☀', '🌞', '🌙', '🌛', '🌜', '🌝', '🌕', '🌤', '⛅', '🌅', '🌄']);
+export const hasOrb = list => [...(list || [])].some(e => ORBS.has(String(e || '').replace(/\uFE0F/g, '')));
 
 const TAU = Math.PI * 2;
 
@@ -367,9 +371,9 @@ function tiles(g, w, h, y0, { c1, c2, vx = w / 2, lines = 14, rows = 7, a = 0.16
 
 const PAINT = {
   cielo: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       fillSky(g, w, h, [[0, '#3fa2ea'], [0.42, '#8fd0fa'], [0.6, '#d8f1ff'], [0.66, '#eefaff']]);
-      sun(g, w * 0.83, h * 0.17, h * 0.07);
+      if (o.orb) sun(g, w * 0.83, h * 0.17, h * 0.07);
       cloud(g, w * 0.2, h * 0.2, h * 0.11, { seed: 1, alpha: 0.95 });
       cloud(g, w * 0.58, h * 0.13, h * 0.07, { seed: 2, alpha: 0.85 });
       cloud(g, w * 0.42, h * 0.36, h * 0.05, { seed: 3, alpha: 0.6 });
@@ -383,9 +387,9 @@ const PAINT = {
   },
 
   campo: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       fillSky(g, w, h, [[0, '#54b4f2'], [0.45, '#a6dcfb'], [0.6, '#e4f6ff']]);
-      sun(g, w * 0.14, h * 0.16, h * 0.06);
+      if (o.orb) sun(g, w * 0.14, h * 0.16, h * 0.06);
       cloud(g, w * 0.55, h * 0.18, h * 0.09, { seed: 4 });
       cloud(g, w * 0.86, h * 0.28, h * 0.06, { seed: 5, alpha: 0.8 });
       ridge(g, w, h, { y: h * 0.52, amp: h * 0.06, seed: 21, n: 4, fill: [[0, '#a9c7dc'], [1, '#c9def0']] });
@@ -419,9 +423,9 @@ const PAINT = {
   },
 
   jardin: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       fillSky(g, w, h, [[0, '#8fd6ff'], [0.4, '#c7ecff'], [0.58, '#f2fce9']]);
-      sun(g, w * 0.7, h * 0.12, h * 0.05, { halo: '#fff7d0' });
+      if (o.orb) sun(g, w * 0.7, h * 0.12, h * 0.05, { halo: '#fff7d0' });
       cloud(g, w * 0.3, h * 0.14, h * 0.07, { seed: 6, alpha: 0.9 });
       // muro de árboles al fondo
       const back = ridge(g, w, h, { y: h * 0.5, amp: h * 0.04, seed: 41, fill: [[0, '#8cc98a'], [1, '#78b876']] });
@@ -456,7 +460,7 @@ const PAINT = {
   },
 
   noche: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       fillSky(g, w, h, [[0, '#0b1036'], [0.45, '#232a6b'], [0.62, '#4a3f8a'], [0.7, '#6a4f96']]);
       // vía láctea tenue
       g.save(); g.translate(w * 0.5, h * 0.3); g.rotate(-0.35);
@@ -466,10 +470,12 @@ const PAINT = {
       stars(g, w, h, Math.round(w / 4), r, { maxY: 0.62, big: 9 });
       // luna creciente
       const mx = w * 0.16, my = h * 0.18, mr = h * 0.06;
-      glow(g, mx, my, mr * 5, '#cfd8ff', 0.35);
-      g.save(); g.beginPath(); g.arc(mx, my, mr, 0, TAU); g.clip();
-      g.beginPath(); g.arc(mx, my, mr, 0, TAU); g.arc(mx + mr * 0.45, my - mr * 0.2, mr * 0.88, 0, TAU);
-      g.fillStyle = '#fff6cf'; g.fill('evenodd'); g.restore();
+      glow(g, mx, my, mr * 5, '#cfd8ff', o.orb ? 0.35 : 0.2);
+      if (o.orb) {
+        g.save(); g.beginPath(); g.arc(mx, my, mr, 0, TAU); g.clip();
+        g.beginPath(); g.arc(mx, my, mr, 0, TAU); g.arc(mx + mr * 0.45, my - mr * 0.2, mr * 0.88, 0, TAU);
+        g.fillStyle = '#fff6cf'; g.fill('evenodd'); g.restore();
+      }
       ridge(g, w, h, { y: h * 0.62, amp: h * 0.05, seed: 51, fill: [[0, '#34367a'], [1, '#2b2d6c']], rim: rgba('#8f86d8', 0.35), rimW: h * 0.005 });
       // Belén: casitas con ventanas encendidas
       const town = ridge(g, w, h, { y: h * 0.7, amp: h * 0.04, seed: 52, fill: [[0, '#272c66'], [1, '#1e2250']], rim: rgba('#a59ae6', 0.3), rimW: h * 0.004 });
@@ -485,9 +491,9 @@ const PAINT = {
   },
 
   desierto: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       fillSky(g, w, h, [[0, '#f2a865'], [0.35, '#fbcf8e'], [0.56, '#ffe8bd'], [0.62, '#fff3d6']]);
-      sun(g, w * 0.76, h * 0.24, h * 0.08, { core: '#fffaf0', rim: '#ffe7b0', halo: '#fff0c4', haloR: 5 });
+      if (o.orb) sun(g, w * 0.76, h * 0.24, h * 0.08, { core: '#fffaf0', rim: '#ffe7b0', halo: '#fff0c4', haloR: 5 });
       // mesetas lejanas
       g.fillStyle = rgba('#d9a57a', 0.55);
       g.beginPath(); g.moveTo(w * 0.02, h * 0.6); g.lineTo(w * 0.06, h * 0.5); g.lineTo(w * 0.22, h * 0.49); g.lineTo(w * 0.27, h * 0.6); g.fill();
@@ -513,11 +519,11 @@ const PAINT = {
   },
 
   mar: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       fillSky(g, w, h, [[0, '#4cb0f0'], [0.35, '#9ad8fb'], [0.5, '#e4f7ff']]);
       cloud(g, w * 0.24, h * 0.16, h * 0.08, { seed: 7 });
       cloud(g, w * 0.7, h * 0.24, h * 0.06, { seed: 8, alpha: 0.85 });
-      sun(g, w * 0.88, h * 0.1, h * 0.05);
+      if (o.orb) sun(g, w * 0.88, h * 0.1, h * 0.05);
       ridge(g, w, h, { y: h * 0.47, amp: h * 0.045, seed: 71, n: 4, fill: [[0, '#9fbfce'], [1, '#b8d3df']] });
       ridge(g, w, h, { y: h * 0.505, amp: h * 0.015, seed: 72, fill: '#a7c9b8' });
       waterBand(g, 0, h * 0.5, w, h * 0.82, [[0, '#8ad3f0'], [0.35, '#52b0e4'], [1, '#2b84c8']], r, { glints: Math.round(w / 9) });
@@ -539,7 +545,7 @@ const PAINT = {
   },
 
   tormenta: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       fillSky(g, w, h, [[0, '#262d48'], [0.4, '#434d6c'], [0.58, '#66718f']]);
       for (let i = 0; i < 6; i++) cloud(g, w * (i / 5) + (r() - 0.5) * w * 0.1, h * (0.02 + r() * 0.08), h * (0.2 + r() * 0.08), { light: '#4f5875', shade: '#30374f', seed: 80 + i });
       for (let i = 0; i < 5; i++) cloud(g, w * (0.1 + i * 0.22) + (r() - 0.5) * w * 0.06, h * (0.22 + r() * 0.06), h * (0.15 + r() * 0.05), { light: '#6f7896', shade: '#414a66', seed: 90 + i, alpha: 0.95 });
@@ -564,7 +570,7 @@ const PAINT = {
   },
 
   dorado: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       g.fillStyle = rad(g, w * 0.5, h * 0.4, 0, Math.max(w, h) * 0.8, [[0, '#fffdf2'], [0.18, '#fff1bf'], [0.45, '#fbd77a'], [0.8, '#efb448'], [1, '#e39d32']]);
       g.fillRect(0, 0, w, h);
       rays(g, w * 0.5, h * 0.4, 22, Math.max(w, h) * 0.9, '#ffffff', { a: 0.28, width: 0.5 });
@@ -581,13 +587,12 @@ const PAINT = {
   },
 
   amanecer: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       fillSky(g, w, h, [[0, '#5e6cc4'], [0.22, '#b58bc6'], [0.4, '#f59fa6'], [0.54, '#ffc68a'], [0.64, '#ffe7a8']]);
       const sx = w * 0.5, sy = h * 0.62;
       glow(g, sx, sy, h * 0.7, '#ffd98a', 0.65);
       rays(g, sx, sy, 16, h * 0.95, '#fff2c4', { a: 0.22, a0: Math.PI, spread: Math.PI, width: 0.5 });
-      g.fillStyle = rad(g, sx, sy, 0, h * 0.1, [[0, '#fffdf0'], [0.8, '#fff2b8'], [1, '#ffd36b']]);
-      g.beginPath(); g.arc(sx, sy, h * 0.1, 0, TAU); g.fill();
+      if (o.orb) { g.fillStyle = rad(g, sx, sy, 0, h * 0.1, [[0, '#fffdf0'], [0.8, '#fff2b8'], [1, '#ffd36b']]); g.beginPath(); g.arc(sx, sy, h * 0.1, 0, TAU); g.fill(); }
       for (let i = 0; i < 5; i++) cloud(g, w * (0.1 + i * 0.2 + r() * 0.05), h * (0.18 + r() * 0.18), h * (0.05 + r() * 0.04), { light: '#ffd2b8', shade: '#e48a9a', seed: 130 + i, alpha: 0.9 });
       ridge(g, w, h, { y: h * 0.63, amp: h * 0.045, seed: 131, fill: [[0, '#c9a1be'], [1, '#d7b4c2']] });
       ridge(g, w, h, { y: h * 0.69, amp: h * 0.04, seed: 132, fill: [[0, '#a4c086'], [1, '#8cb575']], rim: rgba('#ffe7a8', 0.8), rimW: h * 0.007 });
@@ -602,7 +607,7 @@ const PAINT = {
   },
 
   templo: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       g.fillStyle = lin(g, 0, 0, 0, h * 0.66, [[0, '#d9c29a'], [1, '#ecdcbc']]);
       g.fillRect(0, 0, w, h);
       // cornisa
@@ -632,7 +637,7 @@ const PAINT = {
   },
 
   iglesia: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       g.fillStyle = lin(g, 0, 0, 0, h * 0.66, [[0, '#ead9bd'], [1, '#f6ead4']]);
       g.fillRect(0, 0, w, h);
       // vitrales a los lados
@@ -692,7 +697,7 @@ const PAINT = {
   },
 
   cenaculo: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       g.fillStyle = lin(g, 0, 0, 0, h * 0.64, [[0, '#a8683a'], [1, '#d8a066']]);
       g.fillRect(0, 0, w, h);
       for (let i = 0; i < 70; i++) { g.fillStyle = rgba(i % 2 ? '#f0c08a' : '#8a5530', 0.08); g.beginPath(); g.ellipse(r() * w, r() * h * 0.62, w * 0.03 * (0.5 + r()), h * 0.02, 0, 0, TAU); g.fill(); }
@@ -734,9 +739,9 @@ const PAINT = {
   },
 
   rio: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       fillSky(g, w, h, [[0, '#56b6f2'], [0.4, '#a9defb'], [0.52, '#eaf8ff']]);
-      sun(g, w * 0.2, h * 0.14, h * 0.05);
+      if (o.orb) sun(g, w * 0.2, h * 0.14, h * 0.05);
       cloud(g, w * 0.62, h * 0.15, h * 0.08, { seed: 9 });
       ridge(g, w, h, { y: h * 0.5, amp: h * 0.05, seed: 141, n: 4, fill: [[0, '#cbbf9c'], [1, '#d8cfb2']] });
       const mid = ridge(g, w, h, { y: h * 0.57, amp: h * 0.03, seed: 142, fill: [[0, '#a9cc8a'], [1, '#93be76']] });
@@ -771,7 +776,7 @@ const PAINT = {
   },
 
   monte: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       fillSky(g, w, h, [[0, '#4ea9ec'], [0.45, '#a8dcfb'], [0.62, '#effaff']]);
       const px = w * 0.46, py = h * 0.14;
       glow(g, px, py, h * 0.55, '#fff3c4', 0.8);
@@ -795,9 +800,9 @@ const PAINT = {
   },
 
   ciudad: {
-    back(g, w, h, r) {
+    back(g, w, h, r, o) {
       fillSky(g, w, h, [[0, '#5aaeea'], [0.38, '#a9d8f4'], [0.56, '#fde6bf'], [0.62, '#ffefd2']]);
-      sun(g, w * 0.84, h * 0.2, h * 0.055, { halo: '#fff0c8' });
+      if (o.orb) sun(g, w * 0.84, h * 0.2, h * 0.055, { halo: '#fff0c8' });
       cloud(g, w * 0.22, h * 0.15, h * 0.07, { seed: 10, alpha: 0.9 });
       ridge(g, w, h, { y: h * 0.55, amp: h * 0.04, seed: 181, fill: [[0, '#d6c3a2'], [1, '#e2d2b4']] });
       const hill = ridge(g, w, h, { y: h * 0.63, amp: h * 0.025, seed: 182, fill: [[0, '#c9b38a'], [1, '#bda57a']] });
@@ -873,7 +878,7 @@ function encode(c) {
     c.toBlob(b => { res(b ? URL.createObjectURL(b) : null); c.width = 0; c.height = 0; }, 'image/webp', 0.9);
   });
 }
-function paintLayer(bg, layer, shape) {
+function paintLayer(bg, layer, shape, orb = true) {
   const P = PAINT[bg];
   if (!P || !P[layer]) return null;
   const sh = SHAPES[shape] || SHAPES.card;
@@ -883,27 +888,35 @@ function paintLayer(bg, layer, shape) {
   const g = c.getContext('2d');
   if (!g) return null;
   const r = rng(seedOf(`${bg}:${layer}`));
-  P[layer](g, w, h, r);
+  P[layer](g, w, h, r, { orb });
   if (layer === 'back') grain(g, w, h, rng(7), DARK.has(bg) ? 0.03 : 0.025);
   return c;
 }
-function layerUrl(bg, layer, shape, urgent) {
-  const key = `${bg}|${layer}|${shape}`;
+const keyOf = (bg, layer, shape, orb) => `${bg}|${layer}|${shape}${layer === 'back' && !orb ? '|sin-astro' : ''}`;
+function layerUrl(bg, layer, shape, urgent, orb = true) {
+  const key = keyOf(bg, layer, shape, orb);
   if (ready.has(key)) return Promise.resolve(ready.get(key));
   if (pending.has(key)) return pending.get(key);
   const job = () => {
     let c = null;
-    try { c = paintLayer(bg, layer, shape); } catch (e) { console.warn('escena', bg, e); }
+    try { c = paintLayer(bg, layer, shape, orb); } catch (e) { console.warn('escena', bg, e); }
     return c ? encode(c) : null;
   };
   const p = (urgent ? Promise.resolve().then(job) : (chain = chain.then(idle).then(job).catch(() => null))).then(url => { ready.set(key, url); pending.delete(key); return url; });
   pending.set(key, p);
   return p;
 }
-// Pinta por adelantado (por ejemplo, los fondos de una lección antes de reproducirla).
-export function preload(bgs, shape = 'stage') {
+// Pinta por adelantado (por ejemplo, los fondos de una lección mientras el niño mira la portada).
+//   items: ['mar', …] o [{ bg: 'mar', orb: false }, …]
+export function preload(items, shape = 'stage') {
   if (typeof document === 'undefined') return;
-  for (const bg of new Set(bgs)) if (PAINT[bg]) for (const layer of ['back', 'front']) layerUrl(bg, layer, shape, false);
+  const seen = new Set();
+  for (const it of items) {
+    const bg = typeof it === 'string' ? it : it?.bg, orb = typeof it === 'string' ? true : it?.orb !== false;
+    if (!PAINT[bg] || seen.has(bg + orb)) continue;
+    seen.add(bg + orb);
+    for (const layer of ['back', 'front']) if (PAINT[bg][layer]) layerUrl(bg, layer, shape, false, orb);
+  }
 }
 
 // ───────────────────────── Ambiente animado (CSS) ─────────────────────────
@@ -976,7 +989,7 @@ function ambientEl(bg, level) {
 // ───────────────────────── El elemento ─────────────────────────
 
 const hasCanvas = () => typeof document !== 'undefined' && !!document.createElement('canvas').getContext;
-export function sceneEl(bg, { shape = 'card', ambient = false, cls = '', urgent = shape !== 'card' } = {}) {
+export function sceneEl(bg, { shape = 'card', ambient = false, cls = '', urgent = shape !== 'card', orb = true } = {}) {
   const id = SCENE_IDS.includes(bg) ? bg : 'cielo';
   const root = document.createElement('span');
   root.className = `sc sc--${id} sc--${shape}${DARK.has(id) ? ' sc--dark' : ''}${cls ? ` ${cls}` : ''}`;
@@ -992,10 +1005,10 @@ export function sceneEl(bg, { shape = 'card', ambient = false, cls = '', urgent 
   if (hasCanvas()) {
     for (const [el, layer] of [[back, 'back'], [front, 'front']]) {
       if (!PAINT[id][layer]) { el.remove(); continue; }
-      const key = `${id}|${layer}|${shape}`;
+      const key = keyOf(id, layer, shape, orb);
       const set = (url, now) => { if (!url) return; el.style.backgroundImage = `url(${url})`; if (now) el.classList.add('is-now'); el.classList.add('is-ready'); };
       if (ready.has(key)) set(ready.get(key), true);
-      else layerUrl(id, layer, shape, urgent).then(url => set(url, false));
+      else layerUrl(id, layer, shape, urgent, orb).then(url => set(url, false));
     }
   }
   return root;

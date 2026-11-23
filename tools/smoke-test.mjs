@@ -80,7 +80,7 @@ console.log('Bienvenida');
 const SCREENS = [
   ['home', {}], ['games', {}], ['bible', {}], ['bible', { tab: 'parabolas' }], ['bible', { tab: 'oraciones' }],
   ['bible', { tab: 'catecismo' }], ['bible', { tab: 'versiculos' }], ['shop', {}], ['shop', { tab: 'accesorios' }], ['settings', {}],
-  ['levels', { game: 'noe' }], ['catequesis', {}], ['confesion', {}], ['misa', {}], ['reto', {}],
+  ['levels', { game: 'noe' }], ['catequesis', {}], ['confesion', {}], ['misa', {}], ['reto', {}], ['parroquia', {}], ['figuritas', {}],
 ];
 for (const vp of [{ width: 360, height: 640 }, { width: 390, height: 844 }, { width: 540, height: 750 }]) {
   console.log(`Pantallas ${vp.width}×${vp.height}`);

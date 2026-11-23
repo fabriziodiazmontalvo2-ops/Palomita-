@@ -12,6 +12,7 @@ import { growthFor } from '../pet/arrival.js';
 import { music } from '../core/audio.js';
 import { dailyGiftDue, showDailyGift, showChest, takeLevelUps } from '../core/rewards.js';
 import * as reminders from '../core/reminders.js';
+import * as stickers from '../core/stickers.js';
 
 const ROOMS = [
   { id: 'sala', icon: '🏠', name: 'Nido' },
@@ -108,7 +109,8 @@ export async function mount(el, params = {}) {
     h('span', { class: 'home-side__icon', 'aria-hidden': 'true' }, icon), h('span', { class: 'home-side__label' }, label));
   const verseBtn = side('💌', 'Mensaje', () => showVerse(), 'home-side--verse');
   const giftBtn = side('🎁', 'Regalo', () => openGift(), 'home-side--gift');
-  const figusBtn = side('📒', 'Figuritas', () => go('figuritas'), 'home-side--figus');
+  const figusBtn = side('📒', 'Figuritas', () => go('figuritas', stickers.packsAvailable() > 0 ? { tab: 'sobres' } : {}), 'home-side--figus');
+  const paintFigus = () => { let n = 0; try { n = stickers.packsAvailable(); } catch { /* nada */ } figusBtn.classList.toggle('is-new', n > 0); };
   // Aviso de Misa o catequesis (hoy o mañana) de la parroquia.
   const avisoBox = h('div', { class: 'home__aviso' });
   function paintAviso() {
@@ -649,7 +651,8 @@ export async function mount(el, params = {}) {
   }, STEP * 1000);
 
   // ── Inicio ──
-  refreshTop(); refreshMeters(); refreshDove(); applyWear(); paintAviso();
+  refreshTop(); refreshMeters(); refreshDove(); applyWear(); paintAviso(); paintFigus();
+  offs.push(stickers.on('packs', paintFigus));
   try { reminders.sync(); } catch (e) { console.warn(e); }
   world.setRoom(room, { instant: true });
   for (const b of tabs.children) b.classList.toggle('is-on', b.dataset.room === room);

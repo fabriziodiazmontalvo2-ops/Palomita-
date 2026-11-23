@@ -89,8 +89,8 @@ button.fg-st:focus-visible, .fg-card:focus-visible, .fg-dot:focus-visible, .fg-a
   box-shadow: 0 4px 0 var(--sun-deep); }
 .fg-arrow:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--sun-deep); }
 .fg-arrow:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
-.fg-dots { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; min-width: 0; }
-.fg-dot { appearance: none; border: 0; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; padding: 0; font-size: 0.95rem; line-height: 34px; background: rgba(255, 255, 255, 0.7);
+.fg-dots { display: flex; gap: 3px; justify-content: center; flex-wrap: wrap; min-width: 0; }
+.fg-dot { appearance: none; border: 0; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; padding: 0; font-size: 0.85rem; line-height: 30px; background: rgba(255, 255, 255, 0.7);
   box-shadow: 0 2px 0 var(--paper-edge); opacity: 0.7; transition: transform 0.15s; }
 .fg-dot.is-on { background: var(--sun); opacity: 1; transform: scale(1.15); box-shadow: 0 2px 0 var(--sun-deep); }
 .fg-dot.is-done { box-shadow: 0 0 0 2px var(--leaf), 0 2px 0 var(--paper-edge); opacity: 1; }
@@ -194,7 +194,7 @@ button.fg-st:focus-visible, .fg-card:focus-visible, .fg-dot:focus-visible, .fg-a
 .fg-big__page { display: flex; justify-content: center; gap: 6px; font-size: var(--fs-sm); font-weight: 800; color: var(--ink-soft); }
 .fg-big__caption { margin-top: 6px; font-size: var(--fs-md); font-weight: 600; line-height: 1.45; text-align: center; user-select: text; -webkit-user-select: text; }
 .fg-big .ct-listen { flex: 1 1 130px; }
-.fg-trade-modal .fg-open__cards--one { justify-content: center; }
+.fg-trade-modal .fg-open__cards--one { justify-content: center; padding-top: 14px; }
 .fg-trade-modal .fg-card { flex: 0 0 150px; }
 .fg-trade-modal .fg-card__name { color: var(--ink); }
 

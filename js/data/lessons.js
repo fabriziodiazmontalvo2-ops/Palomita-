@@ -1058,7 +1058,7 @@ export const LESSONS = [
         say: 'Se acercaba la fiesta de la Pascua. En ella, el pueblo de Israel recordaba con alegría cómo Dios lo había liberado de la esclavitud de Egipto. Jesús envió a Pedro y a Juan a Jerusalén: «Vayan a prepararnos la cena de Pascua». Y ellos lo prepararon todo en una sala grande del piso de arriba.',
       },
       {
-        bg: 'noche',
+        bg: 'cenaculo',
         actors: [
           { e: '🧔', x: 78, y: 80, s: 1.8, anim: 'glow' },
           { e: '🍞', x: 42, y: 82, s: 1.3, anim: 'none' },
@@ -1070,7 +1070,7 @@ export const LESSONS = [
         say: 'Cuando llegó la hora, Jesús se sentó a la mesa con sus doce apóstoles. Los miró con mucho cariño y les dijo: «¡Cuánto he deseado comer esta Pascua con ustedes antes de padecer!». Jesús sabía que al día siguiente iba a dar su vida, y quería dejarles un regalo enorme.',
       },
       {
-        bg: 'noche',
+        bg: 'cenaculo',
         actors: [
           { e: '🧔', x: 36, y: 80, s: 1.8, anim: 'glow' },
           { e: '🦶', x: 62, y: 84, s: 1.2, anim: 'none' },

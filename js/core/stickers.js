@@ -6,13 +6,14 @@
 //   packsAvailable()                       sobres sin abrir
 //   openPack()                             abre un sobre → { cards: [{ sticker, isNew, count }], prizes } o null
 //   buyPack()                              compra un sobre con semillas → true/false
-//   tradeDuplicates()                      cambia TRADE_COST repetidas por una figurita que falta → { sticker, used } o null
+//   tradeDuplicates()                      cambia TRADE_COST repetidas por una figurita que falta → { sticker, used, prizes }
+//                                          (con el álbum completo, por TRADE_COINS semillas → { coins, used, prizes }) o null
 //   progress()                             { owned, total, pages: { [pageId]: { owned, total, done, claimed } }, packs, dupes }
 //   count(id) / has(id) / isUnseen(id) / markSeen(id) / duplicates()
 //   on(evento, fn) → off()                 eventos: 'packs' ({ packs, delta, reason }), 'change'
 //   reset()                                borra la colección (para «empezar de nuevo»)
 import * as state from './state.js';
-import { STICKERS, PAGES, RARITY, PACK_SIZE, PACK_PRICE, TRADE_COST, PAGE_PRIZE, ALBUM_PRIZE } from '../data/stickers.js';
+import { STICKERS, PAGES, RARITY, PACK_SIZE, PACK_PRICE, TRADE_COST, TRADE_COINS, PAGE_PRIZE, ALBUM_PRIZE } from '../data/stickers.js';
 
 const KEY = 'palomita.stickers.v1';
 const BY_ID = new Map(STICKERS.map(s => [s.id, s]));
@@ -130,7 +131,6 @@ export function openPack(rand = Math.random) {
   }
   S.packs--;
   S.opened++;
-  const before = progress();
   const cards = picks.map(s => {
     const isNew = !has(s.id);
     S.owned[s.id] = count(s.id) + 1;
@@ -138,7 +138,7 @@ export function openPack(rand = Math.random) {
     return { sticker: s, isNew, count: S.owned[s.id] };
   });
   S.dry = cards.some(c => c.isNew) ? 0 : S.dry + 1;
-  const prizes = checkPrizes(before);
+  const prizes = checkPrizes();
   save();
   emit('packs', { packs: S.packs, delta: -1 });
   emit('opened', { cards, prizes });
@@ -147,8 +147,7 @@ export function openPack(rand = Math.random) {
 
 export function tradeDuplicates(rand = Math.random) {
   const miss = missing();
-  if (!miss.length || dupeTotal() < TRADE_COST) return null;
-  const before = progress();
+  if (dupeTotal() < TRADE_COST) return null;
   // Se entregan primero las que más se repiten.
   let left = TRADE_COST;
   const used = [];
@@ -159,10 +158,16 @@ export function tradeDuplicates(rand = Math.random) {
     used.push(d.sticker);
     left--;
   }
+  if (!miss.length) {
+    state.addCoins(TRADE_COINS);
+    save();
+    emit('traded', { coins: TRADE_COINS, used, prizes: [] });
+    return { coins: TRADE_COINS, used, prizes: [] };
+  }
   const s = miss[Math.floor(rand() * miss.length)];
   S.owned[s.id] = 1;
   S.unseen[s.id] = 1;
-  const prizes = checkPrizes(before);
+  const prizes = checkPrizes();
   save();
   emit('traded', { sticker: s, used, prizes });
   return { sticker: s, used, prizes };
@@ -194,6 +199,8 @@ function give({ coins = 0, xp = 0, fe = 0, accessory = null }) {
 }
 
 export function reset() { S = fresh(); save(); emit('packs', { packs: 0, delta: 0 }); }
+// «Empezar de nuevo» en Ajustes también borra el álbum.
+state.on('reset', () => reset());
 
 // Para pruebas: window.__stickers
 try { window.__stickers = { grantPack, openPack, progress, reset, tradeDuplicates }; } catch { /* nada */ }

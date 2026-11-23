@@ -85,7 +85,7 @@ export const STICKERS = [
     caption: 'Muchísima gente viajaba para confesarse con él. ¡A veces pasaba más de diez horas al día en el confesionario!',
     art: { draw: 'vianneyConfessing' } },
   { id: 'ante-sagrario', page: 'cura-ars', rarity: 'comun', hint: '🙏', title: 'Rezando ante el sagrario',
-    caption: 'Le encantaba quedarse en silencio delante de Jesús. Decía: «Yo lo miro y Él me mira».',
+    caption: 'Le encantaba quedarse en silencio delante de Jesús. Un campesino de Ars le explicó así su oración: «Yo lo miro y Él me mira». ¡Al santo le encantaba repetirlo!',
     art: { draw: 'vianneyPraying' } },
   { id: 'catecismo-ars', page: 'cura-ars', rarity: 'comun', hint: '📖', title: 'Catequista de los niños',
     caption: 'Cada día enseñaba el catecismo a los niños del pueblo con palabras sencillas y mucho cariño.',
@@ -191,3 +191,4 @@ export const ALBUM_PRIZE = { coins: 300, xp: 80, fe: 20, accessory: 'campanita' 
 export const PACK_SIZE = 3;
 export const PACK_PRICE = 45;        // semillas por sobre en el álbum
 export const TRADE_COST = 3;         // repetidas que se entregan por una figurita nueva
+export const TRADE_COINS = 15;       // con el álbum completo, 3 repetidas se cambian por semillas
