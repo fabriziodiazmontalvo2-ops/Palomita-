@@ -9,7 +9,11 @@ let stream = null, recorder = null, source = null, raf = 0, stopTimer = 0, block
 
 export function available() {
   try {
-    return !blocked && !!navigator.mediaDevices?.getUserMedia && typeof window.MediaRecorder === 'function' && window.isSecureContext !== false;
+    if (blocked || !navigator.mediaDevices?.getUserMedia || typeof window.MediaRecorder !== 'function' || window.isSecureContext === false) return false;
+    // Dentro de visores que no permiten el micrófono, el botón ni siquiera se ofrece.
+    const policy = document.permissionsPolicy || document.featurePolicy;
+    if (policy?.allowsFeature && !policy.allowsFeature('microphone')) return false;
+    return true;
   } catch { return false; }
 }
 
