@@ -15,6 +15,7 @@ import * as tts from '../core/tts.js';
 import { h, clear, button, iconButton, toast, meter, reduceMotion } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { go, back } from '../core/router.js';
+import { sceneEl, SCENE_IDS, isFloating } from '../art/scenes.js';
 
 // ───────────────────────── Datos fijos de la pantalla ─────────────────────────
 
@@ -66,10 +67,7 @@ const THEMES = [
   { key: 'servicio', title: 'Servicio', icon: '🤲' },
 ];
 
-// Fondos de las ilustraciones (art.bg) y elementos que "flotan" en el cielo de la escena.
-const BGS = ['cielo', 'noche', 'desierto', 'mar', 'jardin', 'dorado', 'amanecer', 'tormenta', 'templo', 'campo'];
-const FLOATING = new Set(['🌞', '☀', '🌙', '🌛', '⭐', '🌟', '✨', '💫', '🌠', '☁', '⛅', '🌤', '🌥', '🌧', '⛈', '🌈', '⚡', '🌬',
-  '🕊', '🐦', '👼', '🎶', '🎵', '❤', '💛', '💜', '💙', '🍃', '🎉', '🌅']);
+// Fondo pintado de cada parábola (js/art/scenes.js).
 const PARABLE_BG = { noe: 'cielo', oveja: 'campo', sembrador: 'campo', samaritano: 'desierto', roca: 'tormenta', talentos: 'dorado',
   mostaza: 'jardin', prodigo: 'amanecer', perla: 'mar', panes: 'campo', luz: 'noche' };
 
@@ -145,18 +143,18 @@ const heartIcon = () => svg('0 0 24 24', 'bb-heart__svg',
   'M12 20.6s-7.4-4.5-9.4-9.1C1.1 8 3 4.6 6.6 4.6c2 0 3.6 1 5.4 3 1.8-2 3.4-3 5.4-3 3.6 0 5.5 3.4 4 6.9-2 4.6-9.4 9.1-9.4 9.1z');
 const trailIcon = () => svg('0 0 100 36', 'bb-trail', 'M2 0 C 2 26, 98 10, 98 36', { preserveAspectRatio: 'none' });
 
-// Ilustración: un fondo temático y los emojis compuestos como una pequeña escena.
-// Los que vuelan (sol, estrellas, aves…) van arriba; los demás se apoyan en el suelo y el primero es el protagonista.
+// Ilustración: un paisaje pintado (js/art/scenes.js) y los emojis compuestos como una pequeña escena.
+// Los que vuelan (sol, estrellas, aves…) van arriba; los demás se apoyan en el suelo con su sombrita:
+// el primero es el protagonista y los más pequeños quedan un poco más atrás (más arriba en el cuadro).
+//   size  'card' (estantes) · 'thumb' (tarjeta «Sigue leyendo») · 'mini' (lista de parábolas) · 'hero' (portada del lector)
 function art(spec, size = 'card') {
-  const bg = BGS.includes(spec?.bg) ? spec.bg : 'cielo';
+  const bg = SCENE_IDS.includes(spec?.bg) ? spec.bg : 'cielo';
   const sky = [], ground = [];
-  for (const e of arr(spec?.emojis).map(txt).filter(Boolean).slice(0, 4)) {
-    (FLOATING.has(e.replace(/️/g, '')) ? sky : ground).push(e);
-  }
+  for (const e of arr(spec?.emojis).map(txt).filter(Boolean).slice(0, size === 'mini' ? 1 : 4)) (isFloating(e) ? sky : ground).push(e);
   if (!ground.length && sky.length) ground.push(sky.shift());
-  const box = h('span', { class: `bb-art bb-art--${bg} bb-art--${size}`, 'aria-hidden': 'true' });
-  const G = { 1: [[50, 1.3]], 2: [[35, 1.22], [69, 0.92]], 3: [[50, 1.2], [19, 0.84], [81, 0.84]], 4: [[37, 1.14], [13, 0.74], [63, 0.92], [87, 0.74]] }[ground.length] || [];
-  const K = { 1: [[80, 12]], 2: [[17, 16], [83, 9]], 3: [[15, 18], [85, 9], [50, 5]] }[sky.length] || [];
+  const box = sceneEl(bg, { shape: size === 'hero' ? 'hero' : 'card', ambient: size === 'hero' ? 'full' : false, cls: `bb-art bb-art--${size}` });
+  const G = { 1: [[50, 1.3]], 2: [[36, 1.22], [70, 0.9]], 3: [[50, 1.2], [19, 0.82], [81, 0.82]], 4: [[38, 1.14], [13, 0.72], [63, 0.92], [88, 0.72]] }[ground.length] || [];
+  const K = { 1: [[80, 14]], 2: [[17, 16], [83, 10]], 3: [[15, 18], [85, 10], [50, 6]] }[sky.length] || [];
   const piece = (e, kind, x, k, y) => {
     const s = h('span', { class: `bb-art__e bb-art__e--${kind}` }, e);
     s.style.setProperty('--x', `${x}%`);
@@ -193,7 +191,8 @@ function progressCard({ icon, title, value, color, note }) {
 function verseCard(verse) {
   if (!verse || !txt(verse.text)) return null;
   return h('blockquote', { class: 'bb-verse' },
-    h('p', null, `«${txt(verse.text)}»`),
+    h('span', { class: 'bb-verse__mark', 'aria-hidden': 'true' }, '“'),
+    h('p', null, txt(verse.text)),
     verse.ref ? h('cite', null, txt(verse.ref)) : null);
 }
 
@@ -305,6 +304,27 @@ export async function mount(el, params = {}) {
 
   function tools(getText) {
     return h('div', { class: 'bb-tools' }, listenButton(getText), fontControl());
+  }
+
+  // ── Portada del lector: la ilustración se queda un poquito atrás al bajar (profundidad)
+  //    y una barrita arriba muestra cuánto falta para terminar la lectura ──
+  function readerHero(spec) {
+    const pic = art(spec, 'hero');
+    const wrap = h('div', { class: 'bb-hero' }, pic);
+    const bar = h('div', { class: 'bb-readbar', 'aria-hidden': 'true' }, h('i'));
+    page.append(bar);
+    const still = reduceMotion();
+    let raf = 0;
+    const paint = () => {
+      raf = 0;
+      const y = scroll.scrollTop, max = scroll.scrollHeight - scroll.clientHeight;
+      bar.firstChild.style.transform = `scaleX(${max > 8 ? Math.min(1, y / max).toFixed(4) : 0})`;
+      if (!still && y < 420) pic.style.transform = `translate3d(0, ${(y * 0.42).toFixed(1)}px, 0) scale(${(1 + y * 0.00035).toFixed(4)})`;
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(paint); };
+    scroll.addEventListener('scroll', onScroll, { passive: true });
+    viewOffs.push(() => { scroll.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); bar.remove(); });
+    return wrap;
   }
 
   // ── Pequeña celebración (no se muestra si el niño prefiere menos movimiento) ──
@@ -617,9 +637,9 @@ export async function mount(el, params = {}) {
       title: sh.key === 'mi' ? 'Milagros' : 'Historias',
       chip: { icon: sh.icon, text: `${i + 1} de ${list.length}`, label: `${sh.title}: historia ${i + 1} de ${list.length}` },
       body: h('article', { class: 'bb-reader' },
-        art(s.art, 'hero'),
+        readerHero(s.art),
         h('div', { class: 'bb-reader__body' },
-          h('p', { class: 'eyebrow' }, sh.title),
+          h('p', { class: 'bb-reader__eyebrow' }, deco(sh.icon), sh.title),
           h('h2', { class: 'bb-reader__title' }, txt(s.title)),
           s.ref ? h('p', { class: 'bb-ref' }, deco('📖'), txt(s.ref)) : null,
           tools(() => [txt(s.title), ...paragraphs]),
@@ -657,7 +677,7 @@ export async function mount(el, params = {}) {
         h('div', { class: 'bb-list' }, list.map(p => {
           const g = gameOf(p);
           const item = h('button', { type: 'button', class: 'bb-item', dataset: { parable: p.id }, onclick: () => open('parable', p.id) },
-            h('span', { class: 'bb-item__icon', 'aria-hidden': 'true' }, txt(p.emoji)),
+            art({ bg: PARABLE_BG[p.id], emojis: [txt(p.emoji)] }, 'mini'),
             h('span', { class: 'bb-item__body' },
               h('span', { class: 'bb-item__title' }, txt(p.title)),
               h('span', { class: 'bb-item__sub' }, txt(p.ref), g ? h('span', { class: 'bb-item__tag' }, deco('🎮'), 'con juego') : null),
@@ -694,9 +714,9 @@ export async function mount(el, params = {}) {
       title: 'Parábolas',
       chip: { text: `${i + 1} de ${list.length}`, label: `Lectura ${i + 1} de ${list.length}` },
       body: h('article', { class: 'bb-reader' },
-        art({ bg: PARABLE_BG[p.id], emojis }, 'hero'),
+        readerHero({ bg: PARABLE_BG[p.id], emojis }),
         h('div', { class: 'bb-reader__body' },
-          h('p', { class: 'eyebrow' }, kindLabel(p)),
+          h('p', { class: 'bb-reader__eyebrow' }, deco(p.kind === 'historia' ? '📜' : '🌾'), kindLabel(p)),
           h('h2', { class: 'bb-reader__title' }, txt(p.title)),
           p.ref ? h('p', { class: 'bb-ref' }, deco('📖'), txt(p.ref)) : null,
           tools(() => [txt(p.title), ...story]),
@@ -737,7 +757,7 @@ export async function mount(el, params = {}) {
           h('div', { class: 'bb-list' }, items.map(p => {
             const done = prayedToday(p.id);
             return h('button', { type: 'button', class: 'bb-item', dataset: { prayer: p.id }, onclick: () => open('prayer', p.id) },
-              h('span', { class: 'bb-item__icon', 'aria-hidden': 'true' }, txt(p.emoji)),
+              art({ bg: PARABLE_BG[p.id], emojis: [txt(p.emoji)] }, 'mini'),
               h('span', { class: 'bb-item__body' },
                 h('span', { class: 'bb-item__title' }, txt(p.title)),
                 h('span', { class: 'bb-item__text bb-item__text--one' }, `${txt(arr(p.lines)[0]).replace(/[,;:.]+$/, '')}…`)),

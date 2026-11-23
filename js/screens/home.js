@@ -117,7 +117,7 @@ export async function mount(el, params = {}) {
     try { ev = reminders.todayBanner(); } catch (e) { console.warn(e); }
     if (!ev) return;
     avisoBox.append(h('button', { type: 'button', class: `home-aviso home-aviso--${ev.kind}`, onclick: () => { sfx('tap'); go('parroquia', { tab: ev.kind === 'misa' ? 'misas' : 'catequesis' }); } },
-      h('span', { class: 'home-aviso__icon', 'aria-hidden': 'true' }, ev.icon), h('span', { class: 'home-aviso__text' }, ev.text)));
+      h('span', { class: 'home-aviso__icon', 'aria-hidden': 'true' }, ev.icon), h('span', { class: 'home-aviso__text' }, ev.text.replace(/ ([ap])\. m\./g, '\u00a0$1.\u00a0m.'))));
   }
   const bubble = h('button', { type: 'button', class: 'home__bubble', hidden: true, 'aria-live': 'polite', onclick: () => hideBubble() });
   const tray = h('div', { class: 'home__tray' });

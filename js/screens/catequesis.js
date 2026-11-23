@@ -12,6 +12,7 @@ import * as tts from '../core/tts.js';
 import { h, clear, button, iconButton, meter, reduceMotion } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { go, back } from '../core/router.js';
+import { sceneEl, SCENE_IDS, isFloating } from '../art/scenes.js';
 
 // ───────────────────────── Utilidades compartidas ─────────────────────────
 
@@ -20,7 +21,7 @@ export const txt = v => (typeof v === 'string' ? v : v === null || v === undefin
 export const deco = icon => h('span', { 'aria-hidden': 'true' }, icon);
 export const smooth = () => (reduceMotion() ? 'auto' : 'smooth');
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-export const BGS = ['cielo', 'noche', 'desierto', 'mar', 'jardin', 'dorado', 'amanecer', 'tormenta', 'templo', 'campo'];
+export const BGS = SCENE_IDS;   // fondos pintados (js/art/scenes.js)
 export const voiceReady = () => state.setting('voice') !== false && tts.available();
 export function shuffle(list) {
   const a = list.slice();
@@ -317,11 +318,14 @@ export function quiz(questions, { key, prize = { coins: 10 }, perfectOnly = true
   return box;
 }
 
-// Pequeña escena ilustrada: fondo temático + emojis colocados en % (x, y = centro; y = 100 abajo).
+// Pequeña escena ilustrada: paisaje pintado (js/art/scenes.js) + emojis colocados en % (x, y = centro; y = 100 abajo).
+// Los que están en el suelo llevan su sombrita. cls con «wide» o «hero» pide la imagen grande (tarjetas anchas, portadas).
 export function miniScene(bg, actors, cls = '') {
-  const box = h('span', { class: `ct-bg ct-bg--${BGS.includes(bg) ? bg : 'cielo'} ${cls}`.trim(), 'aria-hidden': 'true' });
+  const big = /wide|hero/.test(cls);
+  const box = sceneEl(BGS.includes(bg) ? bg : 'cielo', { shape: big ? 'hero' : 'card', ambient: 'lite', cls: `ct-bg ${cls}`.trim() });
   for (const a of actors) {
-    const s = h('span', { class: `ct-mini${a.anim ? ` ct-mini--${a.anim}` : ''}` }, a.e);
+    const grounded = (Number(a.y) || 0) >= 56 && !a.anim && !isFloating(a.e);
+    const s = h('span', { class: `ct-mini${a.anim ? ` ct-mini--${a.anim}` : ''}${grounded ? ' is-ground' : ''}` }, a.e);
     s.style.left = `${a.x}%`;
     s.style.top = `${a.y}%`;
     s.style.setProperty('--s', a.s || 1);
@@ -377,7 +381,7 @@ export async function mount(el, params = {}) {
 
     const card = ({ title, sub, bg, actors, onClick, note, wide = false, play = false, c }) => {
       const b = h('button', { type: 'button', class: `ct-card${wide ? ' ct-card--wide' : ''}`, onclick: () => { sfx('pop'); onClick(); } },
-        h('span', { class: 'ct-card__art' }, miniScene(bg, actors), play ? h('span', { class: 'ct-card__play', 'aria-hidden': 'true' }) : null),
+        h('span', { class: 'ct-card__art' }, miniScene(bg, actors, wide ? 'ct-bg--wide' : ''), play ? h('span', { class: 'ct-card__play', 'aria-hidden': 'true' }) : null),
         h('span', { class: 'ct-card__body' },
           h('span', { class: 'ct-card__title' }, title),
           h('span', { class: 'ct-card__sub' }, sub),

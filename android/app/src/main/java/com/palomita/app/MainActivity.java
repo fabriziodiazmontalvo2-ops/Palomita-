@@ -113,8 +113,24 @@ public class MainActivity extends Activity {
                 int r = tts.setLanguage(l);
                 if (r != TextToSpeech.LANG_MISSING_DATA && r != TextToSpeech.LANG_NOT_SUPPORTED) { ttsReady = true; break; }
             }
-            tts.setSpeechRate(0.92f);
-            tts.setPitch(1.1f);
+            // Entre las voces en español del teléfono, la más natural que no necesite internet.
+            try {
+                android.speech.tts.Voice best = null;
+                int bestScore = -1;
+                for (android.speech.tts.Voice v : tts.getVoices()) {
+                    Locale l = v.getLocale();
+                    if (l == null || !"es".equals(l.getLanguage())) continue;
+                    if (v.getFeatures() != null && v.getFeatures().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)) continue;
+                    int sc = v.getQuality() / 100 + (v.isNetworkConnectionRequired() ? 0 : 3);
+                    String c = l.getCountry();
+                    if ("MX".equals(c) || "US".equals(c) || "PE".equals(c) || "419".equals(c) || "CO".equals(c)) sc += 2;
+                    if (v.getName() != null && v.getName().toLowerCase(Locale.ROOT).contains("female")) sc += 1;
+                    if (sc > bestScore) { bestScore = sc; best = v; }
+                }
+                if (best != null) { tts.setVoice(best); ttsReady = true; }
+            } catch (Exception ignored) { /* algunos motores no listan voces */ }
+            tts.setSpeechRate(0.9f);
+            tts.setPitch(1.05f);
             tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                 @Override public void onStart(String id) {
                     // id = "u<índice>" y termina en "L" si es la última pieza: avisa a la app qué renglón empieza.

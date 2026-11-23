@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Escenas pintadas</title>
+<link rel="stylesheet" href="../css/fonts.css">
+<link rel="stylesheet" href="../css/app.css">
+<link rel="stylesheet" href="../css/bible.css">
+<link rel="stylesheet" href="../css/catequesis.css">
+<style>
+  body { background: #333; margin: 0; padding: 10px; font: 700 14px Nunito, sans-serif; color: #fff; }
+  .grid { display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: 10px; }
+  .cell p { margin: 2px 0 4px; }
+  .cell .sc { border-radius: 12px; }
+  .hero { aspect-ratio: 2 / 1; }
+  .stage { aspect-ratio: 4 / 3; }
+</style>
+</head>
+<body>
+<div id="out" class="grid"></div>
+<script type="module">
+// Banco de pruebas de los fondos de js/art/scenes.js.
+//   dev/scenes.html?shape=hero|stage|card&cols=3&only=noche,mar&amb=full
+import { SCENE_IDS, sceneEl } from '../js/art/scenes.js';
+const q = new URLSearchParams(location.search);
+const shape = q.get('shape') || 'hero';
+document.body.style.setProperty('--cols', q.get('cols') || '3');
+const ids = q.get('only') ? q.get('only').split(',') : SCENE_IDS;
+const out = document.getElementById('out');
+for (const id of ids) {
+  const el = sceneEl(id, { shape, ambient: q.get('amb') || false, cls: shape === 'stage' ? 'stage' : 'hero', urgent: true });
+  const cell = document.createElement('div'); cell.className = 'cell';
+  const p = document.createElement('p'); p.textContent = id;
+  cell.append(p, el); out.append(cell);
+}
+const wait = () => new Promise(r => setTimeout(r, 50));
+(async () => { for (let i = 0; i < 200; i++) { if ([...document.querySelectorAll('.sc__back')].every(b => b.classList.contains('is-ready'))) break; await wait(); } window.__ready = true; })();
+</script>
+</body>
+</html>

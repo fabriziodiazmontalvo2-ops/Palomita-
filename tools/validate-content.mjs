@@ -15,7 +15,7 @@ const warn = (f, m) => warns.push(`[${f}] ${m}`);
 const isStr = (v, min = 1) => typeof v === 'string' && v.trim().length >= min;
 const REF_RE = /^(?:[1-3] )?[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?: [a-záéíóúñ]+){0,3} \d+(?:, \d+[a-c]?(?:-\d+[a-c]?)?(?:\. ?\d+[a-c]?(?:-\d+[a-c]?)?)*)?(?: ?[–-] ?\d+, \d+)?(?:; ?\d+, \d+(?:-\d+)?)*$/;
 const EMOJI_RE = /\p{Extended_Pictographic}/u;
-const BGS = ['cielo', 'noche', 'desierto', 'mar', 'jardin', 'dorado', 'amanecer', 'tormenta', 'templo', 'campo'];
+const BGS = ['cielo', 'noche', 'desierto', 'mar', 'jardin', 'dorado', 'amanecer', 'tormenta', 'templo', 'campo', 'cenaculo', 'rio', 'monte', 'ciudad', 'iglesia'];   // = SCENE_IDS de js/art/scenes.js
 
 function checkText(f, where, v, max, min = 8) {
   if (!isStr(v, min)) return err(f, `${where}: texto vacío o demasiado corto`);

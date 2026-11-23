@@ -10,6 +10,7 @@ import * as tts from '../core/tts.js';
 import { h, clear, button, reduceMotion } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { go, back } from '../core/router.js';
+import { sceneEl, isFloating, preload } from '../art/scenes.js';
 import { arr, txt, deco, clamp, BGS, voiceReady, loadLessons, lifecycle, shell, soon, rewardRow, grant, celebrate, quiz, smooth } from './catequesis.js';
 
 const ANIMS = ['pop', 'float', 'bounce', 'slide-left', 'slide-right', 'spin', 'pulse', 'glow', 'fall', 'grow', 'shake', 'none'];
@@ -30,6 +31,7 @@ export async function mount(el, params = {}) {
   const idx = lessons.findIndex(l => l.id === params.id);
   const L = lessons[idx];
   const scenes = L ? arr(L.scenes).filter(sc => sc && sayOf(sc)) : [];
+  preload(scenes.map(sc => (BGS.includes(sc.bg) ? sc.bg : 'cielo')), 'stage');   // los fondos se pintan mientras el niño mira la portada
   if (!L || !scenes.length) {
     sh.fill(soon('Muy pronto', 'Esta lección todavía se está preparando. ¡Vuelve pronto!', '🎬'),
       button('Volver a las lecciones', { kind: 'sun', icon: '↩️', onClick: () => back() }));
@@ -90,7 +92,9 @@ export async function mount(el, params = {}) {
   function actorEl(a, k) {
     const anim = ANIMS.includes(a.anim) ? a.anim : 'pop';
     const s = clamp(num(a.s, 1), 0.4, 3);
-    const el = h('span', { class: `ls-actor ls-a--${anim}` }, h('span', { class: 'ls-actor__in' }, h('span', { class: 'ls-actor__loop' }, txt(a.e))));
+    const y = clamp(num(a.y, 60), 0, 100);
+    const grounded = y >= 56 && !['float', 'glow', 'spin', 'fall'].includes(anim) && !isFloating(a.e);
+    const el = h('span', { class: `ls-actor ls-a--${anim}${grounded ? ' is-ground' : ''}` }, h('span', { class: 'ls-actor__in' }, h('span', { class: 'ls-actor__loop' }, txt(a.e))));
     el.style.setProperty('--x', clamp(num(a.x, 50), 0, 100));
     el.style.setProperty('--y', clamp(num(a.y, 60), 0, 100));
     el.style.setProperty('--s', s);
@@ -101,7 +105,8 @@ export async function mount(el, params = {}) {
   function paintScene(i, { fade = true } = {}) {
     const sc = scenes[i];
     const bg = BGS.includes(sc.bg) ? sc.bg : 'cielo';
-    const cam = h('div', { class: `ls-cam ct-bg ct-bg--${bg}` }, arr(sc.actors).slice(0, 6).filter(a => txt(a.e)).map(actorEl));
+    const cam = sceneEl(bg, { shape: 'stage', ambient: 'full', cls: 'ls-cam' });
+    cam.append(...arr(sc.actors).slice(0, 6).filter(a => txt(a.e)).map(actorEl));
     cam.style.setProperty('--ox', i % 2 ? '35%' : '65%');
     cam.style.setProperty('--kb', `${Math.max(6, Math.round(voiceGuess(sc) / 1000) + 4)}s`);
     const layer = h('div', { class: `ls-scene${fade ? ' is-in' : ''}` }, cam);

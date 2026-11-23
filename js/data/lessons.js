@@ -208,7 +208,7 @@ export const LESSONS = [
         say: 'Jesús creció en Nazaret, en familia, con María y José. Los obedecía, ayudaba en casa y aprendió el oficio de carpintero. La Biblia dice que iba creciendo en sabiduría, en estatura y en gracia ante Dios y ante la gente.',
       },
       {
-        bg: 'mar',
+        bg: 'rio',
         actors: [
           { e: '🧔', x: 50, y: 72, s: 2, anim: 'glow' },
           { e: '🕊️', x: 50, y: 24, s: 1.3, anim: 'fall' },
@@ -409,7 +409,7 @@ export const LESSONS = [
         say: 'Jairo le rogó a Jesús que salvara a su hija de doce años, que estaba muy enferma. Por el camino le avisaron que la niña había muerto. Jesús le dijo: «No temas; basta que creas». Llegó, tomó a la niña de la mano y le dijo: «Niña, levántate». ¡Y ella se levantó y se puso a caminar!',
       },
       {
-        bg: 'templo',
+        bg: 'iglesia',
         actors: [
           { e: '⛪', x: 50, y: 70, s: 2, anim: 'none' },
           { e: '🍞', x: 24, y: 82, s: 1.2, anim: 'glow' },
@@ -491,7 +491,7 @@ export const LESSONS = [
         say: 'Entonces Jesús fue elevado al cielo, y una nube lo ocultó de su vista. Los apóstoles se quedaron mirando hacia arriba… Pero Jesús no se fue lejos: está con el Padre y sigue con nosotros. Él lo prometió: «Yo estoy con ustedes todos los días, hasta el fin del mundo».',
       },
       {
-        bg: 'templo',
+        bg: 'cenaculo',
         actors: [
           { e: '👩', x: 50, y: 80, s: 1.8, anim: 'glow' },
           { e: '🙏', x: 27, y: 82, s: 1.2, anim: 'pulse' },
@@ -514,7 +514,7 @@ export const LESSONS = [
         say: 'El día de Pentecostés, mientras estaban reunidos, de repente se oyó un ruido del cielo, como de un viento muy fuerte, que llenó toda la casa. Aparecieron unas lenguas como de fuego que se posaron sobre cada uno, y todos quedaron llenos del Espíritu Santo. ¡Se les fue todo el miedo!',
       },
       {
-        bg: 'desierto',
+        bg: 'ciudad',
         actors: [
           { e: '🗣️', x: 28, y: 78, s: 1.9, anim: 'pulse' },
           { e: '🧑', x: 54, y: 82, s: 1.2, anim: 'bounce' },
@@ -549,7 +549,7 @@ export const LESSONS = [
         say: 'Los primeros cristianos vivían como una gran familia. Escuchaban la enseñanza de los apóstoles, compartían lo que tenían para que a nadie le faltara nada, se reunían para partir el pan, que es la Eucaristía, y rezaban juntos. ¡Vivían con alegría y sencillez de corazón!',
       },
       {
-        bg: 'templo',
+        bg: 'iglesia',
         actors: [
           { e: '⛪', x: 50, y: 68, s: 2.2, anim: 'none' },
           { e: '👨', x: 16, y: 82, s: 1.2, anim: 'slide-right' },
@@ -641,7 +641,7 @@ export const LESSONS = [
         caption: '1. El Bautismo: con el agua y las palabras de Jesús nacemos a la vida de Dios. Nos hace hijos suyos, nos limpia del pecado y nos hace parte de la Iglesia.',
       },
       {
-        bg: 'templo',
+        bg: 'iglesia',
         actors: [
           { e: '🧒', x: 50, y: 80, s: 1.8, anim: 'pop' },
           { e: '✋', x: 50, y: 46, s: 1.4, anim: 'float' },
@@ -680,7 +680,7 @@ export const LESSONS = [
         say: 'Quinto: la Unción de los Enfermos. Cuando alguien está muy enfermo o es muy anciano, el sacerdote reza por él y lo unge con aceite bendito, como pide la Biblia. Jesús le da consuelo, paz y fortaleza, y no lo deja solo.',
       },
       {
-        bg: 'templo',
+        bg: 'iglesia',
         actors: [
           { e: '📖', x: 50, y: 78, s: 1.8, anim: 'pop' },
           { e: '⛪', x: 20, y: 72, s: 1.4, anim: 'none' },
@@ -758,7 +758,7 @@ export const LESSONS = [
     summary: 'El día de tu Bautismo, Dios te hizo hijo suyo para siempre y entraste en la familia de la Iglesia. ¡Fue tu segundo nacimiento!',
     scenes: [
       {
-        bg: 'mar',
+        bg: 'rio',
         actors: [
           { e: '🧔', x: 50, y: 70, s: 2, anim: 'glow' },
           { e: '🕊️', x: 50, y: 22, s: 1.4, anim: 'fall' },
@@ -782,7 +782,7 @@ export const LESSONS = [
         say: 'Jesús resucitado reunió a sus apóstoles en un monte de Galilea y les dio una misión: «Vayan y hagan discípulos de todos los pueblos, bautizándolos en el nombre del Padre, y del Hijo, y del Espíritu Santo». Desde entonces, la Iglesia bautiza en todo el mundo.',
       },
       {
-        bg: 'templo',
+        bg: 'iglesia',
         actors: [
           { e: '👶', x: 50, y: 80, s: 1.7, anim: 'pop' },
           { e: '👩', x: 28, y: 80, s: 1.6, anim: 'none' },
@@ -976,7 +976,7 @@ export const LESSONS = [
         say: 'Para prepararte, busca un ratito de silencio y pídele luz al Espíritu Santo. Primero, examina tu conciencia: ¿cómo he tratado a Dios, a mi familia, a mis amigos? Segundo, siente pena de corazón por haber fallado a quien tanto te quiere. Tercero, decide con su ayuda mejorar en algo concreto.',
       },
       {
-        bg: 'templo',
+        bg: 'iglesia',
         actors: [
           { e: '🗣️', x: 34, y: 78, s: 1.6, anim: 'pulse' },
           { e: '👂', x: 66, y: 70, s: 1.4, anim: 'pop' },
@@ -1047,7 +1047,7 @@ export const LESSONS = [
     summary: 'La noche antes de dar su vida, Jesús cenó con sus apóstoles, les lavó los pies y nos dejó el regalo más grande: la Eucaristía.',
     scenes: [
       {
-        bg: 'desierto',
+        bg: 'ciudad',
         actors: [
           { e: '🧔', x: 28, y: 80, s: 1.6, anim: 'slide-right' },
           { e: '🧑', x: 46, y: 80, s: 1.5, anim: 'slide-right' },
@@ -1081,7 +1081,7 @@ export const LESSONS = [
         say: 'Durante la cena, Jesús se levantó, se ató una toalla a la cintura y se puso a lavar los pies de sus discípulos, un trabajo que hacían los sirvientes. Pedro no quería dejarse, pero Jesús le explicó. Al final les dijo: «Les he dado ejemplo, para que hagan lo mismo que yo hice con ustedes». Amar es servir.',
       },
       {
-        bg: 'dorado',
+        bg: 'cenaculo',
         actors: [
           { e: '🍞', x: 50, y: 68, s: 2.4, anim: 'glow' },
           { e: '✨', x: 24, y: 30, s: 1.1, anim: 'pop' },
@@ -1102,7 +1102,7 @@ export const LESSONS = [
         say: 'Después de cenar, Jesús tomó el cáliz con vino y dijo: «Este cáliz es la nueva alianza en mi Sangre, que se derrama por ustedes». Una alianza es un pacto de amor que no se rompe. Con su Sangre, Jesús nos unió a Dios para siempre.',
       },
       {
-        bg: 'templo',
+        bg: 'cenaculo',
         actors: [
           { e: '🙏', x: 28, y: 80, s: 1.6, anim: 'none' },
           { e: '🍞', x: 54, y: 80, s: 1.3, anim: 'glow' },
@@ -1137,7 +1137,7 @@ export const LESSONS = [
         say: 'Después de la cena fueron al monte de los Olivos. Allí Jesús se arrodilló y rezó a su Padre con toda confianza: «Padre, que no se haga mi voluntad, sino la tuya». Al día siguiente, Viernes Santo, dio su vida en la cruz por amor a nosotros. Y al tercer día resucitó.',
       },
       {
-        bg: 'templo',
+        bg: 'iglesia',
         actors: [
           { e: '⛪', x: 50, y: 68, s: 2, anim: 'none' },
           { e: '🍞', x: 22, y: 82, s: 1.3, anim: 'glow' },
@@ -1206,7 +1206,7 @@ export const LESSONS = [
         caption: '«Eucaristía» es una palabra griega que quiere decir «acción de gracias». En la Misa damos gracias al Padre por todo, y sobre todo por su regalo más grande: Jesús.',
       },
       {
-        bg: 'templo',
+        bg: 'iglesia',
         actors: [
           { e: '🍞', x: 46, y: 72, s: 2.2, anim: 'glow' },
           { e: '🍷', x: 74, y: 76, s: 1.4, anim: 'glow' },
@@ -1284,7 +1284,7 @@ export const LESSONS = [
         say: 'Para recibir a Jesús hay que estar en gracia de Dios, en amistad con Él; por eso te confiesas antes de tu Primera Comunión. También guardamos el ayuno: una hora antes de comulgar no comemos ni bebemos nada, salvo agua o medicinas. Y sobre todo, vamos con fe y con cariño.',
       },
       {
-        bg: 'templo',
+        bg: 'iglesia',
         actors: [
           { e: '🙏', x: 50, y: 80, s: 1.9, anim: 'pop' },
           { e: '🍞', x: 50, y: 36, s: 1.4, anim: 'glow' },
@@ -1342,7 +1342,7 @@ export const LESSONS = [
     summary: 'La Misa es la gran fiesta de la familia de Dios. Aprende sus partes, qué se responde y cómo vivirla con todo el corazón.',
     scenes: [
       {
-        bg: 'templo',
+        bg: 'iglesia',
         actors: [
           { e: '⛪', x: 50, y: 66, s: 2.2, anim: 'none' },
           { e: '👨', x: 16, y: 82, s: 1.2, anim: 'slide-right' },
@@ -1374,7 +1374,7 @@ export const LESSONS = [
         say: 'Ahora nos sentamos para la Liturgia de la Palabra. Escuchamos lecturas de la Biblia y respondemos con un salmo. Al terminar cada lectura, el lector dice: «Palabra de Dios», y respondemos: «Te alabamos, Señor». ¡Es Dios mismo quien nos habla!',
       },
       {
-        bg: 'templo',
+        bg: 'iglesia',
         actors: [
           { e: '📖', x: 50, y: 64, s: 2, anim: 'glow' },
           { e: '🎶', x: 22, y: 26, s: 1.1, anim: 'float' },
@@ -1395,7 +1395,7 @@ export const LESSONS = [
         caption: 'Liturgia de la Eucaristía: se llevan al altar el pan y el vino. Con ellos, tú también puedes ofrecerle a Dios tu semana: tus alegrías, tus esfuerzos y tus penas.',
       },
       {
-        bg: 'templo',
+        bg: 'iglesia',
         actors: [
           { e: '🍞', x: 40, y: 70, s: 1.6, anim: 'glow' },
           { e: '🍷', x: 60, y: 70, s: 1.6, anim: 'glow' },
@@ -1721,7 +1721,7 @@ export const LESSONS = [
         say: 'Las siete obras de misericordia espirituales cuidan el alma: enseñar al que no sabe, dar buen consejo al que lo necesita, corregir al que se equivoca, perdonar al que nos ofende, consolar al triste, sufrir con paciencia los defectos del prójimo y rezar a Dios por los vivos y por los difuntos.',
       },
       {
-        bg: 'templo',
+        bg: 'iglesia',
         actors: [
           { e: '🧹', x: 30, y: 80, s: 1.8, anim: 'shake' },
           { e: '🐕', x: 54, y: 84, s: 1.1, anim: 'bounce' },
@@ -1878,7 +1878,7 @@ export const LESSONS = [
         caption: 'María rezó con los apóstoles esperando al Espíritu Santo. Al final de su vida, Dios la llevó al cielo en cuerpo y alma. ¡Allí es Reina y nos cuida como Madre!',
       },
       {
-        bg: 'templo',
+        bg: 'iglesia',
         actors: [
           { e: '📿', x: 30, y: 76, s: 1.6, anim: 'pulse' },
           { e: '🌹', x: 54, y: 80, s: 1.3, anim: 'pop' },

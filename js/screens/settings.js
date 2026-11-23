@@ -35,7 +35,7 @@ export function mount(el) {
       h('section', { class: 'panel set-card' },
         toggle('sound', '🔔', 'Sonidos'),
         toggle('music', '🎵', 'Música'),
-        toggle('voice', '🔊', 'Voz que lee', tts.available() ? 'Lee en voz alta historias y oraciones.' : 'Este dispositivo no tiene voz para leer.'),
+        toggle('voice', '🔊', 'Voz de la narradora', tts.recorded() ? 'Una voz cálida lee en voz alta historias, lecciones y oraciones.' : tts.available() ? 'Lee en voz alta historias y oraciones.' : 'Este dispositivo no tiene voz para leer.'),
         talkAvailable ? toggle('listen', '👂', 'La palomita repite lo que digo', 'Usa el micrófono solo mientras estás con la palomita. Nada se guarda.') : null),
       h('section', { class: 'panel set-card' },
         h('h2', { class: 'set-title' }, 'Nombres'),

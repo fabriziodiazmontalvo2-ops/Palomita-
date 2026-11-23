@@ -50,7 +50,7 @@ export const STORIES_NT = [
     title: 'María visita a Isabel',
     ref: 'Lucas 1, 39-56',
     emoji: '🎶',
-    art: { bg: 'campo', emojis: ['⛰️', '🤗', '🎶'] },
+    art: { bg: 'monte', emojis: ['⛰️', '🤗', '🎶'] },
     summary: 'María va de prisa a visitar a su pariente Isabel y canta de alegría por las maravillas de Dios.',
     paragraphs: [
       'El ángel le había contado a María que su pariente Isabel, ya mayor, esperaba un bebé. María no se quedó quieta: se puso en camino y fue de prisa a la montaña, a un pueblo de Judá, para estar con ella.',
@@ -211,7 +211,7 @@ export const STORIES_NT = [
     title: 'El Bautismo de Jesús',
     ref: 'Mateo 3, 13-17',
     emoji: '💧',
-    art: { bg: 'cielo', emojis: ['💧', '🕊️', '☁️'] },
+    art: { bg: 'rio', emojis: ['💧', '🕊️', '☁️'] },
     summary: 'Juan bautiza a Jesús en el Jordán, y el Padre dice desde el cielo: «Este es mi Hijo amado».',
     paragraphs: [
       'Juan el Bautista estaba a orillas del río Jordán. Invitaba a todos a cambiar de vida y a volver a Dios, y bautizaba en el agua a los que se acercaban. Un día llegó Jesús desde Galilea y se presentó ante Juan para que lo bautizara.',
@@ -332,7 +332,7 @@ export const STORIES_NT = [
     title: 'Las Bienaventuranzas',
     ref: 'Mateo 5, 1-12',
     emoji: '⛰️',
-    art: { bg: 'campo', emojis: ['⛰️', '💛', '🌼'] },
+    art: { bg: 'monte', emojis: ['⛰️', '💛', '🌼'] },
     summary: 'Jesús sube a un monte y enseña a todos el camino de la verdadera felicidad.',
     paragraphs: [
       'Un día, al ver que lo seguía muchísima gente, Jesús subió a un monte y se sentó. Sus discípulos se acercaron, y Él empezó a enseñarles el camino de la verdadera felicidad. Repetía una palabra: «dichosos», que quiere decir «felices de verdad».',
@@ -612,7 +612,7 @@ export const STORIES_NT = [
     title: 'La entrada en Jerusalén',
     ref: 'Mateo 21, 1-11',
     emoji: '🌿',
-    art: { bg: 'cielo', emojis: ['🌿', '🌴', '🎉'] },
+    art: { bg: 'ciudad', emojis: ['🌿', '🌴', '🎉'] },
     summary: 'Jesús entra en Jerusalén montado en un burrito, y la gente lo recibe con mantos, ramas y cantos.',
     paragraphs: [
       'Jesús y sus discípulos se acercaban a Jerusalén. Cuando llegaron junto al monte de los Olivos, Jesús envió a dos de ellos: «Vayan a la aldea que está enfrente. Encontrarán una burra atada y, con ella, un burrito. Desátenlos y tráiganmelos. Y si alguien les pregunta, díganle que el Señor los necesita».',
@@ -653,7 +653,7 @@ export const STORIES_NT = [
     title: 'La Última Cena',
     ref: 'Lucas 22, 14-20',
     emoji: '🍞',
-    art: { bg: 'dorado', emojis: ['🍞', '🍇', '🕯️', '✨'] },
+    art: { bg: 'cenaculo', emojis: ['🍞', '🍇', '🕯️', '✨'] },
     summary: 'En su última cena con los apóstoles, Jesús nos regala la Eucaristía: su Cuerpo y su Sangre.',
     paragraphs: [
       'Era la fiesta de la Pascua, la más importante para el pueblo de Jesús. En Jerusalén, en una sala grande del piso de arriba, todo estaba preparado para la cena. Cuando llegó la hora, Jesús se sentó a la mesa con sus apóstoles.',
@@ -694,7 +694,7 @@ export const STORIES_NT = [
     title: 'Jesús lava los pies',
     ref: 'Juan 13, 1-15',
     emoji: '🦶',
-    art: { bg: 'noche', emojis: ['💧', '🦶', '🤲'] },
+    art: { bg: 'cenaculo', emojis: ['💧', '🦶', '🤲'] },
     summary: 'En la Última Cena, Jesús lava los pies a sus discípulos y nos enseña a servir con amor.',
     paragraphs: [
       'Era la noche de la Última Cena. Jesús sabía que había llegado la hora de pasar de este mundo al Padre. Y Él, que siempre había amado a los suyos, los amó hasta el extremo.',
@@ -898,7 +898,7 @@ export const STORIES_NT = [
     title: 'La Ascensión y la misión',
     ref: 'Hechos 1, 6-11',
     emoji: '☁️',
-    art: { bg: 'cielo', emojis: ['☁️', '⛰️', '🌍'] },
+    art: { bg: 'monte', emojis: ['☁️', '⛰️', '🌍'] },
     summary: 'Jesús envía a sus amigos por todo el mundo, sube al cielo y promete estar siempre con nosotros.',
     paragraphs: [
       'Después de resucitar, Jesús se apareció a sus apóstoles durante cuarenta días y les habló del Reino de Dios.',
@@ -939,7 +939,7 @@ export const STORIES_NT = [
     title: 'Pentecostés',
     ref: 'Hechos 2, 1-13',
     emoji: '🔥',
-    art: { bg: 'dorado', emojis: ['🔥', '🌬️', '🌍'] },
+    art: { bg: 'cenaculo', emojis: ['🔥', '🌬️', '🌍'] },
     summary: 'Con viento y fuego, el Espíritu Santo llena de fuerza y valentía a los amigos de Jesús.',
     paragraphs: [
       'Jesús había prometido enviar al Espíritu Santo. Por eso sus amigos lo esperaban en Jerusalén, rezando juntos, con María, la madre de Jesús. Cuando llegó el día de la fiesta de Pentecostés, estaban todos reunidos en el mismo lugar.',

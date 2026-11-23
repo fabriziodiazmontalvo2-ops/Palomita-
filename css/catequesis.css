@@ -97,55 +97,7 @@
 @keyframes ct-fly { from { transform: translate(-50%, -50%) scale(0.3); opacity: 1; } to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)) scale(1.2); opacity: 0; } }
 
 /* ───────── Escenarios ilustrados (lecciones y tarjetas) ───────── */
-.ct-bg { position: relative; display: block; overflow: hidden; background: linear-gradient(#5fb8f0, #cfeeff 72%, #9ad67e 72%, #7cc466); }
-.ct-bg::before, .ct-bg::after { content: ""; position: absolute; pointer-events: none; }
-/* nubes reutilizables */
-.ct-bg--cielo::before, .ct-bg--campo::before, .ct-bg--cielo::after, .ct-bg--jardin::before {
-  top: 9%; left: 4%; width: 32%; height: 17%;
-  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.95) 97%, transparent) 0 70% / 46% 74% no-repeat,
-    radial-gradient(closest-side, rgba(255, 255, 255, 0.95) 97%, transparent) 42% 0 / 52% 100% no-repeat,
-    radial-gradient(closest-side, rgba(255, 255, 255, 0.95) 97%, transparent) 100% 76% / 44% 70% no-repeat;
-  animation: ct-drift 22s ease-in-out infinite alternate;
-}
-.ct-bg--cielo::after { top: 22%; left: 62%; width: 26%; height: 13%; animation-duration: 28s; animation-direction: alternate-reverse; opacity: 0.85; }
-.ct-bg--cielo { background: linear-gradient(#5fb8f0, #cfeeff 74%, #9ad67e 74%, #76c062); }
-.ct-bg--noche { background: radial-gradient(ellipse 80% 30% at 50% 100%, #3d4a86 98%, transparent), linear-gradient(#141c44, #3a3f8f 78%, #2f3a6e 78%); }
-.ct-bg--noche::before { inset: 0 0 25% 0;
-  background: radial-gradient(1.6px 1.6px at 8% 18%, #fff 90%, transparent), radial-gradient(1.4px 1.4px at 22% 42%, #fff 90%, transparent), radial-gradient(2px 2px at 36% 12%, #fff8c8 90%, transparent),
-    radial-gradient(1.4px 1.4px at 52% 30%, #fff 90%, transparent), radial-gradient(1.8px 1.8px at 66% 10%, #fff 90%, transparent), radial-gradient(1.4px 1.4px at 78% 46%, #fff 90%, transparent),
-    radial-gradient(2px 2px at 90% 22%, #fff8c8 90%, transparent), radial-gradient(1.4px 1.4px at 14% 64%, #fff 90%, transparent), radial-gradient(1.6px 1.6px at 44% 58%, #fff 90%, transparent),
-    radial-gradient(1.4px 1.4px at 94% 62%, #fff 90%, transparent);
-  animation: ct-twinkle 3.2s ease-in-out infinite alternate; }
-.ct-bg--desierto { background: radial-gradient(circle at 82% 20%, #fff6c4 0 7%, rgba(255, 236, 160, 0.5) 7.5% 12%, transparent 12.5%), linear-gradient(#ffcf8f, #ffeccb 66%, #f0c98c 66%, #e2b26d); }
-.ct-bg--desierto::after { left: -10%; right: -10%; bottom: 0; height: 38%;
-  background: radial-gradient(ellipse 45% 70% at 25% 100%, #e9bf7c 98%, transparent), radial-gradient(ellipse 50% 60% at 80% 100%, #dcae66 98%, transparent); }
-.ct-bg--mar { background: linear-gradient(#8fd3f7, #e4f7ff 54%, #4fb0e8 54%, #2a7fc0); }
-.ct-bg--mar::after { left: -30px; right: -30px; top: 52%; height: 22%; opacity: 0.75;
-  background: radial-gradient(circle at 50% 0, transparent 0 8px, rgba(255, 255, 255, 0.75) 9px 11px, transparent 12px) 0 0 / 30px 26px repeat;
-  animation: ct-waves 6s linear infinite; }
-.ct-bg--jardin { background: linear-gradient(#bfeaff, #ecfbe8 64%, #79c66e 64%, #58ac52); }
-.ct-bg--jardin::after { left: 0; right: 0; bottom: 4%; height: 26%;
-  background: radial-gradient(circle, #ff9db5 0 3px, transparent 4px) 0 0 / 38px 30px, radial-gradient(circle, #ffd84a 0 3px, transparent 4px) 19px 15px / 38px 30px; opacity: 0.9; }
-.ct-bg--jardin::before { top: 10%; left: 58%; width: 30%; height: 15%; }
-.ct-bg--dorado { background: radial-gradient(circle at 50% 42%, #fffdf0 0 10%, #ffeeb0 36%, #f6cc66 100%); }
-.ct-bg--dorado::before { inset: -40%;
-  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255, 255, 255, 0.4) 0 7deg, transparent 7deg 22deg);
-  -webkit-mask: radial-gradient(circle, #000 20%, transparent 60%); mask: radial-gradient(circle, #000 20%, transparent 60%);
-  animation: ct-spin 40s linear infinite; }
-.ct-bg--amanecer { background: linear-gradient(#ff9e8a, #ffd3a1 64%, #b9df95 64%, #8cc973); }
-.ct-bg--amanecer::before { left: 30%; width: 40%; bottom: 36%; height: 26%;
-  background: radial-gradient(circle at 50% 100%, #fff4b8 0 44%, rgba(255, 244, 184, 0.45) 45% 62%, transparent 63%); }
-.ct-bg--tormenta { background: linear-gradient(#3f4a68, #7f8aa6 68%, #56617f 68%, #434d69); }
-.ct-bg--tormenta::before { top: 4%; left: -5%; width: 110%; height: 26%;
-  background: radial-gradient(closest-side, #5d6784 97%, transparent) 0 40% / 30% 100% repeat-x, radial-gradient(closest-side, #6d7795 97%, transparent) 15% 100% / 34% 80% repeat-x; }
-.ct-bg--tormenta::after { inset: 0; background: #fff; opacity: 0; animation: ct-flash 7s infinite; }
-.ct-bg--templo { background: linear-gradient(#cdb9f0, #f1e8ff 62%, #e6d3a8 62%, #d1b986); }
-.ct-bg--templo::before { left: 6%; right: 6%; top: 18%; height: 44%;
-  background: linear-gradient(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.75)) 0 0 / 100% 9% no-repeat,
-    repeating-linear-gradient(90deg, transparent 0 8%, rgba(255, 255, 255, 0.65) 8% 13%, transparent 13% 21%); }
-.ct-bg--templo::after { left: 0; right: 0; bottom: 0; height: 38%; background: repeating-linear-gradient(90deg, transparent 0 15%, rgba(255, 255, 255, 0.25) 15% 16%); }
-.ct-bg--campo { background: radial-gradient(ellipse 70% 40% at 18% 100%, #8fd16a 98%, transparent), radial-gradient(ellipse 80% 46% at 88% 100%, #74bf55 98%, transparent),
-  linear-gradient(#8fd5ff, #e0f6ff 62%, #a6dc86 62%, #8fd16a); }
+.ct-bg { position: relative; display: block; overflow: hidden; }   /* el paisaje lo pinta js/art/scenes.js (.sc) */
 @keyframes ct-drift { from { transform: translateX(-6%); } to { transform: translateX(10%); } }
 @keyframes ct-twinkle { from { opacity: 0.55; } to { opacity: 1; } }
 @keyframes ct-waves { from { transform: translateX(0); } to { transform: translateX(30px); } }
@@ -233,6 +185,11 @@
 .ls-scenes, .ls-scene, .ls-cam { position: absolute; inset: 0; }
 .ls-scene.is-in { animation: ls-fade 0.7s ease both; }
 .ls-cam { transform-origin: var(--ox, 50%) 60%; animation: ls-kb var(--kb, 10s) ease-out both; }
+/* profundidad: mientras la cámara se acerca, el fondo se queda atrás y el pasto del frente se acerca más */
+.ls-cam > .sc__back { transform-origin: var(--ox, 50%) 55%; animation: ls-kb-back var(--kb, 10s) ease-out both; }
+.ls-cam > .sc__front { transform-origin: var(--ox, 50%) 100%; animation: ls-kb-front var(--kb, 10s) ease-out both; }
+@keyframes ls-kb-back { to { transform: scale(0.972); } }
+@keyframes ls-kb-front { to { transform: scale(1.05); } }
 @keyframes ls-fade { from { opacity: 0; } }
 @keyframes ls-kb { from { transform: scale(1); } to { transform: scale(1.05); } }
 /* Actores: x, y = centro del emoji (y = 100 abajo); nunca se salen del cuadro */
@@ -536,5 +493,5 @@
 /* Con menos movimiento: nada se mueve solo (entradas instantáneas) */
 @media (prefers-reduced-motion: reduce) {
   .ls-cam { animation: none; }
-  .ls-actor__in, .ls-actor__loop, .ct-mini, .ct-bg::before, .ct-bg::after, .ls-done__rays { animation: none !important; }
+  .ls-actor__in, .ls-actor__loop, .ct-mini, .ls-cam > .sc__back, .ls-cam > .sc__front, .ls-done__rays { animation: none !important; }
 }

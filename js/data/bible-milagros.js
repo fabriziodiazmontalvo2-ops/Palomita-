@@ -11,7 +11,7 @@ export const STORIES_MILAGROS = [
     title: 'Jesús cura a la suegra de Pedro',
     ref: 'Marcos 1, 29-31',
     emoji: '🤝',
-    art: { bg: 'dorado', emojis: ['🏠', '🤒', '🤝'] },
+    art: { bg: 'ciudad', emojis: ['🏠', '🤒', '🤝'] },
     summary: 'La suegra de Simón Pedro está en cama con fiebre. Jesús la toma de la mano… ¡y la levanta!',
     paragraphs: [
       'Era sábado en Cafarnaúm, un pueblo a orillas del lago de Galilea. Jesús había enseñado en la sinagoga, la casa de oración donde la gente se reunía para escuchar la Palabra de Dios. Al salir, fue con Santiago y Juan a la casa de Simón, al que después llamaría Pedro, y de su hermano Andrés.',
@@ -51,7 +51,7 @@ export const STORIES_MILAGROS = [
     title: 'El paralítico bajado por el techo',
     ref: 'Marcos 2, 1-12',
     emoji: '🛏️',
-    art: { bg: 'cielo', emojis: ['🏠', '🛏️', '🙌', '🚶'] },
+    art: { bg: 'ciudad', emojis: ['🏠', '🛏️', '🙌', '🚶'] },
     summary: 'Cuatro hombres abren un hueco en el techo para llevar a un paralítico a Jesús. ¡Y Jesús lo perdona y lo sana!',
     paragraphs: [
       'Jesús volvió a Cafarnaúm, y enseguida se corrió la voz: «¡Está en casa!». Llegó tanta gente que no quedaba sitio ni siquiera delante de la puerta. Y Jesús les anunciaba la Palabra de Dios.',
@@ -91,7 +91,7 @@ export const STORIES_MILAGROS = [
     title: 'La fe del centurión',
     ref: 'Mateo 8, 5-13',
     emoji: '🛡️',
-    art: { bg: 'desierto', emojis: ['🛡️', '🙏', '🏠'] },
+    art: { bg: 'ciudad', emojis: ['🛡️', '🙏', '🏠'] },
     summary: 'Un capitán de soldados confía tanto en Jesús que le dice: «Basta que digas una palabra».',
     paragraphs: [
       'Cuando Jesús entró en Cafarnaúm, se le acercó un centurión, es decir, un capitán que mandaba a cien soldados. No era del pueblo de Israel, pero tenía una confianza muy grande en Jesús.',

@@ -212,7 +212,7 @@ export const STORIES_AT = [
     title: 'Moisés, salvado de las aguas',
     ref: 'Éxodo 1, 8 – 2, 10',
     emoji: '🧺',
-    art: { bg: 'mar', emojis: ['🧺', '👶', '🌾', '💧'] },
+    art: { bg: 'rio', emojis: ['🧺', '👶', '🌾', '💧'] },
     summary: 'Una mamá valiente puso a su bebé en una canasta en el río, y Dios lo cuidó. Ese bebé era Moisés.',
     paragraphs: [
       'Muchos años después de José, el pueblo de Israel seguía viviendo en Egipto. Eran tantos que el nuevo faraón les tuvo miedo. Los obligó a trabajar como esclavos y dio una orden muy cruel contra los bebés varones de los hebreos. Fueron días de mucha tristeza.',
@@ -374,7 +374,7 @@ export const STORIES_AT = [
     title: 'Los Diez Mandamientos',
     ref: 'Éxodo 19, 1 – 20, 17',
     emoji: '📜',
-    art: { bg: 'dorado', emojis: ['⛰️', '⚡', '📜', '❤️'] },
+    art: { bg: 'monte', emojis: ['⛰️', '⚡', '📜', '❤️'] },
     summary: 'En el monte Sinaí, Dios hizo alianza con su pueblo y le regaló diez palabras para vivir en el amor.',
     paragraphs: [
       'Al tercer mes de haber salido de Egipto, el pueblo de Dios llegó al pie de una montaña altísima: el monte Sinaí. Allí armaron su campamento. Moisés subió al monte, y Dios le dio un mensaje para todos: «Ustedes han visto cómo los saqué de Egipto. Los llevé sobre alas de águila y los traje hasta mí».',
@@ -536,7 +536,7 @@ export const STORIES_AT = [
     title: 'Elías y la brisa suave',
     ref: '1 Reyes 19, 3-15',
     emoji: '🍃',
-    art: { bg: 'cielo', emojis: ['⛰️', '🌬️', '🔥', '🍃'] },
+    art: { bg: 'monte', emojis: ['⛰️', '🌬️', '🔥', '🍃'] },
     summary: 'El profeta Elías descubrió que Dios habla bajito al corazón, como el susurro de una brisa suave.',
     paragraphs: [
       'Elías era un profeta, un mensajero de Dios. Hablaba con valentía, pero a algunos poderosos no les gustaba lo que decía, y lo perseguían. Elías tuvo miedo y huyó al desierto. Caminó un día entero, se sentó bajo un arbusto y suspiró: «¡Ya no puedo más, Señor!». Y se quedó dormido.',
