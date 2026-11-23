@@ -7,6 +7,9 @@ import { h, clear, button, modal, toast, meter } from '../core/ui.js';
 import { go } from '../core/router.js';
 import { FOODS, food } from '../data/items.js';
 import * as talkback from '../pet/talkback.js';
+import { growthFor } from '../pet/arrival.js';
+import { music } from '../core/audio.js';
+import { dailyGiftDue, showDailyGift, showChest, takeLevelUps } from '../core/rewards.js';
 
 const ROOMS = [
   { id: 'sala', icon: '🏠', name: 'Nido' },
@@ -32,6 +35,7 @@ const FALLBACK_VERSES = [{ text: 'El Señor es mi pastor, nada me falta.', ref: 
 const ANGEL = ['Ángel de mi guarda,', 'dulce compañía,', 'no me desampares', 'ni de noche ni de día.', 'No me dejes solo,', 'que me perdería. Amén.'];
 
 let world = null, canvas = null, worldFailed = false;
+let listener = null;
 let DATA = null;
 
 async function loadData() {
@@ -81,11 +85,13 @@ export async function mount(el, params = {}) {
   const offs = [];
   let alive = true;
   let room = state.get().sleeping ? 'dormitorio' : (ROOMS.some(r => r.id === params.room) ? params.room : 'sala');
-  let foam = 0, soapMode = false, showering = 0, joyBudget = 8, bubbleTimer = 0, nextTalk = 4, strokeAcc = 0, ghost = null, talking = false;
+  let foam = 0, soapMode = false, showering = 0, joyBudget = 8, bubbleTimer = 0, nextTalk = 4, strokeAcc = 0, ghost = null, talking = false, earState = 'off', growthStage = -1, celebrating = false, arriving = false;
 
   // ── Interfaz ──
   const lvl = h('span', { class: 'home-level__n' });
   const nameEl = h('span', { class: 'home-level__name' });
+  const stageEl = h('span', { class: 'home-level__stage' });
+  const earBtn = h('button', { type: 'button', class: 'home-ear', hidden: true, onclick: () => { sfx('tap'); toggleListen(); } });
   const xpBar = meter(0, 'var(--sun)');
   const coins = h('span', { class: 'chip home__coins' });
   const meters = {};
@@ -99,6 +105,7 @@ export async function mount(el, params = {}) {
   const side = (icon, label, fn, cls = '') => h('button', { type: 'button', class: `home-side ${cls}`.trim(), onclick: () => { sfx('pop'); fn(); } },
     h('span', { class: 'home-side__icon', 'aria-hidden': 'true' }, icon), h('span', { class: 'home-side__label' }, label));
   const verseBtn = side('💌', 'Mensaje', () => showVerse(), 'home-side--verse');
+  const giftBtn = side('🎁', 'Regalo', () => openGift(), 'home-side--gift');
   const bubble = h('button', { type: 'button', class: 'home__bubble', hidden: true, 'aria-live': 'polite', onclick: () => hideBubble() });
   const tray = h('div', { class: 'home__tray' });
   const tabs = h('nav', { class: 'home__tabs', 'aria-label': 'Habitaciones' }, ROOMS.map(r =>
@@ -107,13 +114,14 @@ export async function mount(el, params = {}) {
 
   el.append(h('div', { class: 'home__ui' },
     h('div', { class: 'home__top' },
-      h('div', { class: 'home-level' }, h('span', { class: 'home-level__badge' }, lvl), h('div', { class: 'home-level__col' }, nameEl, xpBar)),
+      h('div', { class: 'home-level' }, h('span', { class: 'home-level__badge' }, lvl), h('div', { class: 'home-level__col' }, h('span', { class: 'home-level__row' }, nameEl, stageEl), xpBar)),
       coins,
       h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Ajustes', onclick: () => { sfx('tap'); go('settings'); } }, '⚙️')),
     metersRow,
     h('div', { class: 'home__sides' },
-      h('div', { class: 'home__side-col' }, side('🎮', 'Juegos', () => go('games')), side('🛍️', 'Tienda', () => go('shop'))),
-      h('div', { class: 'home__side-col' }, side('📖', 'Biblia', () => go('bible')), verseBtn)),
+      h('div', { class: 'home__side-col' }, side('🎮', 'Juegos', () => go('games')), side('⛪', 'Catequesis', () => go('catequesis')), side('🛍️', 'Tienda', () => go('shop'))),
+      h('div', { class: 'home__side-col' }, side('📖', 'Biblia', () => go('bible')), verseBtn, giftBtn)),
+    earBtn,
     bubble,
     h('div', { class: 'home__bottom' }, tray, tabs)));
 
@@ -122,6 +130,9 @@ export async function mount(el, params = {}) {
     const s = state.get();
     lvl.textContent = String(s.level);
     nameEl.textContent = s.name;
+    const gr = growthFor(s.level);
+    stageEl.textContent = gr.name;
+    giftBtn.classList.toggle('is-new', dailyGiftDue());
     xpBar.set(Math.min(100, (s.xp / state.xpForLevel(s.level)) * 100));
     clear(coins).append(h('span', { 'aria-hidden': 'true' }, state.COIN.icon), String(s.coins));
     verseBtn.classList.toggle('is-new', !state.doneToday('verse'));
@@ -195,7 +206,6 @@ export async function mount(el, params = {}) {
     tray.dataset.room = room;
     if (room === 'sala') {
       tray.append(trayButton('🎾', 'Jugar', playWithDove));
-      if (talkback.available()) tray.append(trayButton('🎤', talking ? 'Te escucho…' : 'Háblame', talk, { cls: talking ? 'is-on' : '' }));
       tray.append(trayButton('🎮', 'Juegos', () => go('games'), { kind: 'accent' }));
     } else if (room === 'cocina') {
       const have = FOODS.filter(f => state.countItem(f.id) > 0);
@@ -223,18 +233,96 @@ export async function mount(el, params = {}) {
     world.fx.notes(); sfx('chirp');
     if (playCool <= 0) { joy(4); state.addStat('energia', -1); playCool = 4; }
   }
-  async function talk() {
-    if (isAsleep()) return;
-    if (talking) { talkback.finishListening(); return; }
-    talking = true; renderTray();
-    const ok = await talkback.listenAndRepeat({
-      onState: st => { if (!alive) return; if (st === 'listening') { say('Te escucho… 👂', 4500); dove.play('surprise'); } else if (st === 'speaking') hideBubble(); },
+  // ── La palomita repite lo que oye (sin botones) ──
+  function wantsListen() { return state.setting('listen') === true && talkback.available(); }
+  function shouldListen() {
+    return alive && wantsListen() && !arriving && !state.get().sleeping && !document.hidden
+      && !document.querySelector('.modal-scrim') && !document.querySelector('.game') && !tts.speaking();
+  }
+  function paintEar() {
+    earBtn.hidden = !talkback.available() || state.setting('listen') === undefined;
+    const on = wantsListen();
+    earBtn.className = `home-ear${on ? ' is-on' : ''}${earState === 'hearing' ? ' is-hearing' : ''}${earState === 'speaking' ? ' is-speaking' : ''}`;
+    earBtn.textContent = !on ? '🔇' : earState === 'hearing' ? '👂' : earState === 'speaking' ? '🗣️' : '👂';
+    earBtn.setAttribute('aria-label', on ? 'La palomita te está escuchando. Toca para que deje de escuchar.' : 'Toca para que la palomita repita lo que dices');
+    earBtn.title = on ? 'Te escucho' : 'No escucha';
+  }
+  function ensureListener() {
+    if (listener) return listener;
+    listener = talkback.createListener({
+      onState: st => {
+        earState = st;
+        if (!alive) return;
+        if (st === 'hearing') { dove.lookAt(0.15, 0.35); hideBubble(); }
+        else if (st === 'speaking') { dove.lookAt(0, 0.1); }
+        else if (st === 'listening' && talking) { talking = false; if (Math.random() < 0.35) dove.play('giggle'); joy(0.8); }
+        if (st === 'speaking') talking = true;
+        if (st === 'denied') { state.setSetting('listen', false); toast('No puedo usar el micrófono. Revisa el permiso en el teléfono.', { icon: '🎤', ms: 3400 }); }
+        paintEar();
+      },
       onLevel: v => dove.setTalking(v),
     });
-    talking = false; dove.setTalking(0);
-    if (!alive) return;
-    if (!ok) toast('Ahora no puedo oírte. Revisa el permiso del micrófono.', { icon: '🎤', ms: 3200 }); else joy(2);
-    renderTray();
+    return listener;
+  }
+  async function syncListen() {
+    const L = wantsListen() ? ensureListener() : listener;
+    if (!L) return;
+    if (!wantsListen()) { if (L.state !== 'off') { L.stop(); if (state.setting('music') !== false) music(true); } return; }
+    if (shouldListen()) {
+      if (L.state === 'off') { music(false); await L.start(); }
+      else if (L.paused) L.resume();
+    } else if (L.state !== 'off' && !L.paused) L.pause();
+    if (state.get().sleeping && L.state !== 'off') L.stop();
+  }
+  function toggleListen() {
+    const on = !wantsListen();
+    state.setSetting('listen', on);
+    if (on) { say('¡Háblame y te repito! 👂', 3000); }
+    else say('Ya no te escucho 🤐', 2500);
+    paintEar();
+    syncListen();
+  }
+  function askMic() {
+    if (!talkback.available() || state.flag('micAsked')) return;
+    state.setFlag('micAsked');
+    modal({ title: '¿Jugamos a repetir?', icon: '👂', dismissible: false,
+      body: [h('p', { style: { textAlign: 'center' } }, `Si me hablas, ${state.get().name} te repite con su vocecita.`),
+        h('p', { class: 'home-prayer__note' }, 'Para eso necesito el micrófono. Lo que digas no se guarda ni se envía a ningún lado. Puedes apagarlo cuando quieras tocando la orejita 👂.')],
+      buttons: [{ label: 'Ahora no', kind: 'ghost', small: true, onClick: () => { state.setSetting('listen', false); paintEar(); } },
+        { label: '¡Sí, repíteme!', kind: 'leaf', icon: '🎤', onClick: () => { state.setSetting('listen', true); paintEar(); setTimeout(syncListen, 50); } }] });
+  }
+
+  // ── Regalo diario y celebraciones de nivel ──
+  async function openGift() {
+    if (celebrating) return;
+    celebrating = true;
+    try { await showDailyGift(); } finally { celebrating = false; refreshTop(); }
+  }
+  async function celebrateLevels() {
+    if (celebrating || arriving) return;
+    const ups = takeLevelUps();
+    if (!ups.length) return;
+    celebrating = true;
+    try {
+      for (const u of ups) {
+        if (!alive) break;
+        if (!state.get().sleeping) dove.play('dance');
+        world.fx.confetti();
+        await showChest({ title: `¡${state.get().name} llegó al nivel ${u.level}!`, icon: '🎁', items: u.items });
+      }
+      applyGrowth(true);
+    } finally { celebrating = false; }
+  }
+  function applyGrowth(animate) {
+    const g = growthFor(state.get().level);
+    const grew = growthStage >= 0 && g.stage > growthStage;
+    world.setGrowth?.(g.scale, { animate: animate && (grew || Math.abs((world.growth ?? g.scale) - g.scale) > 0.005) });
+    if (grew && alive) {
+      sfx('levelup');
+      say(`¡Mira, crecí! Ahora soy ${g.name.toLowerCase()} 🎉`, 5000);
+      if (!state.get().sleeping) setTimeout(() => alive && dove.play('flap'), 600);
+    }
+    growthStage = g.stage;
   }
 
   // ── Cocina ──
@@ -435,7 +523,8 @@ export async function mount(el, params = {}) {
   // ── Eventos de la partida ──
   offs.push(state.on('stat', () => { refreshMeters(); }));
   offs.push(state.on('coins', refreshTop));
-  offs.push(state.on('level', () => { refreshTop(); world.fx.confetti(); if (!state.get().sleeping) { dove.play('dance'); say(pick(D.phrases.levelUp)); } }));
+  offs.push(state.on('level', () => { refreshTop(); setTimeout(() => { if (alive) celebrateLevels(); }, 300); }));
+  offs.push(state.on('settings', paintEar));
   offs.push(state.on('change', ({ evt }) => { if (evt === 'xp' || evt === 'names') refreshTop(); }));
   offs.push(state.on('wear', applyWear));
   offs.push(state.on('inventory', () => { if (room === 'cocina') renderTray(); }));
@@ -456,6 +545,8 @@ export async function mount(el, params = {}) {
     if (nextTalk <= 0) { nextTalk = 16 + Math.random() * 10; if (bubble.hidden && !document.querySelector('.modal-scrim')) talkAboutNeeds(); }
     refreshDove();
     if (state.get().sleeping && state.stat('energia') >= 99.5) { wake(); toast('¡Ya descansó!', { icon: '☀️' }); }
+    if (talking || earState === 'hearing') nextTalk = Math.max(nextTalk, 6);
+    syncListen();
   }, STEP * 1000);
 
   // ── Inicio ──
@@ -466,21 +557,49 @@ export async function mount(el, params = {}) {
   world.resize(); world.start();
   renderTray();
 
-  if (!state.get().sleeping) {
-    if (!state.flag('tutorialHome')) {
+  paintEar();
+  const welcomeFlow = async () => {
+    if (!state.flag('arrived') && world.startArrival) {
+      // Primera vez: la palomita llega pequeñita en una jaulita.
+      arriving = true;
+      el.classList.add('home--arrival');
+      if (state.get().sleeping) { state.setSleeping(false); applySleep(false); }
+      world.setGrowth?.(growthFor(state.get().level).scale);
+      growthStage = growthFor(state.get().level).stage;
+      const banner = h('div', { class: 'home-arrival' }, h('p', { class: 'home-arrival__title' }, '¡Te llegó un regalo!'), h('p', { class: 'home-arrival__hint' }, 'Toca la jaulita para abrirla'));
+      el.append(banner);
+      const showHint = setInterval(() => { if (!alive) return; banner.classList.toggle('is-ready', world.arrivalStage === 'wait'); }, 200);
+      await world.startArrival();
+      clearInterval(showHint);
+      banner.remove();
+      el.classList.remove('home--arrival');
+      arriving = false;
+      state.setFlag('arrived');
       state.setFlag('tutorialHome');
-      const tips = ['¡Hola! Tócame y acaríciame 💕', 'Mis barritas de arriba te dicen qué necesito', 'Abajo eliges mi cuarto: cocina, baño, dormir…', '¡Juega 🎮 y lee la Biblia 📖 conmigo!'];
-      tips.forEach((t, i) => setTimeout(() => { if (alive) { say(t, 4300); nextTalk = 14; } }, 900 + i * 4600));
-    } else if (params.from === 'game') { say(pick(D.phrases.afterGame)); dove.play('hop'); }
+      if (!alive) return;
+      say(`¡Hola! Soy ${state.get().name}. ¡Gracias por cuidarme! 💕`, 4500);
+      const tips = ['Tócame y acaríciame 💕', 'Mis barritas de arriba te dicen qué necesito', 'Si me cuidas, juegas y rezas conmigo, ¡voy a crecer!'];
+      tips.forEach((t, i) => setTimeout(() => { if (alive) { say(t, 4300); nextTalk = 14; } }, 5200 + i * 4600));
+      setTimeout(() => { if (alive) askMic(); }, 5200 + tips.length * 4600);
+      return;
+    }
+    applyGrowth(false);
+    if (state.get().sleeping) return;
+    if (params.from === 'game') { say(pick(D.phrases.afterGame)); dove.play('hop'); }
     else { const hr = new Date().getHours(); say(pick(hr < 11 ? D.phrases.morning : hr >= 19 ? D.phrases.night : D.phrases.greet)); dove.play('wave'); nextTalk = 12; }
-  }
+    await celebrateLevels();
+    if (alive && dailyGiftDue()) setTimeout(() => { if (alive && !document.querySelector('.modal-scrim')) openGift(); }, 1500);
+    else if (alive && state.setting('listen') === undefined) setTimeout(() => { if (alive && !document.querySelector('.modal-scrim')) askMic(); }, 2500);
+  };
+  welcomeFlow();
 
   return {
     unmount() {
       alive = false;
       clearInterval(timer);
       for (const off of offs) off();
-      tts.stop(); talkback.cancel();
+      tts.stop();
+      if (listener && listener.state !== 'off') { listener.stop(); if (state.setting('music') !== false) music(true); }
       ghost?.remove();
       world.fx.shower(false); world.fx.foam(0);
       world.stop();

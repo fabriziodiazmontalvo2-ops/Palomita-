@@ -5,6 +5,7 @@ import * as tts from './core/tts.js';
 import { fitApp, toast } from './core/ui.js';
 import { register, go, back, setHome, current, screenBack } from './core/router.js';
 import { startGame, isRunning, handleBack } from './games/engine.js';
+import { queueLevelUp } from './core/rewards.js';
 
 register('home', () => import('./screens/home.js'));
 register('welcome', () => import('./screens/welcome.js'));
@@ -54,7 +55,12 @@ async function boot() {
   state.init();
   applySettings();
   state.on('settings', applySettings);
-  state.on('level', ({ level }) => { audio.sfx('levelup'); toast(`¡Subiste al nivel ${level}! +25 ${state.COIN.icon}`, { icon: '⬆️', ms: 3200 }); });
+  // Cada nivel nuevo trae su cofre (se abre al volver con la palomita).
+  state.on('level', ({ level, from }) => {
+    for (let l = (from || level - 1) + 1; l <= level; l++) queueLevelUp(l);
+    audio.sfx('levelup');
+    if (current()?.name !== 'home') toast(`¡${state.get().name} subió al nivel ${level}! Te espera un cofre 🎁`, { icon: '⬆️', ms: 3200 });
+  });
 
   // El audio solo puede empezar después del primer toque.
   const firstTouch = () => { audio.unlock(); audio.music(true); };

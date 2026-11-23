@@ -4,11 +4,13 @@ import { sfx } from '../core/audio.js';
 import * as tts from '../core/tts.js';
 import { h, button, iconButton, confirmDialog, toast } from '../core/ui.js';
 import { go, back } from '../core/router.js';
+import { available as talkAvailableFn } from '../pet/talkback.js';
 
 export function mount(el) {
+  const talkAvailable = talkAvailableFn();
   const toggle = (key, icon, label, note) => {
     const input = h('input', { type: 'checkbox', id: `set-${key}`, class: 'set-switch__input' });
-    input.checked = state.setting(key) !== false;
+    input.checked = key === 'listen' ? state.setting(key) === true : state.setting(key) !== false;
     input.addEventListener('change', () => { state.setSetting(key, input.checked); if (input.checked) sfx('pop'); if (key === 'voice' && !input.checked) tts.stop(); });
     return h('label', { class: 'set-row', for: `set-${key}` },
       h('span', { class: 'set-row__icon', 'aria-hidden': 'true' }, icon),
@@ -33,7 +35,8 @@ export function mount(el) {
       h('section', { class: 'panel set-card' },
         toggle('sound', '🔔', 'Sonidos'),
         toggle('music', '🎵', 'Música'),
-        toggle('voice', '🔊', 'Voz que lee', tts.available() ? 'Lee en voz alta historias y oraciones.' : 'Este dispositivo no tiene voz para leer.')),
+        toggle('voice', '🔊', 'Voz que lee', tts.available() ? 'Lee en voz alta historias y oraciones.' : 'Este dispositivo no tiene voz para leer.'),
+        talkAvailable ? toggle('listen', '👂', 'La palomita repite lo que digo', 'Usa el micrófono solo mientras estás con la palomita. Nada se guarda.') : null),
       h('section', { class: 'panel set-card' },
         h('h2', { class: 'set-title' }, 'Nombres'),
         h('label', { class: 'wel__label', for: 'set-name' }, 'Tu palomita se llama'), nameIn,
@@ -50,7 +53,7 @@ export function mount(el) {
         h('p', null, 'Palomita acompaña a niños de 7 a 10 años que se preparan para su Primera Comunión: cuidan a su mascota, juegan con las parábolas de Jesús, leen historias de la Biblia y aprenden a rezar.'),
         h('p', null, 'Los textos bíblicos son adaptaciones para niños. Cada uno trae su cita para leer después el pasaje completo en la Biblia de la familia o de la catequesis.'),
         h('p', null, 'Les sugerimos acompañar al niño, conversar con él sobre el mensaje de cada juego y usar la app unos 15 o 20 minutos al día. Un sacerdote o catequista puede revisar los contenidos antes de usarlos en grupo.'),
-        h('p', null, 'No hay anuncios, compras ni registro, y no se recoge ningún dato: el avance se guarda solo en este dispositivo. El botón «Háblame» usa el micrófono únicamente en ese momento; el sonido no se guarda ni se envía.')),
+        h('p', null, 'No hay anuncios, compras ni registro, y no se recoge ningún dato: el avance se guarda solo en este dispositivo. Si activan «La palomita repite lo que digo», el micrófono se usa solo mientras el niño está en la pantalla de la palomita (se ve una orejita 👂 encendida); el sonido se repite al instante y no se guarda ni se envía. Se puede apagar aquí o tocando la orejita.')),
       h('p', { class: 'set-credits' }, 'Palomita 1.0 · Hecha con Three.js (MIT) y las tipografías Baloo 2 y Nunito (SIL OFL).')));
   return {};
 }

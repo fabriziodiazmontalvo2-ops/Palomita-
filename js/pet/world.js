@@ -11,10 +11,15 @@
 //   world.fx.hearts(n) sparkles(n) crumbs() notes() stars() splash() confetti() · zzz(on) · foam(0..1) · shower(on)
 //   world.wear(slot, id | null)        accesorios ('head' | 'neck' | 'beak')
 //   world.stats() → { calls, triangles }
+//   world.setGrowth(escala 0.5..1, { animate })   tamaño de la palomita (crece con su nivel)
+//   world.startArrival() → Promise   escena de llegada en la jaulita (el niño toca para abrirla)
+//   world.arrivalStage                 etapa de la llegada ('wait' = esperando el toque) o null
 import * as THREE from 'three';
 import { createDove } from './dove.js';
 import { buildRoom, ROOM_IDS, ROOM_LIGHT } from './rooms.js';
 import { createAccessory } from './accessories.js';
+import { createArrival } from './arrival.js';
+import { sfx } from '../core/audio.js';
 
 const MAX_SPRITES = 56;
 
@@ -245,6 +250,7 @@ export function createWorld(canvas) {
     ptr.id = null;
     if (paused) return;
     const [x, y] = local(e);
+    if (arrival) { if (arrival.stage === 'wait') arrival.open(); return; }
     if (ptr.moved <= 10 && performance.now() - ptr.t0 < 600) {
       const part = hitDove(x, y);
       if (part) emit('tap', { part, x, y });
@@ -273,8 +279,20 @@ export function createWorld(canvas) {
   ro?.observe(canvas);
 
   let running = false, paused = false, raf = 0, last = 0, time = 0;
+  // Crecimiento y llegada
+  let arrival = null, growthNow = 1, growthFrom = 1, growthTo = 1, growthT = 1;
+  function applyGrowth(v) { growthNow = v; dove.group.scale.setScalar(v); blob.scale.setScalar(0.4 + v * 0.6); }
   function tick(dt) {
     time += dt;
+    if (growthT < 1) {
+      growthT = Math.min(1, growthT + dt / 1.6);
+      const k = growthT < 1 ? 1 - Math.pow(1 - growthT, 3) + Math.sin(growthT * Math.PI * 3) * 0.04 * (1 - growthT) : 1;
+      applyGrowth(growthFrom + (growthTo - growthFrom) * k);
+    }
+    if (arrival) {
+      arrival.update(dt);
+      if (arrival.stage === 'done') { arrival.dispose(); arrival = null; }
+    }
     stepLight(Math.min(1, dt * 5));
     if (lookReset > 0) { lookReset -= dt; if (lookReset <= 0) dove.lookAt(0, 0); }
     dove.update(dt, time);
@@ -306,6 +324,23 @@ export function createWorld(canvas) {
     start() { if (running) return; running = true; last = performance.now(); raf = requestAnimationFrame(frame); },
     stop() { running = false; cancelAnimationFrame(raf); },
     setPaused(v) { paused = !!v; },
+    setGrowth(v, { animate = false } = {}) {
+      v = Math.max(0.4, Math.min(1, v));
+      if (!animate) { growthT = 1; applyGrowth(v); return; }
+      growthFrom = growthNow; growthTo = v; growthT = 0;
+      fx.sparkles(14); fx.confetti(); sfx('grow');
+    },
+    get growth() { return growthNow; },
+    get arrivalStage() { return arrival ? arrival.stage : null; },
+    openArrival() { arrival?.open(); },
+    startArrival() {
+      return new Promise(resolve => {
+        if (arrival) arrival.skip();
+        showRoom('sala', true);
+        arrival = createArrival(THREE, scene, dove, { sfx, fx });
+        arrival.onDone(() => resolve());
+      });
+    },
     // Avanza la simulación sin reloj real (pruebas y capturas).
     simulate(seconds, step = 1 / 60) { for (let i = 0; i < Math.round(seconds / step); i++) tick(step); renderer.render(scene, camera); },
     stats() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; },

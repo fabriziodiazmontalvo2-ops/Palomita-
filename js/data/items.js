@@ -53,7 +53,7 @@ export const ACCESSORIES = [
   { id: 'diadema-mariposa', name: 'Diadema de mariposa', emoji: '🦋', slot: 'head', price: 320, level: 60 },
   { id: 'chalina-andina', name: 'Chalina andina', emoji: '🧣', slot: 'neck', price: 350, level: 70 },
   { id: 'chullo', name: 'Chullo andino', emoji: '🧶', slot: 'head', price: 380, level: 80 },
-  { id: 'capa-estrellas', name: 'Capa de estrellas', emoji: '🌌', slot: 'neck', price: 500, level: 100 },
+  { id: 'collar-estrellas', name: 'Collar de estrellas', emoji: '🌟', slot: 'neck', price: 500, level: 100 },
   // Premios por estrellas en los juegos (no se venden)
   { id: 'corona-olivo', name: 'Corona de olivo', emoji: '🌿', slot: 'head', price: 0, level: 1, reward: 25 },
   { id: 'collar-perlas', name: 'Collar de perlas', emoji: '🦪', slot: 'neck', price: 0, level: 1, reward: 75 },

@@ -112,6 +112,11 @@ export function levelUpRewards(level) {
   return [...items, ...newFoods, ...newAcc];
 }
 
+// Cola de subidas de nivel: los premios se entregan al momento y la celebración se muestra al volver con la palomita.
+const pendingLevelUps = [];
+export function queueLevelUp(level) { pendingLevelUps.push({ level, items: levelUpRewards(level) }); }
+export function takeLevelUps() { return pendingLevelUps.splice(0); }
+
 // ── Regalo diario (7 días que se repiten; no se pierde nada si un día no se juega) ──
 export const DAILY = [
   { icon: '🌱', coins: 15 },

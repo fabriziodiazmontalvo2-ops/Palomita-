@@ -17,7 +17,7 @@
 <div id="bar"></div>
 <script type="module">
 // Monta el mundo 3D a pantalla completa para probarlo sin la interfaz.
-// Parámetros: room=sala|cocina|bano|dormitorio|capilla · lights=0 · candle=1 · wear=head:gorra,neck:bufanda,beak:flor
+// Parámetros: grow=0.5..1 (tamaño) · arrival=<seg> open=<seg> (llegada en la jaulita) · room=sala|cocina|bano|dormitorio|capilla · lights=0 · candle=1 · wear=head:gorra,neck:bufanda,beak:flor
 //             mood=… · sleep=1 · dirt=0..1 · foam=0..1 · fx=hearts|sparkles|… · still=<seg> (simula y congela) · bar=0
 // Deja window.__world, window.__ready y window.__error.
 import { createWorld } from '../js/pet/world.js';
@@ -33,6 +33,12 @@ try {
   if (q.has('dirt')) world.dove.setDirt(+q.get('dirt'));
   if (q.has('foam')) world.fx.foam(+q.get('foam'));
   for (const pair of (q.get('wear') || '').split(',').filter(Boolean)) { const [slot, id] = pair.split(':'); world.wear(slot, id); }
+  if (q.has('grow')) world.setGrowth(+q.get('grow'));
+  // arrival=<seg>: llegada en la jaulita, simulada esos segundos; open=<seg>: luego la abre y simula esos segundos más.
+  if (q.has('arrival')) {
+    world.startArrival();
+    if (q.has('still')) { world.simulate(+q.get('arrival') || 3); if (q.has('open')) { world.openArrival(); world.simulate(+q.get('open') || 1); } }
+  }
   if (q.has('still')) {
     world.simulate(+q.get('still') || 1.5);
     if (q.has('fx')) { world.fx[q.get('fx')]?.(true); world.simulate(0.5); }

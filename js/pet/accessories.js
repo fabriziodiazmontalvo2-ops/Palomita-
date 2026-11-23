@@ -149,6 +149,158 @@ export function createAccessory(THREE, id) {
       add(sph(0.045, 10, 8), M(0xffc94a), 0, 0, 0.02, { parent: head });
       break;
     }
+    // ── Nuevos (se desbloquean por nivel o por estrellas) ──
+    case 'boina': {
+      const b = add(cyl(0.4, 0.43, 0.1, 28), M(0x3d5aa8, { roughness: 0.9 }), 0.06, -0.1, -0.02, { r: [-0.1, 0, -0.22] });
+      add(cyl(0.025, 0.03, 0.07, 8), M(0x2c437f), 0, 0.08, 0, { parent: b });
+      break;
+    }
+    case 'gorro-marinero': {
+      const white = M(0xffffff, { roughness: 0.6 });
+      add(cyl(0.33, 0.35, 0.17, 26), white, 0, -0.08, 0);
+      add(cyl(0.37, 0.37, 0.05, 26), white, 0, 0.03, 0);
+      add(torus(0.352, 0.035, 26), M(0x3d5aa8), 0, -0.12, 0, { r: [Math.PI / 2, 0, 0] });
+      add(sph(0.045), M(0xe94b4b), 0, 0.07, 0);
+      break;
+    }
+    case 'gorro-chef': {
+      const white = M(0xffffff, { roughness: 0.7 });
+      add(cyl(0.3, 0.32, 0.2, 24), white, 0, -0.06, 0);
+      for (const [x, y, z, r] of [[0, 0.2, 0, 0.22], [-0.17, 0.15, 0.05, 0.16], [0.17, 0.15, 0.03, 0.16], [0, 0.15, -0.16, 0.16], [0.03, 0.13, 0.17, 0.15]]) add(sph(r), white, x, y, z);
+      break;
+    }
+    case 'diadema-mariposa': {
+      add(new THREE.TorusGeometry(0.53, 0.03, 8, 28, Math.PI), M(0xec6f90), 0, -0.47, 0.06, { r: [-0.15, 0, 0] });
+      const fly = new THREE.Group(); fly.position.set(0.3, -0.02, 0.2); fly.rotation.set(0.15, 0.45, -0.35); fly.scale.setScalar(1.6); g.add(fly);
+      for (const sx of [-1, 1]) {
+        add(sph(0.09, 12, 8), M(0x9b7be8), sx * 0.08, 0.03, 0, { s: [1, 1.2, 0.25], r: [0, 0, sx * 0.4], parent: fly });
+        add(sph(0.065, 12, 8), M(0xffc94a), sx * 0.07, -0.08, 0, { s: [1, 1, 0.25], r: [0, 0, -sx * 0.3], parent: fly });
+        add(sph(0.025, 8, 6), M(0xffffff), sx * 0.09, 0.05, 0.02, { parent: fly });
+      }
+      add(sph(0.03, 8, 6), M(0x3d2b24), 0, 0, 0.01, { s: [0.6, 2.2, 0.6], parent: fly });
+      break;
+    }
+    case 'chullo': {
+      // Gorro andino tejido: copa con franjas de colores, orejeras con borlas y pompón.
+      const R = HEAD_R * 0.9, cols = [0xe94b4b, 0xffc94a, 0x3fb58a, 0x3d5aa8, 0xffffff];
+      const hat = new THREE.Group(); hat.position.set(0, -0.3, -0.03); hat.rotation.x = -0.12; g.add(hat);
+      add(dome(R), M(0xe94b4b, { roughness: 1 }), 0, 0, 0, { s: [1, 0.92, 1], parent: hat });
+      cols.forEach((c, k) => {
+        const a = 0.18 + k * 0.24, rr = R * Math.cos(a) + 0.012;
+        add(torus(rr, 0.028, 30), M(c, { roughness: 1 }), 0, R * 0.92 * Math.sin(a), 0, { r: [Math.PI / 2, 0, 0], parent: hat });
+      });
+      add(torus(R + 0.01, 0.045, 30), M(0x3d5aa8, { roughness: 1 }), 0, 0.01, 0, { r: [Math.PI / 2, 0, 0], parent: hat });
+      for (const sx of [-1, 1]) {
+        const flap = add(sph(0.15, 14, 10), M(0xffc94a, { roughness: 1 }), sx * (R + 0.02), -0.12, 0.04, { s: [0.38, 1.05, 0.85], parent: hat });
+        add(cyl(0.012, 0.012, 0.18, 6), M(0xe94b4b), sx * 0.0, -0.24, 0, { parent: flap, s: [2.6, 0.95, 1.2] });
+        add(sph(0.045, 8, 6), M(0x3fb58a, { roughness: 1 }), 0, -0.36, 0, { parent: flap, s: [2.6, 0.95, 1.2] });
+      }
+      add(sph(0.1, 12, 10), M(0xffffff, { roughness: 1 }), 0, R * 0.92 + 0.06, 0, { parent: hat });
+      break;
+    }
+    case 'corona-olivo': {
+      add(torus(0.4, 0.02, 28), M(0x6f8f3a), 0, -0.14, 0, { r: [Math.PI / 2, 0, 0] });
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2;
+        add(sph(0.06, 8, 6), M(i % 2 ? 0x8dbb4e : 0x7aa83f), Math.cos(a) * 0.4, -0.1 + (i % 2) * 0.03, Math.sin(a) * 0.4, { s: [0.5, 1.4, 0.3], r: [0.3, -a, (i % 2 ? 0.5 : -0.5)] });
+      }
+      break;
+    }
+    case 'gorro-estrellas': {
+      const cone = add(new THREE.ConeGeometry(0.33, 0.7, 24), M(0x27325e, { roughness: 0.8 }), 0, 0.18, -0.06, { r: [-0.35, 0, 0.1] });
+      add(torus(0.33, 0.05, 24), M(0xffffff, { roughness: 1 }), 0, -0.14, 0, { r: [Math.PI / 2 - 0.1, 0, 0] });
+      for (const [x, y, z] of [[0.15, -0.15, 0.24], [-0.17, -0.02, 0.2], [0.08, 0.12, 0.15], [-0.05, -0.2, -0.27]]) add(sph(0.035, 8, 6), M(0xffd95e, { emissive: 0x8a6a10 }), x, y, z, { parent: cone });
+      add(sph(0.08, 10, 8), M(0xffd95e), 0, 0.36, 0, { parent: cone });
+      break;
+    }
+    case 'sombrero-pastor': {
+      const felt = M(0x8a5a3c, { roughness: 0.95 });
+      add(dome(0.32), felt, 0, -0.1, 0, { s: [1, 0.85, 1] });
+      add(cyl(0.72, 0.74, 0.035, 32), felt, 0, -0.14, 0, { r: [0.05, 0, 0] });
+      add(cyl(0.325, 0.33, 0.07, 24, true), M(0xe9c46a), 0, -0.08, 0);
+      break;
+    }
+    case 'corona-trigo': {
+      const gold = M(0xf0c35a, { roughness: 0.5, metalness: 0.2 });
+      add(torus(0.37, 0.035, 28), gold, 0, -0.12, 0, { r: [Math.PI / 2, 0, 0] });
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2, ear = new THREE.Group();
+        ear.position.set(Math.cos(a) * 0.37, -0.1, Math.sin(a) * 0.37); ear.rotation.set(Math.sin(a) * 0.35, 0, -Math.cos(a) * 0.35); g.add(ear);
+        for (let k = 0; k < 4; k++) for (const sx of [-1, 1]) add(sph(0.028, 6, 5), gold, sx * 0.022, 0.04 + k * 0.045, 0, { s: [0.8, 1.4, 0.8], parent: ear });
+        add(sph(0.026, 6, 5), gold, 0, 0.23, 0, { s: [0.8, 1.6, 0.8], parent: ear });
+      }
+      break;
+    }
+    case 'collar-flores': {
+      const cols = [0xff9db5, 0xffffff, 0xffd95e, 0xff8a5c, 0xc9a3ff];
+      for (let i = 0; i < 18; i++) {
+        const a = (i / 18) * Math.PI * 2;
+        add(sph(0.075, 10, 8), M(cols[i % cols.length]), Math.cos(a) * NECK_R * 0.95, 0.02 - Math.max(0, Math.sin(a)) * 0.0, -NECK_R * 0.95 + Math.sin(a) * NECK_R * 0.95, { s: [1, 0.7, 1] });
+      }
+      g.rotation.x = -0.12;
+      break;
+    }
+    case 'pajarita-dorada': {
+      const b = bow(0xf0c35a, 0xd9a23a, 0.95);
+      b.traverse(o => { if (o.isMesh) { o.material.metalness = 0.5; o.material.roughness = 0.3; } });
+      b.position.set(0, 0, 0.05);
+      break;
+    }
+    case 'chalina-andina': {
+      const cols = [0xe94b4b, 0xffc94a, 0x3fb58a, 0x3d5aa8, 0xff8a5c, 0xc9a3ff];
+      cols.forEach((c, i) => add(torus(NECK_R * 0.96, 0.05, 32), M(c, { roughness: 1 }), 0, 0.15 - i * 0.045, -NECK_R * 0.96, { r: [Math.PI / 2 - 0.08, 0, 0] }));
+      const end = new THREE.Group(); end.position.set(0.22, -0.2, 0.1); end.rotation.set(0.2, 0, -0.12); g.add(end);
+      cols.forEach((c, i) => add(new THREE.BoxGeometry(0.2, 0.08, 0.07), M(c, { roughness: 1 }), 0, 0.17 - i * 0.08, 0, { parent: end }));
+      for (let i = 0; i < 5; i++) add(cyl(0.008, 0.008, 0.08, 4), M(0xffc94a), -0.08 + i * 0.04, -0.3, 0, { parent: end });
+      break;
+    }
+    case 'collar-estrellas': {
+      add(torus(NECK_R * 0.9, 0.018, 32), M(0xf0c35a, { metalness: 0.4, roughness: 0.4 }), 0, 0.1, -NECK_R * 0.88, { r: [Math.PI / 2 - 0.22, 0, 0] });
+      const star = new THREE.Shape();
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 0.045 : 0.1; star[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, -Math.sin(a) * r); }
+      const sg = new THREE.ExtrudeGeometry(star, { depth: 0.03, bevelEnabled: false });
+      for (const [x, y, z, k] of [[0, -0.14, 0.07, 1.2], [-0.22, -0.07, 0.02, 0.8], [0.22, -0.07, 0.02, 0.8]]) add(sg, M(0xffd95e, { emissive: 0x6a5010, metalness: 0.3, roughness: 0.4 }), x, y, z, { s: [k, k, k], r: [0.2, 0, 0] });
+      break;
+    }
+    case 'collar-perlas': {
+      for (let i = 0; i < 26; i++) {
+        const a = (i / 26) * Math.PI * 2;
+        add(sph(0.04, 10, 8), M(0xfdfbff, { roughness: 0.2, metalness: 0.1 }), Math.cos(a) * NECK_R * 0.92, 0.08 - (Math.sin(a) > 0 ? Math.sin(a) * 0.14 : 0), -NECK_R * 0.92 + Math.sin(a) * NECK_R * 0.92);
+      }
+      break;
+    }
+    case 'bufanda-arcoiris': {
+      const cols = [0xff6b6b, 0xffa94d, 0xffe066, 0x69db7c, 0x4dabf7, 0x9775fa];
+      cols.forEach((c, i) => add(torus(NECK_R * 0.97, 0.045, 32), M(c, { roughness: 1 }), 0, 0.14 - i * 0.04, -NECK_R * 0.97, { r: [Math.PI / 2 - 0.08, 0, 0] }));
+      cols.forEach((c, i) => add(new THREE.BoxGeometry(0.2, 0.075, 0.08), M(c, { roughness: 1 }), 0.2, -0.05 - i * 0.075, 0.09, { r: [0.2, 0, -0.12] }));
+      break;
+    }
+    case 'campanita': {
+      add(torus(NECK_R * 0.92, 0.04, 32), M(0xe94b4b), 0, 0.08, -NECK_R * 0.9, { r: [Math.PI / 2 - 0.2, 0, 0] });
+      const pts = [[0, 0.16], [0.05, 0.15], [0.07, 0.1], [0.09, 0.02], [0.13, -0.04], [0.12, -0.06], [0, -0.06]].map(([x, y]) => new THREE.Vector2(x, y));
+      add(new THREE.LatheGeometry(pts, 20), M(0xf0c35a, { metalness: 0.6, roughness: 0.3, side: THREE.DoubleSide }), 0, -0.16, 0.09, { r: [0.15, 0, 0] });
+      add(sph(0.03, 8, 6), M(0xd9a23a), 0, -0.24, 0.1);
+      break;
+    }
+    case 'corazon': {
+      const red = M(0xff5c8a, { roughness: 0.4 });
+      const hgrp = new THREE.Group(); hgrp.position.set(0.14, -0.02, 0.05); hgrp.rotation.set(0, -0.4, -0.25); g.add(hgrp);
+      add(sph(0.055, 12, 10), red, -0.04, 0.03, 0, { parent: hgrp });
+      add(sph(0.055, 12, 10), red, 0.04, 0.03, 0, { parent: hgrp });
+      add(new THREE.ConeGeometry(0.083, 0.1, 16), red, 0, -0.035, 0, { r: [Math.PI, 0, 0], parent: hgrp });
+      break;
+    }
+    case 'espiga': {
+      const stem = add(cyl(0.01, 0.012, 0.42, 6), M(0xc9a857), 0.12, -0.02, 0.03, { r: [0, 0, 1.25] });
+      for (let k = 0; k < 6; k++) for (const sx of [-1, 1]) add(sph(0.026, 6, 5), M(0xf0c35a), sx * 0.022, 0.06 + k * 0.03, 0, { s: [0.8, 1.5, 0.8], r: [0, 0, -sx * 0.4], parent: stem });
+      break;
+    }
+    case 'estrella': {
+      const star = new THREE.Shape();
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 0.055 : 0.13; star[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, -Math.sin(a) * r); }
+      add(new THREE.ExtrudeGeometry(star, { depth: 0.04, bevelEnabled: true, bevelSize: 0.012, bevelThickness: 0.012, bevelSegments: 2 }), M(0xffd95e, { emissive: 0x6a5010, roughness: 0.35 }), 0.16, 0.0, 0.03, { r: [0, -0.5, -0.2] });
+      break;
+    }
     default:
       return null;
   }
