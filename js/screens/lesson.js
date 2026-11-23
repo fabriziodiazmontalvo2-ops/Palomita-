@@ -11,6 +11,7 @@ import { h, clear, button, reduceMotion } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { go, back } from '../core/router.js';
 import { sceneEl, isFloating, hasOrb, preload } from '../art/scenes.js';
+import { grantPackOnce } from '../core/stickers.js';
 import { arr, txt, deco, clamp, BGS, voiceReady, loadLessons, lifecycle, shell, soon, rewardRow, grant, celebrate, quiz, smooth } from './catequesis.js';
 
 const ANIMS = ['pop', 'float', 'bounce', 'slide-left', 'slide-right', 'spin', 'pulse', 'glow', 'fall', 'grow', 'shake', 'none'];
@@ -289,6 +290,8 @@ export async function mount(el, params = {}) {
     paintButtons();
     const first = state.markRead(`lesson:${L.id}`);
     const gains = first ? grant(PRIZE.read) : [];
+    // Un sobre de figuritas por cada lección terminada (una sola vez por lección).
+    try { if (grantPackOnce(`lesson:${L.id}`, 1, 'Lección terminada')) gains.push(['✉️', '+1 sobre de figuritas']); } catch { /* sin álbum */ }
     sfx(first ? 'win' : 'good');
     stage.append(h('div', { class: 'ls-done', 'aria-hidden': 'true' },
       h('span', { class: 'ls-done__rays' }),

@@ -431,7 +431,10 @@ export async function mount(el, params = {}) {
           onClick: () => go('bible', { tab: 'oraciones' }) }),
         card({ title: 'Reto de fe', sub: '10 preguntas, rachas y premios', bg: 'cielo', c: '#4aa3e0',
           actors: [{ e: '🏆', x: 50, y: 60, s: 1.3 }, { e: '⭐', x: 20, y: 30, s: 0.75, anim: 'twinkle' }, { e: '⭐', x: 80, y: 28, s: 0.75, anim: 'twinkle' }],
-          note: retos ? `${retos} de ${RETO_TOPICS} temas superados` : '', onClick: () => go('reto') })));
+          note: retos ? `${retos} de ${RETO_TOPICS} temas superados` : '', onClick: () => go('reto') }),
+        card({ wide: true, title: 'Mi parroquia', sub: 'Santo Cura de Ars · horarios de Misa, catequesis y avisos', bg: 'iglesia', c: '#b5393f',
+          actors: [{ e: '⛪', x: 50, y: 60, s: 1.3 }, { e: '🔔', x: 18, y: 28, s: 0.8, anim: 'float' }, { e: '🕊️', x: 82, y: 26, s: 0.8, anim: 'float' }],
+          onClick: () => go('parroquia') })));
 
     return { title: 'Catequesis', body: [hello, progress, learn, prepare] };
   }
