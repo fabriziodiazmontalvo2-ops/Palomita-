@@ -13,6 +13,11 @@ register('bible', () => import('./screens/bible.js'));
 register('shop', () => import('./screens/shop.js'));
 register('settings', () => import('./screens/settings.js'));
 register('levels', () => import('./screens/levels.js'));
+register('catequesis', () => import('./screens/catequesis.js'));
+register('lesson', () => import('./screens/lesson.js'));
+register('confesion', () => import('./screens/confesion.js'));
+register('misa', () => import('./screens/misa.js'));
+register('reto', () => import('./screens/reto.js'));
 setHome('home');
 
 const TICK_SECONDS = 5;

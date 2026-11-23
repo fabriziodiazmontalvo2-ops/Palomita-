@@ -110,8 +110,12 @@ public class MainActivity extends Activity {
             tts.setSpeechRate(0.92f);
             tts.setPitch(1.1f);
             tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-                @Override public void onStart(String id) { }
-                @Override public void onDone(String id) { if ("last".equals(id)) notifyDone(); }
+                @Override public void onStart(String id) {
+                    // id = "u<índice>" y termina en "L" si es la última pieza: avisa a la app qué renglón empieza.
+                    final String n = id.replace("u", "").replace("L", "");
+                    runOnUiThread(() -> { if (web != null) web.evaluateJavascript("window.__palomitaTtsLine && window.__palomitaTtsLine(" + n + ")", null); });
+                }
+                @Override public void onDone(String id) { if (id.endsWith("L")) notifyDone(); }
                 @Override public void onError(String id) { notifyDone(); }
             });
         });
@@ -136,7 +140,7 @@ public class MainActivity extends Activity {
                 JSONArray parts = new JSONArray(json);
                 tts.stop();
                 for (int i = 0; i < parts.length(); i++) {
-                    String id = i == parts.length() - 1 ? "last" : "p" + i;
+                    String id = "u" + i + (i == parts.length() - 1 ? "L" : "");
                     tts.speak(parts.getString(i), i == 0 ? TextToSpeech.QUEUE_FLUSH : TextToSpeech.QUEUE_ADD, null, id);
                 }
                 if (parts.length() == 0) notifyDone();
