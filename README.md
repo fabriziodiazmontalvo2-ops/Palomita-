@@ -41,7 +41,26 @@ node tools/serve.mjs        # abre http://localhost:8765
 2. Elige la rama y la carpeta `/ (root)` y guarda.
 3. En un par de minutos la app queda en `https://<usuario>.github.io/<repositorio>/`.
 
-**Para instalarla en el teléfono**
+**Como app de Android (APK)**
+
+El archivo `palomita.apk` se instala directo en el teléfono, sin tienda:
+
+1. Copia `palomita.apk` al teléfono (por WhatsApp, correo, Drive o cable) y tócalo.
+2. Si Android avisa que es de un «origen desconocido», permite instalar apps desde esa aplicación (WhatsApp, Archivos, Chrome…) y vuelve a tocarlo.
+3. Toca **Instalar**. Palomita queda con su ícono en el teléfono y funciona sin internet.
+
+Para compilar el APK tú mismo hace falta Java 17 o más nuevo y el SDK de Android (`platforms;android-34` y `build-tools;34.0.0`):
+
+```bash
+export ANDROID_HOME=/ruta/al/android-sdk
+./tools/build-apk.sh        # crea dist/palomita.apk
+```
+
+Para que una versión nueva **actualice** la que ya está instalada, debe firmarse con la misma llave
+(`palomita-release.jks` y `android/keystore.properties`, que no se suben al repositorio). Guárdalas en un lugar seguro:
+sin ellas, para instalar una versión nueva habría que desinstalar la anterior y se perdería el avance guardado.
+
+**Para instalarla en el teléfono como página web**
 
 Abre la dirección publicada en Chrome (Android) o Safari (iPhone) y elige *Agregar a la pantalla de inicio*. Queda con su ícono, a pantalla completa y **funciona sin conexión**.
 
@@ -80,6 +99,7 @@ js/games/               motor, kit de dibujo y un archivo por minijuego
 js/data/                contenidos: parábolas, historias, oraciones, catequesis, versículos, trivia
 tools/                  servidor de pruebas, validador de contenidos y empaquetador
 dev/                    páginas de laboratorio para probar piezas sueltas
+android/                app de Android que envuelve la app web (voz del teléfono, micrófono, botón atrás)
 ```
 
 ### Editar los contenidos
