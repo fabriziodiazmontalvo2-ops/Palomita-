@@ -1,1 +1,69 @@
-/* Estilos de la pantalla "shop" (los escribe su propio módulo). */
+/* Tienda (shop-), ajustes (set-) y bienvenida (wel-). */
+
+/* ───────── Tienda ───────── */
+.shop-coins { min-height: 44px; font-size: var(--fs-lg); }
+.shop-tabs { flex: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0 var(--gutter-r) 10px var(--gutter-l); }
+.shop-tab { appearance: none; border: 0; cursor: pointer; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 4px;
+  background: rgba(255, 255, 255, 0.6); color: var(--ink); border-radius: var(--r-pill); font-family: var(--font-display); font-weight: 800; font-size: var(--fs-sm); line-height: 1; }
+.shop-tab.is-on { background: var(--white); box-shadow: 0 4px 0 var(--paper-edge); }
+.shop-tab:focus-visible, .shop-card__art:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.shop-scroll { display: flex; flex-direction: column; gap: 12px; }
+.shop-note { color: var(--white); font-family: var(--font-display); font-size: var(--fs-sm); text-shadow: 0 1px 0 rgba(40, 90, 140, 0.4); }
+.shop-group { color: var(--white); font-size: var(--fs-lg); text-shadow: 0 2px 0 rgba(40, 90, 140, 0.35); margin-top: 4px; }
+.shop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.shop-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 6px 12px; text-align: center;
+  background: var(--paper); border-radius: var(--r-md); box-shadow: 0 4px 0 var(--paper-edge), 0 8px 14px var(--shade); }
+.shop-card.is-on { background: #e9f8e6; box-shadow: 0 4px 0 var(--leaf), 0 8px 14px var(--shade); }
+.shop-card__art { appearance: none; border: 0; background: none; padding: 0; cursor: pointer; font-size: 2.6rem; line-height: 1.15; }
+span.shop-card__art { cursor: default; }
+.shop-card__name { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-sm); line-height: 1.05; min-height: 2.1em; display: flex; align-items: center; }
+.shop-card__info, .shop-card__have { font-size: var(--fs-xs); color: var(--ink-soft); line-height: 1.1; min-height: 1.1em; }
+.shop-buy { min-height: 40px; padding: 6px 12px; margin-top: 4px; align-self: stretch; }
+.shop-price { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+.shop-lock { margin-top: 4px; min-height: 40px; display: flex; align-items: center; font-family: var(--font-display); font-weight: 800; font-size: var(--fs-sm); color: var(--ink-soft); }
+.shop-card.is-locked .shop-card__art { filter: grayscale(1) opacity(0.45); }
+.shop-card.is-shake { animation: shop-shake 0.35s; }
+.shop-card.is-bump { animation: shop-bump 0.3s; }
+.shop-empty { background: rgba(255, 255, 255, 0.85); border-radius: var(--r-md); padding: 14px; text-align: center; }
+.shop-pantry { display: flex; flex-wrap: wrap; gap: 8px; }
+@keyframes shop-shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+@keyframes shop-bump { 40% { transform: scale(1.08); } }
+
+/* ───────── Ajustes ───────── */
+.set-scroll { display: flex; flex-direction: column; gap: 14px; }
+.set-card { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+.set-title { font-size: var(--fs-lg); }
+.set-row { display: flex; align-items: center; gap: 12px; min-height: 52px; cursor: pointer; }
+.set-row__icon { font-size: 1.6rem; flex: none; }
+.set-row__text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.set-row__text b { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-md); }
+.set-row__text span { font-size: var(--fs-xs); color: var(--ink-soft); }
+.set-switch { position: relative; flex: none; width: 58px; height: 34px; }
+.set-switch__input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.set-switch__track { position: absolute; inset: 0; border-radius: var(--r-pill); background: #d9cfc4; transition: background 0.15s; pointer-events: none; }
+.set-switch__track::after { content: ""; position: absolute; left: 4px; top: 4px; width: 26px; height: 26px; border-radius: 50%; background: var(--white); box-shadow: 0 2px 4px var(--shade); transition: transform 0.15s; }
+.set-switch__input:checked + .set-switch__track { background: var(--leaf); }
+.set-switch__input:checked + .set-switch__track::after { transform: translateX(24px); }
+.set-switch__input:focus-visible + .set-switch__track { outline: 3px solid var(--ink); outline-offset: 2px; }
+.set-stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.set-parents p { font-size: var(--fs-sm); font-weight: 600; line-height: 1.45; }
+.set-credits { text-align: center; font-size: var(--fs-xs); color: var(--white); text-shadow: 0 1px 0 rgba(40, 90, 140, 0.4); }
+
+/* ───────── Bienvenida ───────── */
+.wel__wrap { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  padding: calc(var(--safe-t) + 12px) var(--gutter-r) calc(var(--safe-b) + 16px) var(--gutter-l); }
+.wel__dove { flex: none; width: min(200px, 46vw); height: auto; margin-bottom: -18px; position: relative; z-index: 1; }
+.wel__card { width: 100%; max-width: 420px; }
+.wel__body { display: flex; flex-direction: column; gap: 10px; }
+.wel__title { font-size: var(--fs-xl); text-align: center; padding-top: 8px; }
+.wel__text { text-align: center; font-size: var(--fs-md); }
+.wel__label { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-md); margin-top: 2px; }
+.wel__input { width: 100%; min-height: 52px; padding: 8px 16px; border: 3px solid var(--paper-edge); border-radius: var(--r-md); background: var(--white); color: var(--ink);
+  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-lg); user-select: text; -webkit-user-select: text; }
+.wel__input:focus { outline: none; border-color: var(--sky-deep); }
+.wel__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.wel__list li { display: flex; align-items: center; gap: 12px; background: var(--white); border-radius: var(--r-md); padding: 8px 12px; }
+.wel__icon { font-size: 1.8rem; flex: none; }
+.wel__list div { display: flex; flex-direction: column; line-height: 1.2; }
+.wel__list b { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-md); }
+.wel__list span { font-size: var(--fs-sm); color: var(--ink-soft); }
