@@ -4,6 +4,7 @@
 //   id, name, emoji, price (semillas), hambre (cuánto llena), alegria (extra), level (nivel mínimo para comprarlo)
 //   Cada alimento tiene un dato bíblico en js/data/phrases.js → FOOD_FACTS[id].
 // ACCESSORIES: cosas que la palomita puede ponerse. slot: 'head' | 'neck' | 'beak' (uno por lugar).
+//   reward: N → no se vende: se gana al juntar N estrellas en los juegos (ver js/core/rewards.js).
 //   id, name, emoji (para la tienda), slot, price, level. El modelo 3D de cada uno lo construye js/pet/accessories.js con el mismo id.
 export const FOODS = [
   { id: 'pan', name: 'Pan', emoji: '🍞', price: 5, hambre: 18, alegria: 2, level: 1 },
@@ -40,6 +41,27 @@ export const ACCESSORIES = [
   { id: 'lazo-comunion', name: 'Lazo de Primera Comunión', emoji: '🤍', slot: 'neck', price: 180, level: 7 },
   { id: 'ramita-olivo', name: 'Ramita de olivo', emoji: '🌿', slot: 'beak', price: 50, level: 2 },
   { id: 'flor', name: 'Florecita', emoji: '🌼', slot: 'beak', price: 35, level: 1 },
+  // Se desbloquean al subir de nivel
+  { id: 'corazon', name: 'Corazoncito', emoji: '💗', slot: 'beak', price: 90, level: 10 },
+  { id: 'boina', name: 'Boina', emoji: '🎨', slot: 'head', price: 140, level: 12 },
+  { id: 'collar-flores', name: 'Collar de flores', emoji: '🌺', slot: 'neck', price: 150, level: 15 },
+  { id: 'gorro-marinero', name: 'Gorro de marinero', emoji: '⚓', slot: 'head', price: 170, level: 20 },
+  { id: 'espiga', name: 'Espiga de trigo', emoji: '🌾', slot: 'beak', price: 160, level: 25 },
+  { id: 'pajarita-dorada', name: 'Corbatín dorado', emoji: '✨', slot: 'neck', price: 220, level: 30 },
+  { id: 'estrella', name: 'Estrellita', emoji: '⭐', slot: 'beak', price: 250, level: 40 },
+  { id: 'gorro-chef', name: 'Gorro de cocinero', emoji: '👨‍🍳', slot: 'head', price: 300, level: 50 },
+  { id: 'diadema-mariposa', name: 'Diadema de mariposa', emoji: '🦋', slot: 'head', price: 320, level: 60 },
+  { id: 'chalina-andina', name: 'Chalina andina', emoji: '🧣', slot: 'neck', price: 350, level: 70 },
+  { id: 'chullo', name: 'Chullo andino', emoji: '🧶', slot: 'head', price: 380, level: 80 },
+  { id: 'capa-estrellas', name: 'Capa de estrellas', emoji: '🌌', slot: 'neck', price: 500, level: 100 },
+  // Premios por estrellas en los juegos (no se venden)
+  { id: 'corona-olivo', name: 'Corona de olivo', emoji: '🌿', slot: 'head', price: 0, level: 1, reward: 25 },
+  { id: 'collar-perlas', name: 'Collar de perlas', emoji: '🦪', slot: 'neck', price: 0, level: 1, reward: 75 },
+  { id: 'bufanda-arcoiris', name: 'Bufanda arcoíris', emoji: '🌈', slot: 'neck', price: 0, level: 1, reward: 150 },
+  { id: 'gorro-estrellas', name: 'Gorro de estrellas', emoji: '🌟', slot: 'head', price: 0, level: 1, reward: 300 },
+  { id: 'sombrero-pastor', name: 'Sombrero de pastor', emoji: '🐑', slot: 'head', price: 0, level: 1, reward: 600 },
+  { id: 'campanita', name: 'Campanita', emoji: '🔔', slot: 'neck', price: 0, level: 1, reward: 1000 },
+  { id: 'corona-trigo', name: 'Corona de trigo', emoji: '👑', slot: 'head', price: 0, level: 1, reward: 2000 },
 ];
 
 export const food = id => FOODS.find(f => f.id === id) || null;

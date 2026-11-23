@@ -12,6 +12,7 @@ register('games', () => import('./screens/games.js'));
 register('bible', () => import('./screens/bible.js'));
 register('shop', () => import('./screens/shop.js'));
 register('settings', () => import('./screens/settings.js'));
+register('levels', () => import('./screens/levels.js'));
 setHome('home');
 
 const TICK_SECONDS = 5;

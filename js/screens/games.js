@@ -4,7 +4,8 @@ import { h, clear, iconButton, modal } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { back } from '../core/router.js';
 import { GAMES } from '../games/registry.js';
-import { startGame } from '../games/engine.js';
+import { go } from '../core/router.js';
+import { MAX_LEVEL, MEDALS } from '../games/levels.js';
 
 let parables = null;
 async function loadParables() {
@@ -16,23 +17,26 @@ async function loadParables() {
 export async function mount(el, params = {}) {
   const P = await loadParables();
   const grid = h('div', { class: 'games-grid' });
-  const stickersChip = h('button', { type: 'button', class: 'chip', 'aria-label': 'Ver mi álbum de estampitas', onclick: () => { sfx('tap'); album(); } });
+  const stickersChip = h('button', { type: 'button', class: 'chip', 'aria-label': 'Ver mis premios', onclick: () => { sfx('tap'); album(); } });
   const coinsChip = h('span', { class: 'chip' });
 
   function render() {
     clear(grid);
-    const won = state.stickers().length;
-    clear(stickersChip).append(h('span', { 'aria-hidden': 'true' }, '🏅'), `${won}/${GAMES.length}`);
+    clear(stickersChip).append(h('span', { 'aria-hidden': 'true' }, '★'), String(state.totalStars()));
     clear(coinsChip).append(h('span', { 'aria-hidden': 'true' }, state.COIN.icon), String(state.get().coins));
     for (const def of GAMES) {
-      const info = state.gameInfo(def.id);
+      const lp = state.levelProgress(def.id);
       const p = P[def.parable];
+      const done = Math.min(MAX_LEVEL, lp.cleared);
       const card = h('button', { type: 'button', class: 'game-card', dataset: { game: def.id }, onclick: () => play(def.id) },
         h('span', { class: 'game-card__icon', 'aria-hidden': 'true' }, def.icon),
-        info.sticker ? h('span', { class: 'game-card__badge', title: 'Estampita ganada', 'aria-label': 'Estampita ganada' }, '🏅')
-          : info.best > 0 ? h('span', { class: 'game-card__best' }, `Récord ${info.best}`) : null,
+        h('span', { class: 'game-card__best' }, `Nivel ${lp.unlocked}`),
         h('span', { class: 'game-card__title' }, def.title),
-        h('span', { class: 'game-card__sub' }, p ? `${p.kind === 'historia' ? 'Historia' : 'Parábola'}: ${p.title}` : ''));
+        h('span', { class: 'game-card__sub' }, p ? `${p.kind === 'historia' ? 'Historia' : 'Parábola'}: ${p.title}` : ''),
+        h('span', { class: 'game-card__prog', 'aria-label': `${done} de ${MAX_LEVEL} niveles, ${lp.total} estrellas` },
+          h('span', { class: 'game-card__bar' }, h('i', { style: { width: `${done}%` } })),
+          h('span', { class: 'game-card__stars' }, `★ ${lp.total}`),
+          lp.medals.length ? h('span', { 'aria-hidden': 'true' }, lp.medals.map(m => MEDALS[m]?.icon || '').join('')) : null));
       card.style.setProperty('--c1', def.colors[0]);
       card.style.setProperty('--c2', def.colors[1]);
       grid.append(card);
@@ -41,18 +45,29 @@ export async function mount(el, params = {}) {
 
   function play(id) {
     sfx('pop');
-    startGame(id, { onExit: () => { if (grid.isConnected) render(); } }).catch(e => console.error(e));
+    go('levels', { game: id });
   }
 
-  function album() {
-    const body = h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px' } },
-      GAMES.map(def => {
-        const has = state.gameInfo(def.id).sticker;
-        return h('div', { style: { textAlign: 'center', padding: '10px 4px', borderRadius: '16px', background: has ? '#fff' : 'rgba(61,43,36,0.07)' } },
-          h('div', { style: { fontSize: '2.2rem', lineHeight: '1.1', filter: has ? 'none' : 'grayscale(1) opacity(0.35)' }, 'aria-hidden': 'true' }, def.icon),
-          h('div', { style: { fontSize: 'var(--fs-xs)', lineHeight: '1.15', marginTop: '4px' } }, has ? def.title : def.goalText));
-      }));
-    modal({ title: 'Mi álbum de estampitas', icon: '🏅', body, buttons: [{ label: '¡Listo!', kind: 'sun' }] });
+  // Mis premios: medallas de cada juego y accesorios que se ganan con estrellas.
+  async function album() {
+    const { STAR_REWARDS, nextStarReward } = await import('../core/rewards.js');
+    const { accessory } = await import('../data/items.js');
+    const total = state.totalStars();
+    const games = h('div', { class: 'gm-album' }, GAMES.map(def => {
+      const lp = state.levelProgress(def.id);
+      return h('div', { class: 'gm-album__row' },
+        h('span', { class: 'gm-album__icon', 'aria-hidden': 'true' }, def.icon),
+        h('span', { class: 'gm-album__name' }, def.title, h('small', null, `Nivel ${lp.unlocked} · ★ ${lp.total}`)),
+        h('span', { class: 'gm-album__medals' }, [25, 50, 75, 100].map(m => h('span', { class: lp.medals.includes(m) ? 'is-on' : '', title: MEDALS[m].name }, MEDALS[m].icon))));
+    }));
+    const next = nextStarReward();
+    const prizes = h('div', { class: 'gm-prizes' }, STAR_REWARDS.map(r => {
+      const a = accessory(r.id), got = state.owns(r.id);
+      return h('div', { class: `gm-prize${got ? ' is-on' : ''}` }, h('span', { 'aria-hidden': 'true' }, a?.emoji || '🎁'), h('small', null, got ? a?.name : `${r.stars} ★`));
+    }));
+    modal({ title: 'Mis premios', icon: '🏆', className: 'gm-album-modal',
+      body: [h('p', { style: { textAlign: 'center' } }, `Tienes ★ ${total} estrellas.${next ? ` ${next.stars - total === 1 ? 'Te falta 1 estrella' : `Te faltan ${next.stars - total} estrellas`} para el próximo regalo.` : ''}`), prizes, games],
+      buttons: [{ label: '¡Listo!', kind: 'sun' }] });
   }
 
   el.append(
@@ -62,11 +77,11 @@ export async function mount(el, params = {}) {
       coinsChip, stickersChip),
     h('div', { class: 'scroll' },
       h('p', { style: { color: 'var(--white)', fontFamily: 'var(--font-display)', fontSize: 'var(--fs-md)', margin: '0 0 12px', textShadow: '0 1px 0 rgba(40,90,140,0.4)' } },
-        'Cada juego guarda un mensaje de Jesús para ti. ¡Gana sus estampitas!'),
+        'Cada juego tiene 100 niveles y guarda un mensaje de Jesús para ti. ¡Junta estrellas y gana premios!'),
       grid));
   render();
   const off = state.on('coins', () => { if (coinsChip.isConnected) render(); });
 
-  if (params.play) play(params.play);
+  if (params.play) setTimeout(() => go('levels', { game: params.play }, { replace: true }), 0);
   return { unmount() { off(); } };
 }

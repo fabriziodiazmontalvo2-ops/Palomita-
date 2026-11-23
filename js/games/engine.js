@@ -30,8 +30,12 @@
 //   api.timeLeft            segundos restantes (si hud.time; al llegar a 0 el motor termina la partida)   api.addTime(seg)
 //   api.setProgress(p)      muestra una barra de avance 0..1 bajo el marcador (opcional)
 //   api.end({ won })        termina la partida ahora (won: true si se cumplió el objetivo del juego)
-//   api.goal, api.best      meta de puntaje del catálogo y mejor puntaje anterior. Cuando el puntaje alcanza la meta, el motor
-//                           muestra solo "🏅 ¡Meta lograda!" (una vez por partida); el juego decide si sigue o termina.
+//   api.level               nivel que se juega (1..100)      api.difficulty   0 (nivel 1) .. 1 (nivel 100)
+//   api.goal                meta de ESTE nivel (la calcula levels.js con la config `levels` del juego)
+//                           Al alcanzarla el motor da el nivel por ganado y termina la partida, salvo que el juego tenga
+//                           levels.selfEnd = true: entonces el juego hace su propia celebración y llama api.end({ won: true }).
+//   api.end({ won, stars })  stars (1..3) es opcional: si no se da, el motor la calcula con las vidas o el tiempo sobrantes.
+//   api.best                mejor puntaje anterior
 //   api.sfx(nombre)         sonidos de core/audio.js: tap pop coin good bad win lose jump flap eat splash bubble chirp coo
 //                           sparkle tick drop grow match wrong step bell whoosh
 //   api.rand()              aleatorio 0..1 (¡usa este, no Math.random!, para que las pruebas sean repetibles)
@@ -53,6 +57,8 @@ import * as tts from '../core/tts.js';
 import * as kit from './kit.js';
 import { h, clear, button, iconButton, appRoot, reduceMotion } from '../core/ui.js';
 import { getGame } from './registry.js';
+import { levelConfig, levelSpec, MAX_LEVEL } from './levels.js';
+import { grantLevel, showChest } from '../core/rewards.js';
 
 const LOGICAL_W = 360;
 const KEYMAP = {
@@ -86,8 +92,8 @@ export function handleBack() {
   return true;
 }
 
-// Inicia un minijuego. opts: { onExit(), skipIntro, seed }
-export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
+// Inicia un minijuego. opts: { level (1..100; por defecto el último desbloqueado), onExit(), skipIntro, seed }
+export async function startGame(id, { onExit, skipIntro = false, seed, level } = {}) {
   if (current) current.exit(true);
   const def = getGame(id);
   if (!def) throw new Error(`Juego desconocido: ${id}`);
@@ -96,6 +102,7 @@ export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
   const canvas = h('canvas', { 'aria-label': def.title });
   const overlay = h('div', { class: 'layer', style: { pointerEvents: 'none' } });
   const scoreVal = h('b', null, '0');
+  const levelChip = h('span', { class: 'chip game-hud__level' }, 'Nivel 1');
   const heartsEl = h('span', { class: 'chip game-hud__hearts', hidden: true });
   const timeVal = h('b', null, '');
   const timeEl = h('span', { class: 'chip game-hud__time', hidden: true }, h('span', { 'aria-hidden': 'true' }, '⏱️'), timeVal);
@@ -103,6 +110,7 @@ export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
   const hud = h('div', { class: 'game-hud', hidden: true },
     pauseBtn,
     h('span', { class: 'chip' }, h('span', { 'aria-hidden': 'true' }, def.scoreIcon || '⭐'), scoreVal),
+    levelChip,
     h('span', { class: 'game-hud__spacer' }), heartsEl, timeEl);
   const progress = h('div', { class: 'game-progress', hidden: true }, h('i'));
   const hintEl = h('div', { class: 'game-hint', hidden: true }, h('span'));
@@ -115,6 +123,8 @@ export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
   // ── Estado del motor ──
   let phase = 'loading';       // loading | intro | playing | paused | ending | result | message | error
   let mod = null, instance = null, parable = FALLBACK_PARABLE;
+  const levelN = Math.max(1, Math.min(MAX_LEVEL, Math.round(level) || state.levelProgress(id).unlocked));
+  let spec = levelSpec(levelConfig(def, null), levelN);
   let W = LOGICAL_W, H = 640, scale = 1, pixelScale = 1, top = 64;
   let score = 0, lives = 0, timeLeft = 0, time = 0;
   let raf = 0, last = 0, hintTimer = 0, endTimer = 0, exited = false;
@@ -129,13 +139,14 @@ export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
   const api = {
     get W() { return W; }, get H() { return H; }, get top() { return top; }, get bottom() { return H - 10; },
     get time() { return time; }, get score() { return score; }, get lives() { return lives; }, get timeLeft() { return timeLeft; },
-    goal: def.goal || 0, best: best0, kit, overlay, pointer, keys, reduceMotion: motionOff,
+    get goal() { return spec.goal; }, get level() { return spec.level; }, get difficulty() { return spec.difficulty; }, get levelSpec() { return spec; },
+    best: best0, kit, overlay, pointer, keys, reduceMotion: motionOff,
     addScore(n = 1, x, y) {
-      score = Math.max(0, score + n); scoreVal.textContent = String(score);
+      score = Math.max(0, score + n); renderScore();
       if (x !== undefined && y !== undefined && n) api.floatText(x, y, (n > 0 ? '+' : '') + n, { color: n > 0 ? '#ffffff' : '#ffd0d0' });
       checkGoal();
     },
-    setScore(n) { score = Math.max(0, Math.round(n)); scoreVal.textContent = String(score); checkGoal(); },
+    setScore(n) { score = Math.max(0, Math.round(n)); renderScore(); checkGoal(); },
     loseLife(x, y) {
       if (phase !== 'playing' || lives <= 0) return lives;
       lives--; renderHearts();
@@ -144,7 +155,7 @@ export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
       if (lives <= 0) finish({ won: false });
       return lives;
     },
-    addLife() { if (def.hud?.lives && lives < def.hud.lives + 2) { lives++; renderHearts(); audio.sfx('sparkle'); } return lives; },
+    addLife() { if (def.hud?.lives && lives < maxLives() + 2) { lives++; renderHearts(); audio.sfx('sparkle'); } return lives; },
     addTime(sec) { timeLeft = Math.max(0, timeLeft + sec); renderTime(); },
     setProgress(p) { progress.hidden = false; progress.firstChild.style.setProperty('--v', Math.round(Math.max(0, Math.min(1, p)) * 100)); measureTop(); },
     end(opts = {}) { finish(opts); },
@@ -175,14 +186,18 @@ export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
     },
   };
 
-  // Al alcanzar la meta por primera vez en la partida, el motor lo celebra (el juego puede seguir).
+  // Al alcanzar la meta del nivel: el motor da el nivel por ganado (o, si el juego tiene su propio final, solo lo celebra).
   function checkGoal() {
-    if (goalHit || phase !== 'playing' || !(def.goal > 0) || score < def.goal) return;
+    if (goalHit || phase !== 'playing' || !(spec.goal > 0) || score < spec.goal) return;
     goalHit = true;
     audio.sfx('sticker');
-    api.hint('🏅 ¡Meta lograda!', 2000);
     api.burst(W / 2, H * 0.3, { emoji: '⭐', count: 8, speed: 170, size: 18, life: 1 });
+    if (spec.selfEnd) api.hint('🏅 ¡Meta lograda!', 2000);
+    else finish({ won: true });
   }
+  function renderScore() { scoreVal.textContent = spec.goal > 0 ? `${score}/${spec.goal}` : String(score); }
+  const maxLives = () => (def.hud?.lives ? (spec.lives ?? def.hud.lives) : 0);
+  const maxTime = () => (def.hud?.time ? (spec.time ?? def.hud.time) : 0);
 
   // ── Tamaño ──
   function measureTop() {
@@ -211,7 +226,7 @@ export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
   function renderHearts() {
     if (!def.hud?.lives) return;
     heartsEl.hidden = false;
-    heartsEl.textContent = '❤️'.repeat(Math.max(0, lives)) + '🤍'.repeat(Math.max(0, def.hud.lives - lives));
+    heartsEl.textContent = '❤️'.repeat(Math.max(0, lives)) + '🤍'.repeat(Math.max(0, maxLives() - lives));
     heartsEl.setAttribute('aria-label', `${lives} vidas`);
   }
   function renderTime() {
@@ -359,10 +374,12 @@ export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
     hud.hidden = true;
     showPanel(
       h('div', { class: 'game-panel__icon', 'aria-hidden': 'true' }, def.icon),
+      h('p', { class: 'game-level-badge' }, `Nivel ${spec.level}`),
       h('h2', null, def.title),
       parableLine(),
       h('div', { class: 'game-panel__how' }, h('ul', null, def.how.map(t => h('li', null, t)))),
-      def.goalText ? h('p', { class: 'game-panel__goal' }, `🏅 Meta: ${def.goalText}`) : null,
+      h('p', { class: 'game-panel__goal' }, `🏅 Meta: ${spec.label}`),
+      starsRow(state.levelProgress(id).stars(spec.level), 'Tu mejor resultado en este nivel'),
       h('div', { class: 'game-panel__row' },
         button('¡Jugar!', { kind: 'leaf', icon: '▶️', onClick: () => begin() })),
       h('div', { class: 'game-panel__row' },
@@ -388,8 +405,9 @@ export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
     clear(overlay);
     try { instance?.destroy?.(); } catch { /* nada */ }
     particles.length = 0; floats.length = 0; keys.clear(); pointer.down = false;
-    score = 0; time = 0; goalHit = false; scoreVal.textContent = '0';
-    lives = def.hud?.lives || 0; timeLeft = def.hud?.time || 0;
+    score = 0; time = 0; goalHit = false; renderScore();
+    lives = maxLives(); timeLeft = maxTime();
+    levelChip.textContent = `Nivel ${spec.level}`;
     progress.hidden = true; hintEl.hidden = true;
     hud.hidden = false;
     renderHearts(); renderTime();
@@ -406,6 +424,7 @@ export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
     showPanel(
       h('div', { class: 'game-panel__icon', 'aria-hidden': 'true' }, '⏸️'),
       h('h2', null, 'Pausa'),
+      h('p', { class: 'game-panel__goal' }, `Nivel ${spec.level} · Meta: ${spec.label}`),
       h('div', { class: 'game-panel__row' }, button('Seguir jugando', { kind: 'leaf', icon: '▶️', onClick: () => resume() })),
       h('div', { class: 'game-panel__row' },
         button('Empezar de nuevo', { kind: 'ghost', small: true, icon: '🔄', onClick: () => begin() }),
@@ -419,45 +438,61 @@ export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
     last = performance.now();
   }
 
-  function finish({ won = false } = {}) {
+  function finish({ won = false, stars } = {}) {
     if (phase !== 'playing') return;
     phase = 'ending';
     clearTimeout(hintTimer); hintEl.hidden = true;
-    const goal = def.goal || 0;
-    const didWin = !!won || (goal > 0 && score >= goal);
-    const res = state.gameResult(id, { score, won: didWin, goal });
-    let coins = Math.min(def.maxCoins ?? 40, Math.round(score * (def.coinRate ?? 1)));
-    if (score > 0) coins = Math.max(coins, 2);
-    if (res.firstSticker) coins += 15;
-    state.addCoins(coins);
-    const lvl = state.addXp(10 + (didWin ? 10 : 0) + (res.firstSticker ? 10 : 0));
-    state.addStat('alegria', 16); state.addStat('energia', -6); state.addStat('hambre', -4);
+    const didWin = spec.selfEnd ? !!won : (!!won || (spec.goal > 0 && score >= spec.goal));
+    // Estrellas: las da el juego, o salen de las vidas o del tiempo que sobró.
+    let st = stars;
+    if (didWin && !(st >= 1)) {
+      if (maxLives() > 0) st = Math.max(1, Math.min(3, lives));
+      else if (maxTime() > 0) { const f = timeLeft / maxTime(); st = f >= 0.4 ? 3 : f >= 0.2 ? 2 : 1; }
+      else st = 3;
+    }
+    const rec = state.recordLevel(id, spec.level, { won: didWin, stars: didWin ? st : 0, score });
+    const prize = grantLevel(id, spec.level, rec, { won: didWin });
+    state.addStat('alegria', didWin ? 14 : 8); state.addStat('energia', -5); state.addStat('hambre', -3);
     audio.sfx(didWin ? 'win' : 'lose');
     if (didWin) for (let i = 0; i < 4; i++) api.burst(W * (0.2 + 0.2 * i), H * 0.35, { emoji: ['🎉', '⭐', '✨', '🎊'][i], count: 4, speed: 160, size: 20, life: 1.1 });
-    endTimer = setTimeout(() => showResult({ didWin, res, coins, lvl }), motionOff ? 200 : 950);
+    endTimer = setTimeout(() => showResult({ didWin, rec, prize }), motionOff ? 200 : 950);
   }
 
-  function showResult({ didWin, res, coins, lvl }) {
+  function starsRow(n, label) {
+    return h('div', { class: 'game-stars', role: 'img', 'aria-label': `${label}: ${n} de 3 estrellas` },
+      [0, 1, 2].map(i => h('span', { class: `game-star${i < n ? ' is-on' : ''}`, style: { animationDelay: `${0.25 + i * 0.22}s` }, 'aria-hidden': 'true' }, '★')));
+  }
+
+  function showResult({ didWin, rec, prize }) {
     if (exited) return;
     phase = 'result';
     hud.hidden = true;
+    const n = spec.level;
+    const hasNext = didWin && n < MAX_LEVEL;
     showPanel(
-      h('div', { class: 'game-panel__icon', 'aria-hidden': 'true' }, didWin ? '🏆' : score > 0 ? '🌟' : '💛'),
-      h('h2', null, didWin ? '¡Lo lograste!' : score > 0 ? '¡Buen intento!' : '¡Ánimo, tú puedes!'),
-      h('div', { class: 'game-score-big', 'aria-label': `${score} puntos` }, String(score), ' ', h('span', { style: { fontSize: '1.6rem' }, 'aria-hidden': 'true' }, def.scoreIcon || '⭐')),
+      h('p', { class: 'game-level-badge' }, `Nivel ${n}`),
+      h('h2', null, didWin ? (n === MAX_LEVEL ? '¡Completaste los 100 niveles!' : '¡Nivel superado!') : '¡Casi lo logras!'),
+      didWin ? starsRow(rec.stars, 'Estrellas') : h('div', { class: 'game-panel__icon', 'aria-hidden': 'true' }, '💛'),
+      h('div', { class: 'game-score-big', 'aria-label': `${score} de ${spec.goal}` }, `${score}`, h('small', null, ` / ${spec.goal} `), h('span', { style: { fontSize: '1.6rem' }, 'aria-hidden': 'true' }, def.scoreIcon || '⭐')),
       h('div', { class: 'game-rewards' },
-        res.newBest && score > 0 ? h('span', { class: 'chip' }, '🎖️ ¡Nuevo récord!') : h('span', { class: 'chip' }, `Récord: ${res.best}`),
-        h('span', { class: 'chip' }, `+${coins} ${state.COIN.icon}`),
-        lvl.leveled ? h('span', { class: 'chip' }, `⬆️ ¡Nivel ${lvl.level}!`) : null),
-      res.firstSticker ? h('p', { class: 'game-sticker' }, `🏅 ¡Ganaste la estampita de «${def.title}»!`) : null,
-      !didWin && def.goalText ? h('p', { class: 'game-panel__goal' }, `Meta: ${def.goalText}`) : null,
-      h('div', { class: 'game-panel__row' }, button('Ver el mensaje', { kind: 'sun', icon: '💌', onClick: () => showMessage() })),
+        prize.items.map(it => h('span', { class: 'chip' }, h('span', { 'aria-hidden': 'true' }, it.icon), ` ${it.text}`)),
+        rec.unlockedNow && hasNext ? h('span', { class: 'chip' }, `🔓 Nivel ${n + 1}`) : null),
+      !didWin ? h('p', { class: 'game-panel__goal' }, `Meta: ${spec.label}. ¡Tú puedes!`) : null,
       h('div', { class: 'game-panel__row' },
-        button('Jugar otra vez', { kind: 'ghost', small: true, icon: '🔄', onClick: () => begin() }),
-        button('Salir', { kind: 'ghost', small: true, icon: '↩️', onClick: () => exit() })),
+        hasNext ? button('Siguiente nivel', { kind: 'leaf', icon: '▶️', onClick: () => gotoLevel(n + 1) })
+          : button(didWin ? 'Jugar otra vez' : 'Intentar otra vez', { kind: 'leaf', icon: '🔄', onClick: () => begin() })),
+      h('div', { class: 'game-panel__row' },
+        button('Mensaje', { kind: 'sun', small: true, icon: '💌', onClick: () => showMessage() }),
+        hasNext ? button('Repetir', { kind: 'ghost', small: true, icon: '🔄', onClick: () => begin() }) : null,
+        button('Niveles', { kind: 'ghost', small: true, icon: '🗺️', onClick: () => exit() })),
     );
-    if (res.firstSticker) audio.sfx('sticker');
-    if (lvl.leveled) setTimeout(() => audio.sfx('levelup'), 500);
+    if (prize.chest) setTimeout(() => { if (!exited) showChest(prize.chest); }, 700);
+  }
+
+  // Pasa a otro nivel sin volver al mapa.
+  function gotoLevel(n) {
+    exit(true);
+    startGame(id, { level: n, onExit, seed, skipIntro: true }).catch(e => console.error(e));
   }
 
   function showMessage() {
@@ -488,8 +523,9 @@ export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
         storyBtn,
         listenButton(() => [msg, 'Tu misión de hoy: ' + mission, parable.verse ? parable.verse.text : ''])),
       h('div', { class: 'game-panel__row' },
-        button('Jugar otra vez', { kind: 'leaf', small: true, icon: '🔄', onClick: () => begin() }),
-        button('Salir', { kind: 'ghost', small: true, icon: '↩️', onClick: () => exit() })),
+        spec.level < MAX_LEVEL && state.levelProgress(id).unlocked > spec.level ? button('Siguiente nivel', { kind: 'leaf', small: true, icon: '▶️', onClick: () => gotoLevel(spec.level + 1) })
+          : button('Jugar otra vez', { kind: 'leaf', small: true, icon: '🔄', onClick: () => begin() }),
+        button('Niveles', { kind: 'ghost', small: true, icon: '🗺️', onClick: () => exit() })),
     );
   }
 
@@ -529,6 +565,7 @@ export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
 
   const ctl = {
     id, api, exit,
+    get level() { return spec.level; },
     get phase() { return phase; }, get instance() { return instance; }, get parable() { return parable; },
     start: () => begin(), finish: opts => finish(opts || {}), restart: () => begin(), pause, resume,
     setSeed(n) { rng = mulberry32(n | 0); },
@@ -550,6 +587,7 @@ export async function startGame(id, { onExit, skipIntro = false, seed } = {}) {
     if (!mod || typeof mod.create !== 'function') throw new Error('El módulo del juego no exporta create(api)');
     const p = data?.PARABLES?.[def.parable];
     if (p) parable = { ...FALLBACK_PARABLE, ...p };
+    spec = levelSpec(levelConfig(def, mod), levelN);
   } catch (e) {
     if (exited) return ctl;
     console.warn(`[juego ${id}] no se pudo cargar`, e);

@@ -210,7 +210,9 @@ export function tick(seconds) {
 }
 
 // ── Semillas (monedas), experiencia y nivel ──
-export function xpForLevel(level) { return 40 + level * 25; }
+export const MAX_LEVEL = 100;
+// Experiencia para pasar del nivel `level` al siguiente. Crecer hasta el 100 es un camino largo, como en las mascotas virtuales.
+export function xpForLevel(level) { return 30 + level * 6; }
 export function addCoins(n) {
   n = Math.round(n);
   if (!n) return S.coins;
@@ -225,14 +227,17 @@ export function spendCoins(n) {
   return true;
 }
 export function addXp(n) {
+  if (S.level >= MAX_LEVEL) { S.xp = 0; saveSoon(); return { leveled: false, level: S.level }; }
   S.xp += Math.max(0, Math.round(n));
-  let leveled = false;
-  while (S.xp >= xpForLevel(S.level)) {
+  const from = S.level;
+  while (S.level < MAX_LEVEL && S.xp >= xpForLevel(S.level)) {
     S.xp -= xpForLevel(S.level);
     S.level++;
-    leveled = true;
   }
-  if (leveled) { S.coins += 25; emit('coins', { coins: S.coins, delta: 25 }); emit('level', { level: S.level }); }
+  if (S.level >= MAX_LEVEL) S.xp = 0;
+  const leveled = S.level > from;
+  // Los premios de cada nivel nuevo los entrega js/core/rewards.js al escuchar este evento.
+  if (leveled) emit('level', { level: S.level, from });
   else emit('change', { evt: 'xp' });
   saveSoon();
   return { leveled, level: S.level };
@@ -280,6 +285,51 @@ export function gameResult(id, { score = 0, won = false, goal = 0 } = {}) {
   return { best: g.best, newBest, firstSticker, plays: g.plays };
 }
 export function stickers() { return Object.keys(S.games).filter(id => S.games[id].sticker); }
+
+// ── Niveles de cada juego (1 a 100) ──
+// games[id].lv = nivel más alto desbloqueado · games[id].st = estrellas de cada nivel ("0".."3", un carácter por nivel)
+// games[id].medals = medallas ganadas (25, 50, 75, 100)
+export function levelProgress(id) {
+  const g = S.games[id] || {};
+  const st = typeof g.st === 'string' ? g.st : '';
+  let total = 0;
+  for (const c of st) total += +c || 0;
+  return {
+    unlocked: Math.max(1, Math.min(MAX_LEVEL, g.lv || 1)),
+    stars: n => +(st[n - 1] || 0),
+    total,
+    cleared: [...st].filter(c => +c > 0).length,
+    medals: Array.isArray(g.medals) ? g.medals.slice() : [],
+  };
+}
+export function recordLevel(id, n, { won = false, stars = 0, score = 0 } = {}) {
+  const g = S.games[id] || (S.games[id] = { plays: 0, best: 0, sticker: false });
+  g.plays = (g.plays || 0) + 1;
+  if (score > (g.best || 0)) g.best = score;
+  let st = typeof g.st === 'string' ? g.st : '';
+  if (st.length < MAX_LEVEL) st = st.padEnd(MAX_LEVEL, '0');
+  const prev = +st[n - 1] || 0;
+  const got = won ? Math.max(1, Math.min(3, stars | 0)) : 0;
+  const best = Math.max(prev, got);
+  g.st = st.slice(0, n - 1) + best + st.slice(n);
+  const firstClear = won && prev === 0;
+  let unlockedNow = false;
+  if (won && n >= (g.lv || 1) && n < MAX_LEVEL) { g.lv = n + 1; unlockedNow = true; }
+  if (won && !g.sticker) g.sticker = true;
+  let medal = null;
+  if (firstClear && [25, 50, 75, 100].includes(n)) {
+    g.medals = Array.isArray(g.medals) ? g.medals : [];
+    if (!g.medals.includes(n)) { g.medals.push(n); medal = n; }
+  }
+  save();
+  emit('change', { evt: 'level', id, n });
+  return { firstClear, prevStars: prev, stars: best, gainedStars: Math.max(0, got - prev), unlockedNow, medal };
+}
+export function totalStars() {
+  let t = 0;
+  for (const id of Object.keys(S.games)) t += levelProgress(id).total;
+  return t;
+}
 
 // ── Lecturas, preguntas y oraciones ──
 export function isRead(id) { return !!S.read[id]; }

@@ -47,12 +47,13 @@ export async function mount(el, params = {}) {
   }
 
   function accCard(a) {
-    const owned = state.owns(a.id), locked = !owned && level() < a.level;
+    const owned = state.owns(a.id), locked = !owned && (a.reward ? true : level() < a.level);
     const on = state.get().wearing[a.slot] === a.id;
     const card = h('div', { class: `shop-card ${locked ? 'is-locked' : ''} ${on ? 'is-on' : ''}`.trim() },
       h('span', { class: 'shop-card__art', 'aria-hidden': 'true' }, a.emoji),
       h('span', { class: 'shop-card__name' }, a.name),
       owned ? h('button', { type: 'button', class: `btn btn--sm ${on ? 'btn--ghost' : 'btn--sky'} shop-buy`, onclick: () => { sfx('pop'); state.wear(a.slot, on ? null : a.id); render(); } }, on ? 'Quitar' : 'Poner')
+        : a.reward ? h('span', { class: 'shop-lock' }, `🏆 ${a.reward} ★`)
         : locked ? h('span', { class: 'shop-lock' }, `🔒 Nivel ${a.level}`)
           : h('button', { type: 'button', class: 'btn btn--sm btn--leaf shop-buy', 'aria-label': `Comprar ${a.name} por ${a.price} semillas`, onclick: async () => {
             if (state.get().coins < a.price) { shake(card); short(a.price - state.get().coins); return; }
@@ -75,8 +76,10 @@ export async function mount(el, params = {}) {
         h('div', { class: 'shop-grid' }, FOODS.map(foodCard)));
     } else if (tab === 'accesorios') {
       for (const slot of ['head', 'neck', 'beak']) {
-        list.append(h('h2', { class: 'shop-group' }, SLOT_NAMES[slot]), h('div', { class: 'shop-grid' }, ACCESSORIES.filter(a => a.slot === slot).map(accCard)));
+        list.append(h('h2', { class: 'shop-group' }, SLOT_NAMES[slot]), h('div', { class: 'shop-grid' }, ACCESSORIES.filter(a => a.slot === slot && !a.reward).map(accCard)));
       }
+      list.append(h('h2', { class: 'shop-group' }, 'Premios de los juegos'), h('p', { class: 'shop-note' }, `Se ganan juntando estrellas en los niveles. Tienes ★ ${state.totalStars()}.`),
+        h('div', { class: 'shop-grid' }, ACCESSORIES.filter(a => a.reward).map(accCard)));
     } else {
       const mine = ACCESSORIES.filter(a => state.owns(a.id));
       const foods = FOODS.filter(f => state.countItem(f.id) > 0);
