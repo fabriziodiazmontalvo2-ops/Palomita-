@@ -154,7 +154,13 @@ fs.writeFileSync(path.join(appDir, 'index.html'), `<!doctype html>
 </head>
 <body>
 ${body}
-<script type="module" src="main.js"></script>
+<script>
+// Red de seguridad: si este teléfono no pudiera cargar la app por módulos, se abre la versión de un solo archivo
+// (palomita.html, que el APK también trae). Misma dirección, así que la partida guardada es la misma.
+window.__palomitaPlanB = () => { try { if (!sessionStorage.getItem('palomita.planB')) { sessionStorage.setItem('palomita.planB', '1'); location.replace('palomita.html'); } } catch (e) { location.replace('palomita.html'); } };
+setTimeout(() => { if (!window.__palomitaBoot) window.__palomitaPlanB(); }, 20000);
+</script>
+<script type="module" src="main.js" onerror="window.__palomitaPlanB()"></script>
 </body>
 </html>
 `);

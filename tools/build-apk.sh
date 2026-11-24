@@ -32,6 +32,8 @@ node tools/build.mjs
 rm -rf android/app/src/main/assets
 mkdir -p android/app/src/main/assets
 cp -r dist/app/. android/app/src/main/assets/
+# Red de seguridad: la versión de un solo archivo, por si el WebView de algún teléfono no carga los módulos.
+cp dist/palomita.html android/app/src/main/assets/palomita.html
 # Fotos de la parroquia, figuritas y la voz grabada de la narradora (la app las pide por ruta relativa).
 rm -rf android/app/src/main/assets/assets
 mkdir -p android/app/src/main/assets/assets

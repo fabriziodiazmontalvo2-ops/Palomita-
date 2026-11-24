@@ -63,6 +63,9 @@ function androidBack() {
   return false;
 }
 
+// Ya arrancó la versión por módulos (la red de seguridad de dist/app/index.html no hace falta).
+window.__palomitaBoot = true;
+
 async function boot() {
   applyFont();
   fitApp();
@@ -111,6 +114,8 @@ async function boot() {
 
 boot().catch(e => {
   console.error(e);
+  // En el APK: si no se pudo cargar una parte de la app, se abre la versión de un solo archivo.
+  if (window.__palomitaPlanB && /dynamically imported module|Importing a module script failed|Failed to fetch/i.test(String(e && e.message))) { window.__palomitaPlanB(); return; }
   window.__bootError = String(e && e.stack || e);
   const s = document.getElementById('screen');
   if (s) s.innerHTML = '<div class="splash"><div class="splash__bird">🛠️</div><h2>No pudimos abrir Palomita</h2><p>Cierra y vuelve a abrir la app.</p></div>';
