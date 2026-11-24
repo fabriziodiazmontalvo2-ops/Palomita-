@@ -8,6 +8,8 @@
 // Medidas (unidades del mundo): la palomita está en el origen mirando a +Z y mide ≈ 2 de alto.
 // La pared está en z = -2.6 (9 de ancho × 6.4 de alto). En teléfonos angostos solo se ve x ∈ [-1.5, 1.5],
 // y la palomita tapa el centro hasta y ≈ 2: por eso lo importante de la pared va ARRIBA (y 2.1–3.4) y a los lados.
+import { decorItem } from '../data/decor.js';
+
 export const ROOM_IDS = ['sala', 'cocina', 'bano', 'dormitorio', 'capilla'];
 export const ROOM_NAMES = { sala: 'Nido', cocina: 'Cocina', bano: 'Baño', dormitorio: 'Dormitorio', capilla: 'Oración' };
 
@@ -35,11 +37,64 @@ function painter(g, U, left, top) {
   return P;
 }
 
-// Ventana con marco, cielo y cortinas. day = false pinta la noche.
-function windowArt(P, x, y, w, h, { frame = '#ffffff', curtain = null, day = true } = {}) {
+// Cielo de las ventanas según la hora real: 'amanecer' | 'dia' | 'atardecer' | 'noche' (ver skyFor).
+let SKY = 'dia';
+// Decoración elegida para el Nido (slot → id de js/data/decor.js); la leen WALLS.sala y FLOORS.sala al pintar.
+let DECO = {};
+
+// Cuadros grandes del Nido (se pintan dentro del marco x, y, w, h).
+const PAINTINGS = {
+  'd-paisaje'(P, x, y, w, h) { P.circ(x + w * 0.72, y + h * 0.72, 0.08, '#ffd95e'); P.ell(x + w * 0.35, y + 0.03, w * 0.5, 0.2, '#6cc070'); P.ell(x + w * 0.8, y + 0.01, w * 0.36, 0.14, '#a8e08c'); },
+  'd-buen-pastor'(P, x, y, w, h) {
+    P.ell(x + w * 0.5, y + 0.02, w * 0.7, 0.24, '#7cc96f'); P.circ(x + w * 0.8, y + h * 0.78, 0.07, '#ffd95e');
+    P.line(x + w * 0.3, y + 0.1, x + w * 0.24, y + h * 0.7, '#8a5a32', 0.03); P.emoji('🐑', x + w * 0.55, y + h * 0.3, 0.2); P.emoji('🐑', x + w * 0.78, y + h * 0.24, 0.14);
+  },
+  'd-arca'(P, x, y, w, h) {
+    P.rect(x, y, w, h * 0.35, '#5aa9ff');
+    P.poly([[x + w * 0.15, y + h * 0.35], [x + w * 0.85, y + h * 0.35], [x + w * 0.75, y + h * 0.15], [x + w * 0.25, y + h * 0.15]], '#a9744a');
+    P.rect(x + w * 0.35, y + h * 0.35, w * 0.3, h * 0.18, '#c08a57'); P.emoji('🌈', x + w * 0.5, y + h * 0.78, 0.26);
+  },
+  'd-paloma-paz'(P, x, y, w, h) { P.emoji('🕊️', x + w * 0.5, y + h * 0.55, 0.32); P.emoji('🌿', x + w * 0.68, y + h * 0.3, 0.14); },
+  'd-maria'(P, x, y, w, h) {
+    P.circ(x + w * 0.5, y + h * 0.66, 0.13, 'rgba(255,217,94,0.55)');
+    P.poly([[x + w * 0.5, y + h * 0.78], [x + w * 0.82, y + 0.04], [x + w * 0.18, y + 0.04]], '#4a7fd4');
+    P.poly([[x + w * 0.5, y + h * 0.78], [x + w * 0.66, y + h * 0.4], [x + w * 0.34, y + h * 0.4]], '#ffffff');
+    P.circ(x + w * 0.5, y + h * 0.64, 0.065, '#f3cfae'); P.emoji('🙏', x + w * 0.5, y + h * 0.3, 0.12);
+  },
+  'd-parroquia'(P, x, y, w, h) {
+    P.rect(x, y, w, h * 0.18, '#a8e08c');
+    P.rect(x + w * 0.28, y + h * 0.18, w * 0.44, h * 0.42, '#fff6e8'); P.poly([[x + w * 0.24, y + h * 0.6], [x + w * 0.76, y + h * 0.6], [x + w * 0.5, y + h * 0.82]], '#c0392b');
+    P.rect(x + w * 0.44, y + h * 0.18, w * 0.12, h * 0.2, '#8a5a32'); P.line(x + w * 0.5, y + h * 0.82, x + w * 0.5, y + h * 0.95, '#f0c35a', 0.025); P.line(x + w * 0.46, y + h * 0.9, x + w * 0.54, y + h * 0.9, '#f0c35a', 0.025);
+  },
+  'd-estrella-belen'(P, x, y, w, h) {
+    P.rect(x, y, w, h, P.vgrad(y, y + h, '#3a3f86', '#1c2550'));
+    P.star(x + w * 0.55, y + h * 0.72, 0.1, '#ffd95e'); P.line(x + w * 0.55, y + h * 0.62, x + w * 0.45, y + h * 0.3, 'rgba(255,217,94,0.5)', 0.02);
+    for (let i = 0; i < 4; i++) P.rect(x + w * (0.1 + i * 0.2), y, w * 0.14, h * (0.18 + (i % 2) * 0.08), '#2a3068');
+  },
+};
+const FRAME_BG = { 'd-estrella-belen': '#1c2550', 'd-arca': '#cdeeff', 'd-maria': '#e8f0ff', 'd-parroquia': '#cdeeff' };
+export function skyFor(d = new Date()) {
+  const m = d.getHours() * 60 + d.getMinutes();
+  if (m >= 330 && m < 420) return 'amanecer';      // 5:30 a 7:00
+  if (m >= 420 && m < 1050) return 'dia';          // 7:00 a 17:30
+  if (m >= 1050 && m < 1140) return 'atardecer';   // 17:30 a 19:00
+  return 'noche';
+}
+const SKIES = {
+  amanecer: { sky: ['#ffd6a8', '#9fd2f5'], sun: '#ffb347', sunY: 0.32, cloud: '#ffe4ec', hill: '#93cf86' },
+  atardecer: { sky: ['#ff9f6b', '#8a73cf'], sun: '#ff8c3a', sunY: 0.3, cloud: '#ffc4d6', hill: '#7fb57a' },
+};
+// Ventana con marco, cielo y cortinas. day = false pinta la noche; si no se dice, sigue la hora (SKY).
+function windowArt(P, x, y, w, h, { frame = '#ffffff', curtain = null, day = null } = {}) {
+  const sky = day === false ? 'noche' : day === true ? 'dia' : SKY;
   P.rect(x - 0.09, y - 0.09, w + 0.18, h + 0.18, frame, 0.1);
-  P.rect(x, y, w, h, day ? P.vgrad(y, y + h, '#d8f1ff', '#7cc8f5') : P.vgrad(y, y + h, '#3a3f86', '#1c2550'), 0.05);
-  if (day) {
+  const S = SKIES[sky];
+  P.rect(x, y, w, h, sky === 'dia' ? P.vgrad(y, y + h, '#d8f1ff', '#7cc8f5') : S ? P.vgrad(y, y + h, S.sky[0], S.sky[1]) : P.vgrad(y, y + h, '#3a3f86', '#1c2550'), 0.05);
+  if (S) {
+    P.circ(x + w * (sky === 'amanecer' ? 0.3 : 0.7), y + h * S.sunY, 0.15, S.sun);
+    for (const [cx, cy, s] of [[0.62, 0.68, 0.9], [0.24, 0.8, 0.7]]) { P.circ(x + w * cx, y + h * cy, 0.1 * s, S.cloud); P.circ(x + w * cx + 0.11 * s, y + h * cy + 0.03, 0.08 * s, S.cloud); P.circ(x + w * cx - 0.1 * s, y + h * cy - 0.01, 0.07 * s, S.cloud); }
+    P.ell(x + w * 0.5, y + 0.02, w * 0.6, 0.14, S.hill);
+  } else if (sky === 'dia') {
     P.circ(x + w * 0.74, y + h * 0.72, 0.13, '#ffd95e');
     for (const [cx, cy, s] of [[0.28, 0.6, 1], [0.6, 0.3, 0.8]]) { P.circ(x + w * cx, y + h * cy, 0.11 * s, '#fff'); P.circ(x + w * cx + 0.12 * s, y + h * cy + 0.03, 0.09 * s, '#fff'); P.circ(x + w * cx - 0.11 * s, y + h * cy - 0.01, 0.08 * s, '#fff'); }
     P.ell(x + w * 0.5, y + 0.02, w * 0.6, 0.14, '#a8e08c');
@@ -73,9 +128,10 @@ const WALLS = {
     P.rect(-4.5, 0, 9, 6.4, P.vgrad(0, 6.4, '#ffd3ad', '#ffe6cc'));
     for (let x = -4.5; x < 4.5; x += 0.5) P.rect(x, 0, 0.25, 6.4, 'rgba(255,255,255,0.16)');
     baseboard(P);
-    windowArt(P, -1.42, 2.2, 1.2, 1.15, { curtain: '#ff9db5' });
-    frameArt(P, 0.2, 2.55, 0.72, 0.62, '#cdeeff', () => { P.circ(0.72, 3.0, 0.08, '#ffd95e'); P.ell(0.45, 2.58, 0.36, 0.2, '#6cc070'); P.ell(0.78, 2.56, 0.26, 0.14, '#a8e08c'); });
-    frameArt(P, 1.1, 2.3, 0.44, 0.52, '#fff1f4', () => P.emoji('❤️', 1.32, 2.56, 0.28));
+    windowArt(P, -1.42, 2.2, 1.2, 1.15, { curtain: decorItem(DECO.cortinas)?.color || '#ff9db5' });
+    const big = PAINTINGS[DECO.cuadro] ? DECO.cuadro : 'd-paisaje';
+    frameArt(P, 0.2, 2.55, 0.72, 0.62, FRAME_BG[big] || '#cdeeff', () => PAINTINGS[big](P, 0.2, 2.55, 0.72, 0.62));
+    frameArt(P, 1.1, 2.3, 0.44, 0.52, '#fff1f4', () => P.emoji(decorItem(DECO.cuadrito)?.emoji || '❤️', 1.32, 2.56, 0.28));
     frameArt(P, 1.08, 3.02, 0.36, 0.32, '#fff6dd', () => P.emoji('⭐', 1.26, 3.18, 0.2));
     // estante con libros (pantallas anchas)
     P.rect(-3.9, 2.3, 1.7, 0.07, '#c08a57', 0.02);
@@ -165,8 +221,21 @@ function floorTiles(F, size, c1, c2) {
 const FLOORS = {
   sala(F) {
     planks(F, '#e2b582', '#e8be8e');
-    F.circ(0, -0.1, 1.75, '#ff8a5c'); F.circ(0, -0.1, 1.55, '#fff3e2'); F.circ(0, -0.1, 1.3, '#ffd3ad');
-    for (let i = 0; i < 12; i++) F.circ(Math.cos(i * 0.5236) * 1.42, -0.1 + Math.sin(i * 0.5236) * 1.42, 0.07, '#ff8a5c');
+    const rug = DECO.alfombra || 'd-redonda';
+    if (rug === 'd-arcoiris') {
+      ['#ff6b6b', '#ff9f43', '#ffd95e', '#6cc070', '#5aa9ff', '#9b7be8', '#fff3e2'].forEach((c, i) => F.circ(0, -0.1, 1.75 - i * 0.2, c));
+    } else if (rug === 'd-estrellas') {
+      F.circ(0, -0.1, 1.75, '#ffd95e'); F.circ(0, -0.1, 1.62, '#2a3068');
+      for (let i = 0; i < 14; i++) { const a = i * 0.4488, r = 0.5 + (i % 3) * 0.38; F.star(Math.cos(a) * r, -0.1 + Math.sin(a) * r, 0.11, i % 2 ? '#ffd95e' : '#ffffff'); }
+    } else if (rug === 'd-andina') {
+      F.rect(-1.7, -1.2, 3.4, 2.2, '#c0392b', 0.1);
+      const cols = ['#ffd95e', '#2f8f48', '#ffffff', '#ff8a5c', '#5aa9ff'];
+      for (let r = 0; r < 5; r++) { const z = -1.05 + r * 0.42; F.rect(-1.6, z, 3.2, 0.14, cols[r]); for (let k = 0; k < 16; k++) F.rect(-1.55 + k * 0.2, z + 0.18, 0.1, 0.1, cols[(r + 2) % 5]); }
+      F.rect(-1.7, -1.2, 3.4, 0.08, '#7a2318'); F.rect(-1.7, 0.92, 3.4, 0.08, '#7a2318');
+    } else {
+      F.circ(0, -0.1, 1.75, '#ff8a5c'); F.circ(0, -0.1, 1.55, '#fff3e2'); F.circ(0, -0.1, 1.3, '#ffd3ad');
+      for (let i = 0; i < 12; i++) F.circ(Math.cos(i * 0.5236) * 1.42, -0.1 + Math.sin(i * 0.5236) * 1.42, 0.07, '#ff8a5c');
+    }
   },
   cocina(F) {
     floorTiles(F, 0.7, '#fff6e2', '#d8f1e4');
@@ -231,11 +300,24 @@ export function buildRoom(THREE, id) {
   const box = (w, hh, d) => new THREE.BoxGeometry(w, hh, d);
 
   // Pared (sin luz: conserva los colores pintados) y piso (recibe la sombra de la palomita).
-  const wallMat = new THREE.MeshBasicMaterial({ map: tex(WALL_W * WU, WALL_H * WU, g => WALLS[id](painter(g, WU, -WALL_W / 2, WALL_H))) });
+  // La pared se vuelve a pintar cuando cambia la hora del día (cielo de las ventanas).
+  const wallCanvas = document.createElement('canvas'); wallCanvas.width = WALL_W * WU; wallCanvas.height = WALL_H * WU;
+  const paintWall = sky => {
+    const prev = SKY; SKY = sky || SKY;
+    const g = wallCanvas.getContext('2d'); g.clearRect(0, 0, wallCanvas.width, wallCanvas.height);
+    WALLS[id](painter(g, WU, -WALL_W / 2, WALL_H));
+    SKY = prev;
+  };
+  paintWall(SKY);
+  const wallTex = new THREE.CanvasTexture(wallCanvas); wallTex.colorSpace = THREE.SRGBColorSpace; wallTex.anisotropy = 4;
+  disposables.push(wallTex);
+  const wallMat = new THREE.MeshBasicMaterial({ map: wallTex });
   const wall = new THREE.Mesh(new THREE.PlaneGeometry(WALL_W, WALL_H), wallMat);
   wall.position.set(0, WALL_H / 2, WALL_Z);
   group.add(wall);
-  const floorMat = new THREE.MeshStandardMaterial({ roughness: 1, map: tex(FLOOR_W * FU, FLOOR_D * FU, g => {
+  const floorCanvas = document.createElement('canvas'); floorCanvas.width = FLOOR_W * FU; floorCanvas.height = FLOOR_D * FU;
+  const paintFloor = () => { const g = floorCanvas.getContext('2d'); g.clearRect(0, 0, floorCanvas.width, floorCanvas.height); drawFloor(g); };
+  const drawFloor = g => {
     // pintor con (x, z): arriba del canvas = fondo (z = -2.6)
     const F = painter(g, FU, -FLOOR_W / 2, 0);
     const X = F.X, Zp = z => (z + 2.6) * FU;
@@ -245,7 +327,11 @@ export function buildRoom(THREE, id) {
     F.ell = (x, z, rx, rz, fill) => { g.fillStyle = fill; g.beginPath(); g.ellipse(X(x), Zp(z), rx * FU, rz * FU, 0, 0, 6.2832); g.fill(); };
     F.star = (x, z, r, fill) => { g.fillStyle = fill; g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * 0.45 : r; g.lineTo(X(x) + Math.cos(a) * q * FU, Zp(z) + Math.sin(a) * q * FU); } g.closePath(); g.fill(); };
     FLOORS[id](F);
-  }) });
+  };
+  paintFloor();
+  const floorTex = new THREE.CanvasTexture(floorCanvas); floorTex.colorSpace = THREE.SRGBColorSpace; floorTex.anisotropy = 4;
+  disposables.push(floorTex);
+  const floorMat = new THREE.MeshStandardMaterial({ roughness: 1, map: floorTex });
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_W, FLOOR_D), floorMat);
   floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0, WALL_Z + FLOOR_D / 2); floor.receiveShadow = true;
   group.add(floor);
@@ -254,18 +340,60 @@ export function buildRoom(THREE, id) {
   const props = [];
   const prop = (mesh, name) => { mesh.userData.prop = name; props.push(mesh); return mesh; };
   const anim = [];            // funciones (dt, t) de animación del cuarto
-  const room = { id, group, props, light: ROOM_LIGHT[id], lightsOn: true, candleOn: false };
+  const room = { id, group, props, light: ROOM_LIGHT[id], lightsOn: true, candleOn: false, sky: SKY };
+  room.setSky = sky => { if (!sky || room.sky === sky) return; room.sky = sky; paintWall(sky); wallTex.needsUpdate = true; };
+  // Decoración (solo cambia el Nido): vuelve a pintar la pared y el piso con lo elegido.
+  room.decoKey = '';
+  room.setDecor = deco => {
+    const key = JSON.stringify(deco || {});
+    if (key === room.decoKey) return;
+    room.decoKey = key;
+    if (id !== 'sala') return;
+    const prev = DECO; DECO = { ...(deco || {}) };
+    paintWall(room.sky); wallTex.needsUpdate = true;
+    paintFloor(); floorTex.needsUpdate = true;
+    room.setPlant?.(DECO.planta);
+    DECO = prev;
+  };
 
   if (id === 'sala') {
-    // pelota
+    // pelota (se toca para que rebote, o se arrastra y se lanza: la palomita la devuelve con la cabeza)
     const ball = prop(add(sphere(0.25), mat(0xff8a5c), -1.18, 0.25, -0.55), 'ball');
     add(new THREE.TorusGeometry(0.25, 0.035, 8, 24), mat(0xffffff), 0, 0, 0, { parent: ball, r: [Math.PI / 2, 0, 0.5] });
     let bounce = 0;
     room.poke = name => { if (name === 'ball') bounce = 1; };
-    anim.push((dt, t) => { if (bounce > 0) { bounce = Math.max(0, bounce - dt * 0.9); ball.position.y = 0.25 + Math.abs(Math.sin(bounce * 9.4)) * 0.7 * bounce; ball.rotation.z += dt * 6 * bounce; } });
-    // maceta
+    anim.push((dt, t) => { if (bounce > 0 && !room.ballBusy) { bounce = Math.max(0, bounce - dt * 0.9); ball.position.y = 0.25 + Math.abs(Math.sin(bounce * 9.4)) * 0.7 * bounce; ball.rotation.z += dt * 6 * bounce; } });
+    room.draggables = [{ id: 'ball', obj: ball, home: ball.position.clone(), homeRot: ball.rotation.clone(), lift: 0.1, throwable: true }];
+    // jardinera en la ventana: una flor por cada buena obra cumplida (hasta 7)
+    add(box(1.02, 0.15, 0.2), mat(0xc97b5a), -0.82, 2.07, -2.47, { shadow: false });
+    add(box(0.96, 0.03, 0.16), mat(0x7a4b2e), -0.82, 2.14, -2.47, { shadow: false });
+    const PETALS = [0xff9db5, 0xffd95e, 0xffffff, 0x9b7be8, 0xff8a5c, 0x7cc8f5, 0xff6f91];
+    const flowers = PETALS.map((c, i) => {
+      const f = new THREE.Group();
+      f.position.set(-0.4 - i * 0.135, 2.15, -2.45 + (i % 2) * 0.03);      // de derecha a izquierda: las primeras quedan a la vista
+      add(cyl(0.012, 0.012, 0.2, 6), mat(0x4f9a45), 0, 0.1, 0, { parent: f, shadow: false });
+      add(sphere(0.022), mat(0x6cc070), 0.03, 0.08, 0, { parent: f, s: [1.4, 0.6, 1], shadow: false });
+      for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; add(sphere(0.034), mat(c), Math.cos(a) * 0.04, 0.22 + Math.sin(a) * 0.04, 0, { parent: f, s: [1, 1, 0.5], shadow: false }); }
+      add(sphere(0.026), mat(0xffc94a), 0, 0.22, 0.012, { parent: f, shadow: false });
+      f.visible = false; f.userData.k = 1;
+      group.add(f);
+      return f;
+    });
+    room.setFlowers = n => {
+      flowers.forEach((f, i) => { const on = i < Math.min(7, n); if (on && !f.visible) { f.visible = true; f.userData.k = 0; } else if (!on) f.visible = false; });
+    };
+    anim.push((dt, t) => flowers.forEach((f, i) => { if (!f.visible) return; if (f.userData.k < 1) f.userData.k = Math.min(1, f.userData.k + dt * 1.6); const k = f.userData.k; const pop = k < 1 ? Math.sin(k * Math.PI / 2) * (1 + 0.25 * Math.sin(k * Math.PI)) : 1; f.scale.setScalar(pop * 1.45); f.rotation.z = Math.sin(t * 1.3 + i) * 0.05; }));
+    // maceta con la planta elegida (decoración)
     add(cyl(0.2, 0.15, 0.3), mat(0xc97b5a), 1.22, 0.15, -0.95);
-    for (const [x, y, z, s] of [[0, 0.5, 0, 1], [-0.16, 0.42, 0.04, 0.8], [0.17, 0.44, -0.02, 0.85]]) add(sphere(0.16), mat(s === 1 ? 0x6cc070 : 0x8fd16a), 1.22 + x, y, -0.95 + z, { s: [s * 0.75, s * 1.35, s * 0.75] });
+    const plants = {};
+    const plantGroup = key => { const g = new THREE.Group(); g.position.set(1.22, 0, -0.95); g.visible = false; group.add(g); plants[key] = g; return g; };
+    { const g = plantGroup('d-arbusto'); for (const [x, y, z, s] of [[0, 0.5, 0, 1], [-0.16, 0.42, 0.04, 0.8], [0.17, 0.44, -0.02, 0.85]]) add(sphere(0.16), mat(s === 1 ? 0x6cc070 : 0x8fd16a), x, y, z, { s: [s * 0.75, s * 1.35, s * 0.75], parent: g }); }
+    { const g = plantGroup('d-cactus'); add(cyl(0.09, 0.1, 0.5, 12), mat(0x3f9a52), 0, 0.52, 0, { parent: g }); add(cyl(0.05, 0.05, 0.2, 10), mat(0x3f9a52), -0.13, 0.55, 0, { parent: g, r: [0, 0, 0.9] }); add(cyl(0.05, 0.05, 0.18, 10), mat(0x3f9a52), 0.12, 0.62, 0, { parent: g, r: [0, 0, -0.9] }); add(sphere(0.04), mat(0xff6f91), 0, 0.79, 0, { parent: g }); }
+    { const g = plantGroup('d-girasoles'); [[-0.08, 0.62, 0.3], [0.1, 0.72, -0.3], [0, 0.54, 0]].forEach(([x, hh, r]) => { add(cyl(0.015, 0.015, hh, 6), mat(0x4f9a45), x, 0.3 + hh / 2, 0, { parent: g, r: [0, 0, r * 0.2] }); add(cyl(0.11, 0.11, 0.03, 16), mat(0xffc94a), x, 0.3 + hh, 0.02, { parent: g, r: [Math.PI / 2, 0, 0] }); add(cyl(0.05, 0.05, 0.035, 12), mat(0x7a4b2e), x, 0.3 + hh, 0.04, { parent: g, r: [Math.PI / 2, 0, 0] }); }); }
+    { const g = plantGroup('d-rosas'); add(sphere(0.18), mat(0x4f9a45), 0, 0.46, 0, { parent: g, s: [1, 0.9, 1] }); for (const [x, y, z] of [[0, 0.6, 0.08], [-0.12, 0.52, 0.1], [0.12, 0.54, 0.08], [0.05, 0.48, 0.16]]) add(sphere(0.055), mat(0xd8322e), x, y, z, { parent: g }); }
+    { const g = plantGroup('d-olivo'); add(cyl(0.025, 0.035, 0.42, 8), mat(0x8a5a32), 0, 0.5, 0, { parent: g }); for (const [x, y, z, s] of [[0, 0.78, 0, 1], [-0.13, 0.7, 0.03, 0.75], [0.13, 0.72, -0.02, 0.75]]) add(sphere(0.14), mat(0x8fa86a), x, y, z, { parent: g, s: [s, s * 0.75, s] }); for (const [x, y, z] of [[0.05, 0.7, 0.12], [-0.08, 0.66, 0.1]]) add(sphere(0.025), mat(0x3d4a2b), x, y, z, { parent: g }); }
+    room.setPlant = idp => { const k = plants[idp] ? idp : 'd-arbusto'; for (const [key, g] of Object.entries(plants)) g.visible = key === k; };
+    room.setPlant('d-arbusto');
     // cojín y cubos
     add(sphere(0.3), mat(0x9b7be8), -1.3, 0.12, -1.35, { s: [1.1, 0.4, 0.9] });
     add(box(0.22, 0.22, 0.22), mat(0xffc94a), 1.12, 0.11, -0.25, { r: [0, 0.4, 0] });
@@ -424,11 +552,55 @@ export function buildRoom(THREE, id) {
       room.light = on ? ROOM_LIGHT.dormitorio : ROOM_LIGHT.noche;
     };
   } else if (id === 'capilla') {
-    // mesita con mantel blanco, vela y florero
+    // mesita con mantel blanco, vela y florero; el frente y una cinta llevan el color del tiempo litúrgico
     add(box(0.9, 0.62, 0.55), mat(0xc08a57), 1.3, 0.31, -1.0);
     add(box(0.96, 0.05, 0.6), mat(0xffffff), 1.3, 0.645, -1.0);
-    add(box(0.5, 0.36, 0.02), mat(0xffffff), 1.3, 0.47, -0.715);
+    const litMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 }); disposables.push(litMat);
+    add(box(0.5, 0.36, 0.02), litMat, 1.3, 0.47, -0.715);
     add(box(0.5, 0.03, 0.022), mat(0xf0c35a), 1.3, 0.31, -0.714);
+    add(box(0.16, 0.012, 0.62), litMat, 1.3, 0.674, -1.0, { shadow: false });
+    add(box(0.16, 0.2, 0.012), litMat, 1.3, 0.575, -0.694, { shadow: false });
+    // corona de Adviento (se ve en Adviento): 3 velas moradas y una rosada
+    const wreath = new THREE.Group(); wreath.position.set(1.34, 0.68, -0.86); wreath.visible = false; group.add(wreath);
+    add(new THREE.TorusGeometry(0.13, 0.04, 8, 24), mat(0x2f7a3a), 0, 0.02, 0, { parent: wreath, r: [Math.PI / 2, 0, 0] });
+    for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; add(sphere(0.022), mat(k % 3 ? 0x3f9a52 : 0xd8322e), Math.cos(a) * 0.13, 0.05, Math.sin(a) * 0.13, { parent: wreath, shadow: false }); }
+    const wreathFlames = [];
+    const smallFlameMat = new THREE.SpriteMaterial({ transparent: true, depthWrite: false, map: tex(32, 48, g => {
+      const gr = g.createRadialGradient(16, 31, 1, 16, 28, 17); gr.addColorStop(0, '#fffbe0'); gr.addColorStop(0.4, '#ffd95e'); gr.addColorStop(1, 'rgba(255,140,30,0)');
+      g.fillStyle = gr; g.beginPath(); g.moveTo(16, 2); g.bezierCurveTo(29, 22, 27, 44, 16, 45); g.bezierCurveTo(5, 44, 3, 22, 16, 2); g.fill();
+    }) });
+    disposables.push(smallFlameMat);
+    [[0, 0x6b3fa0], [1, 0x6b3fa0], [2, 0xe48fb3], [3, 0x6b3fa0]].forEach(([k, c]) => {
+      const a = -Math.PI / 2 + k * Math.PI / 2;
+      const x = Math.cos(a) * 0.13, z = Math.sin(a) * 0.13;
+      add(cyl(0.02, 0.022, 0.16, 10), mat(c), x, 0.11, z, { parent: wreath });
+      const fl = new THREE.Sprite(smallFlameMat); fl.position.set(x, 0.23, z); fl.scale.set(0.06, 0.09, 1); fl.visible = false;
+      wreath.add(fl); wreathFlames.push(fl);
+    });
+    // Nacimiento (del 16 de diciembre al 6 de enero): figuritas que se agregan una por día
+    const crib = new THREE.Group(); crib.position.set(-0.9, 0, -0.25); group.add(crib);
+    const spriteOf = (emoji, size) => {
+      const m = new THREE.SpriteMaterial({ transparent: true, depthWrite: false, map: tex(128, 128, g => {
+        g.font = '104px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(emoji, 64, 70);
+      }) });
+      disposables.push(m);
+      const sp = new THREE.Sprite(m); sp.scale.set(size, size, 1); sp.center.set(0.5, 0.08);
+      return sp;
+    };
+    let cribKey = '';
+    room.setCrib = list => {
+      const key = (list || []).map(x => x.emoji).join('');
+      if (key === cribKey) return;
+      cribKey = key;
+      while (crib.children.length) crib.remove(crib.children[0]);
+      (list || []).forEach((x, i) => { const sp = spriteOf(x.emoji, x.size || 0.3); sp.position.set(x.x ?? (i % 5) * 0.22 - 0.44, x.y ?? 0, x.z ?? -Math.floor(i / 5) * 0.2); crib.add(sp); });
+    };
+    room.setLiturgy = ({ color = '#ffffff', candles = 0, advent = false } = {}) => {
+      litMat.color.set(color);
+      wreath.visible = !!advent;
+      wreathFlames.forEach((f, i) => { f.visible = !!advent && i < candles; });
+    };
+    anim.push((dt, t) => { if (wreath.visible) wreathFlames.forEach((f, i) => { if (f.visible) { const k = 1 + Math.sin(t * 12 + i * 2) * 0.08; f.scale.set(0.06 * k, 0.09 * (2 - k), 1); } }); });
     const candle = prop(add(cyl(0.055, 0.06, 0.34, 14), mat(0xfff6dd), 1.1, 0.84, -1.0), 'candle');
     add(cyl(0.09, 0.1, 0.03, 14), mat(0xf0c35a), 1.1, 0.685, -1.0);
     const flameMat = new THREE.SpriteMaterial({ transparent: true, depthWrite: false, map: tex(64, 96, g => {
@@ -454,6 +626,10 @@ export function buildRoom(THREE, id) {
   room.setLights ||= () => {};
   room.setCandle ||= () => {};
   room.poke ||= () => {};
+  room.setFlowers ||= () => {};
+  room.setPlant ||= () => {};
+  room.setLiturgy ||= () => {};
+  room.setCrib ||= () => {};
   room.update = (dt, t) => { for (const f of anim) f(dt, t); };
   room.dispose = () => { for (const d of disposables) d.dispose?.(); };
   return room;

@@ -27,6 +27,8 @@ register('grandes', () => import('./screens/grandes.js'));
 register('perfiles', () => import('./screens/perfiles.js'));
 register('dudas', () => import('./screens/dudas.js'));
 register('grandia', () => import('./screens/grandia.js'));
+register('rosario', () => import('./screens/rosario.js'));
+register('ratito', () => import('./screens/ratito.js'));
 setHome('home');
 
 const TICK_SECONDS = 5;

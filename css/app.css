@@ -376,3 +376,20 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; line-height: 1.
 .game-hint { top: calc(var(--safe-t) + 64px); }
 .game-hint > span { font-size: var(--fs-md); padding: 7px 14px; background: rgba(255, 255, 255, 0.9); }
 @media (max-width: 380px) { .game-hud { gap: 5px; } .game-hud .chip { padding-left: 8px; padding-right: 8px; } }
+/* «¡Acepto la misión!» (juegos y parábolas) */
+.mission-accept { appearance: none; border: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; min-height: 44px; padding: 8px 16px; border-radius: var(--r-pill);
+  background: var(--leaf-btn); color: var(--white); font-family: var(--font-display); font-weight: 800; font-size: var(--fs-md); box-shadow: 0 4px 0 var(--leaf-btn-edge); }
+.mission-accept:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--leaf-btn-edge); }
+.mission-accept.is-on { background: #e6f6e8; color: var(--leaf-btn-edge); box-shadow: none; cursor: default; }
+.mission-accept:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+/* Manito que muestra el gesto de cada juego (nivel 1) */
+.game-hand { position: absolute; left: 50%; top: 56%; transform: translate(-50%, -50%); z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+.game-hand__icon { font-size: 3.2rem; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25)); }
+.game-hand__text { padding: 6px 14px; border-radius: var(--r-pill); background: rgba(61, 43, 36, 0.82); color: var(--white); font-family: var(--font-display); font-weight: 800; }
+.game-hand--tap .game-hand__icon { animation: hand-tap 0.9s ease-in-out infinite; }
+.game-hand--hold .game-hand__icon { animation: hand-hold 1.6s ease-in-out infinite; }
+.game-hand--drag .game-hand__icon { animation: hand-drag 1.6s ease-in-out infinite; }
+@keyframes hand-tap { 0%, 100% { transform: translateY(0) scale(1); } 45% { transform: translateY(10px) scale(0.92); } }
+@keyframes hand-hold { 0%, 15% { transform: translateY(0); } 30%, 80% { transform: translateY(10px) scale(0.92); } 100% { transform: translateY(0); } }
+@keyframes hand-drag { 0%, 100% { transform: translateX(-60px); } 50% { transform: translateX(60px); } }
+@media (prefers-reduced-motion: reduce) { .game-hand__icon { animation: none !important; } }

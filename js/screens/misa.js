@@ -2,7 +2,7 @@
 //   go('misa')
 import * as state from '../core/state.js';
 import * as tts from '../core/tts.js';
-import { h, clear, button } from '../core/ui.js';
+import { h, clear, button, toast } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { back } from '../core/router.js';
 import * as R from '../core/reminders.js';
@@ -13,7 +13,10 @@ const TABS = [
   { id: 'practica', label: 'Practicar', icon: '🗣️' },
   { id: 'comulgar', label: 'Comulgar', icon: '🍞' },
   { id: 'preguntas', label: 'Preguntas', icon: '🎯' },
+  { id: 'pasaporte', label: 'Pasaporte', icon: '🎫' },
 ];
+const MASS_COLORS = { morado: '#6b3fa0', blanco: '#f4efe2', verde: '#3f8f4e', rojo: '#c0392b', rosado: '#e48fb3' };
+const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const GROUPS = [
   { key: 'inicio', short: 'Inicio', title: 'Ritos iniciales', sub: 'Nos reunimos y pedimos perdón', icon: '🔔', c: '#4aa3e0', bg: '#e3f3ff' },
   { key: 'palabra', short: 'Palabra', title: 'Liturgia de la Palabra', sub: 'Dios nos habla', icon: '📖', c: '#3f9a52', bg: '#e4f6e2' },
@@ -66,7 +69,7 @@ export async function mount(el, params = {}) {
     tabs.select(id);
     sh.scroll.setAttribute('role', 'tabpanel');
     sh.scroll.setAttribute('aria-labelledby', `ct-tab-${id}`);
-    sh.fill({ pasos: viewPasos, practica: viewPractica, comulgar: viewComulgar, preguntas: viewPreguntas }[id]());
+    sh.fill({ pasos: viewPasos, practica: viewPractica, comulgar: viewComulgar, preguntas: viewPreguntas, pasaporte: viewPasaporte }[id]());
   }
   const goTab = (id, label, icon = '▶️') => button(label, { kind: 'sun', block: true, icon, sound: 'pop', onClick: () => { show(id); tabs.button(id)?.focus({ preventScroll: true }); } });
 
@@ -286,6 +289,52 @@ export async function mount(el, params = {}) {
         h('h2', null, '¿Qué aprendiste?'),
         h('p', null, state.quizDone('misa:quiz') ? 'Ya ganaste el premio. ¡Repasa cuando quieras!' : 'Responde todo bien y gana un premio.')),
       q || soon('Muy pronto', 'Las preguntas están por llegar.', '🎯'),
+    ];
+  }
+
+  // ── Mi pasaporte de la Misa del domingo ──
+  function viewPasaporte() {
+    const log = state.massLog();
+    const keys = Object.keys(log).sort();
+    const today = new Date();
+    // Casillas: los domingos desde el primer sello (o desde hace 6 semanas) hasta la Primera Comunión (o 6 semanas más).
+    const sun = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - x.getDay()); return x; };
+    const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    let start = sun(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 42));
+    if (keys.length) { const [y, m, d] = keys[0].split('-').map(Number); const f = new Date(y, m - 1, d); if (f < start) start = sun(f); }
+    const ev = R.nextEvent('comunion');
+    let end = sun(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 42));
+    if (ev && ev.start > end) end = sun(ev.start);
+    const cells = [];
+    for (let d = new Date(start); d <= end && cells.length < 60; d.setDate(d.getDate() + 7)) cells.push(new Date(d));
+    const n = keys.length;
+    const nextPrize = 4 - (n % 4);
+    const key = state.massKey();
+    return [
+      h('div', { class: 'ct-intro' }, h('h2', null, 'Mi pasaporte de la Misa'),
+        h('p', null, 'Cada domingo que vas a Misa, tu palomita pone un sello. La Misa de la tarde del sábado también cuenta.')),
+      h('div', { class: 'mp-sum' }, h('span', { class: 'chip' }, `⛪ ${n} ${n === 1 ? 'Misa' : 'Misas'}`),
+        h('span', { class: 'chip' }, `🎁 Faltan ${nextPrize} para el próximo premio`),
+        ev ? h('span', { class: 'chip' }, `🕊️ Primera Comunión: ${R.fmtDate(ev.start)}`) : null),
+      h('div', { class: 'mp-grid' }, cells.map(d => {
+        const k = iso(d), v = log[k], future = d > today, isCom = ev && iso(ev.start) === k;
+        const c = h('div', { class: `mp-cell${v ? ' is-on' : ''}${future ? ' is-future' : ''}${isCom ? ' is-com' : ''}`, title: k },
+          h('span', { class: 'mp-cell__d' }, `${d.getDate()} ${MONTHS[d.getMonth()]}`),
+          h('span', { class: 'mp-cell__s', 'aria-hidden': 'true' }, v ? '⛪' : isCom ? '🕊️' : ''),
+          v?.ok ? h('span', { class: 'mp-cell__ok', 'aria-label': 'Confirmado por un grande' }, '✔') : null);
+        if (v?.color && MASS_COLORS[v.color]) c.style.setProperty('--mc', MASS_COLORS[v.color]);
+        c.setAttribute('aria-label', `Domingo ${d.getDate()} de ${MONTHS[d.getMonth()]}: ${v ? 'fui a Misa' : future ? 'todavía no llega' : 'sin sello'}`);
+        return c;
+      })),
+      key && !state.massStamped(key) ? button('¡Hoy fui a Misa!', { kind: 'leaf', block: true, icon: '⛪', onClick: () => {
+        state.logMass(key, {});
+        sfx('sticker');
+        const total = Object.keys(state.massLog()).length;
+        if (total % 4 === 0 && !state.owns('collar-cruz')) { state.own('collar-cruz'); toast('¡Premio! Crucecita de madera para tu palomita', { icon: '✝️', ms: 3200 }); }
+        else toast('¡Sello en tu pasaporte!', { icon: '⛪' });
+        show('pasaporte');
+      } }) : null,
+      h('p', { class: 'pq-small' }, '✔ = un grande lo confirmó en «Para grandes». Puedes mostrarle tu pasaporte a tu catequista.'),
     ];
   }
 

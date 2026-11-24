@@ -3,6 +3,7 @@
 //
 //   grantPack(n = 1, reason = '')         regala n sobres (reason: texto corto para el aviso, p. ej. 'Regalo del día')
 //   grantPackOnce(key, n, reason)         igual, pero una sola vez por clave (p. ej. 'lesson:creacion'); true si se dio
+//   grantSticker(id)                       regala una figurita concreta → { sticker, isNew, prizes }
 //   packsAvailable()                       sobres sin abrir
 //   openPack()                             abre un sobre → { cards: [{ sticker, isNew, count }], prizes } o null
 //   buyPack()                              compra un sobre con semillas → true/false
@@ -144,6 +145,19 @@ export function openPack(rand = Math.random) {
   emit('packs', { packs: S.packs, delta: -1 });
   emit('opened', { cards, prizes });
   return { cards, prizes };
+}
+
+// Regala una figurita concreta (por ejemplo la de la Primera Comunión, el gran día). → { sticker, isNew, prizes } o null
+export function grantSticker(id) {
+  const s = BY_ID.get(id);
+  if (!s) return null;
+  const isNew = !has(id);
+  S.owned[id] = count(id) + 1;
+  if (isNew) S.unseen[id] = 1;
+  const prizes = checkPrizes();
+  save();
+  emit('change', { id });
+  return { sticker: s, isNew, prizes };
 }
 
 export function tradeDuplicates(rand = Math.random) {

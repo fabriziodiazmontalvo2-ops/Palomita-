@@ -67,3 +67,7 @@ span.shop-card__art { cursor: default; }
 .wel__list div { display: flex; flex-direction: column; line-height: 1.2; }
 .wel__list b { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-md); }
 .wel__list span { font-size: var(--fs-sm); color: var(--ink-soft); }
+.shop-try { appearance: none; border: 0; cursor: pointer; margin-top: 2px; padding: 4px 10px; min-height: 32px; border-radius: var(--r-pill); background: #efe8ff; color: var(--grape-deep);
+  font-family: var(--font-display); font-weight: 800; font-size: var(--fs-xs); }
+.shop-lock--earn { font-size: var(--fs-xs); line-height: 1.2; text-align: center; color: var(--grape-deep); }
+.shop-see { align-self: center; margin-bottom: 10px; }

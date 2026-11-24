@@ -404,6 +404,7 @@ export function recordLevel(id, n, { won = false, stars = 0, score = 0 } = {}) {
   g.st = st.slice(0, n - 1) + best + st.slice(n);
   const firstClear = won && prev === 0;
   let unlockedNow = false;
+  if (won) dailyOnce('level');     // para «Mi día»
   if (won && n >= (g.lv || 1) && n < MAX_LEVEL) { g.lv = n + 1; unlockedNow = true; }
   if (won && !g.sticker) g.sticker = true;
   let medal = null;
@@ -425,6 +426,7 @@ export function totalStars() {
 export function isRead(id) { return !!S.read[id]; }
 export function markRead(id) {
   dailyOnce('read:' + id);        // para «Mi día»: leyó algo hoy
+  if (String(id).startsWith('lesson:')) dailyOnce('learn');
   if (S.read[id]) return false;
   S.read[id] = Date.now();
   logActivity(1);
@@ -437,6 +439,7 @@ export function quizDone(id) { return !!S.quiz[id]; }
 export function quizAt(id) { const v = S.quiz[id]; return typeof v === 'number' ? v : null; }
 export function markQuiz(id) {
   if (S.quiz[id]) return false;
+  dailyOnce('learn');
   S.quiz[id] = Date.now();
   logActivity(2);
   save();

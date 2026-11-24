@@ -20,6 +20,11 @@
 //   world.setBed(on, { instant })      la palomita se acuesta en su camita (dormitorio) y se tapa con la frazada
 //   world.setDoveVisible(bool)         la palomita no está en este cuarto (p. ej. duerme en el dormitorio)
 //   world.water(segundos)              abre la regadera un ratito (sin moverla)
+//   world.setSky('amanecer' | 'dia' | 'atardecer' | 'noche')   cielo de las ventanas según la hora real
+//   world.setFlowers(n)                flores en la jardinera del Nido (buenas obras cumplidas, hasta 7)
+//   world.setLiturgy({ color, candles, advent }) · world.setCrib([{ emoji, x, y, z, size }])   capilla según el año litúrgico
+//   world.setDecor({ cuadro, cuadrito, planta, alfombra, cortinas })   decoración del Nido (ids de js/data/decor.js)
+//   Pelota del Nido: se arrastra y se lanza; la palomita la devuelve con la cabeza → 'ballHit' { n } (cabezazos seguidos)
 //   Objetos que se arrastran (baño: 'shower' regadera, 'soap' jabón):
 //     'grab' { id } · 'dragMove' { id, x, y, dist, part } · 'drop' { id, moved } · 'tapProp' { id } si solo se tocó
 //     'wet' { amount, top } mientras el chorro moja a la palomita · 'waterStop' cuando se cierra el agua
@@ -80,8 +85,15 @@ export function createWorld(canvas) {
   // ── Habitaciones (se construyen la primera vez que se visitan) ──
   const rooms = new Map();
   let room = null;
+  let skyNow = 'dia', flowersNow = 0, liturgyNow = null, cribNow = null, decorNow = null;
   function getRoom(id) {
-    if (!rooms.has(id)) { const r = buildRoom(THREE, id); r.group.visible = false; scene.add(r.group); rooms.set(id, r); }
+    if (!rooms.has(id)) {
+      const r = buildRoom(THREE, id); r.group.visible = false; scene.add(r.group); rooms.set(id, r);
+      r.setSky(skyNow); r.setFlowers(flowersNow);
+      if (decorNow) r.setDecor(decorNow);
+      if (liturgyNow) r.setLiturgy(liturgyNow);
+      if (cribNow) r.setCrib(cribNow);
+    }
     return rooms.get(id);
   }
   const targetLight = { hemiSky: new THREE.Color(), hemiGround: new THREE.Color(), hemiI: 1.8, sun: new THREE.Color(), sunI: 1.9 };
@@ -215,6 +227,8 @@ export function createWorld(canvas) {
     if (name === 'beak') dove.anchors.beak.getWorldPosition(v);
     else if (name === 'head') dove.anchors.head.getWorldPosition(v);
     else if (name === 'feet') v.set(0, 0.02, 0.3);
+    else if (name === 'wingL' || name === 'wingR') dove.group.localToWorld(v.set(name === 'wingL' ? 0.62 : -0.62, 1.0, 0.18));
+    else if (name === 'tail') dove.group.localToWorld(v.set(0, 0.7, -0.6));
     else v.set(0, 0.95, 0.6);
     v.project(camera);
     return { x: (v.x * 0.5 + 0.5) * cssW, y: (-v.y * 0.5 + 0.5) * cssH };
@@ -246,7 +260,7 @@ export function createWorld(canvas) {
     ray.setFromCamera(toNdc(x, y), camera);
     const hits = ray.intersectObjects(list.map(d => d.obj), true);
     if (!hits.length) return null;
-    for (let o = hits[0].object; o; o = o.parent) { const d = list.find(q => q.obj === o); if (d) return d; }
+    for (let o = hits[0].object; o; o = o.parent) { const d = list.find(q => q.obj === o); if (d) return d.flight ? null : d; }
     return null;
   }
   function aimDrag(d, x, y) {
@@ -267,8 +281,57 @@ export function createWorld(canvas) {
     const d = ptr.drag; ptr.drag = null;
     if (!d) return false;
     d.held = false; d.target = null;
+    if (d.throwable) launch(d);
     emit('drop', { id: d.id, moved: ptr.moved });
     return true;
+  }
+  // ── Pelota: si se suelta con impulso vuela hacia la palomita, que la devuelve con un cabezazo ──
+  let ballHits = 0, ballHitT = 0;
+  const flightTo = new THREE.Vector3();
+  let lastThrow = null;         // { n, speed } del último lanzamiento (para pruebas)
+  function launch(d) {
+    const tr = d.track || [];
+    const now = performance.now();
+    // Los últimos movimientos del dedo antes de soltar (si el dedo ya estaba quieto, no es un lanzamiento).
+    const lastT = tr.length ? tr[tr.length - 1].t : 0;
+    const recent = now - lastT < 220 ? tr.filter(p => lastT - p.t < 300) : [];
+    lastThrow = { n: recent.length, total: tr.length, speed: 0, age: tr.length ? Math.round(now - lastT) : -1 };
+    let speed = 0;
+    if (recent.length >= 2) {
+      const a = recent[0], b = recent[recent.length - 1];
+      speed = Math.hypot(b.x - a.x, b.y - a.y) / Math.max(0.016, (b.t - a.t) / 1000);
+    }
+    lastThrow.speed = speed;
+    d.track = [];
+    if (!dove.group.visible || bedK > 0.05) return;
+    dove.anchors.head.getWorldPosition(flightTo);
+    // Se lanza con impulso, o se suelta cerquita de la palomita (se la «da»): ella la devuelve con la cabeza.
+    const near = Math.hypot(d.obj.position.x - flightTo.x, d.obj.position.y - flightTo.y) < 1.3;
+    if (speed < 1.0 && !near) return;
+    flightTo.y += 0.25 * growthNow; flightTo.z += 0.2;
+    d.flight = { t: 0, dur: 0.55, from: d.obj.position.clone(), to: flightTo.clone(), arc: 0.6, back: false };
+    if (room) room.ballBusy = true;
+    sfx('whoosh');
+  }
+  function stepFlight(d, dt) {
+    const f = d.flight;
+    f.t += dt;
+    const u = Math.min(1, f.t / f.dur);
+    d.obj.position.lerpVectors(f.from, f.to, u);
+    d.obj.position.y += f.arc * 4 * u * (1 - u);
+    d.obj.rotation.x += dt * 9; d.obj.rotation.z += dt * 5;
+    if (u < 1) return;
+    if (!f.back) {
+      // ¡Cabezazo! y la pelota vuelve a su lugar con un rebote
+      const t = performance.now();
+      ballHits = t - ballHitT < 6000 ? ballHits + 1 : 1; ballHitT = t;
+      dove.play('hop'); sfx('jump');
+      emit('ballHit', { n: ballHits });
+      d.flight = { t: 0, dur: 0.9, from: d.obj.position.clone(), to: d.home.clone(), arc: 1.1, back: true };
+    } else {
+      d.flight = null;
+      if (room) { room.ballBusy = false; room.poke('ball'); }
+    }
   }
   function onDown(e) {
     if (paused) return;
@@ -290,6 +353,8 @@ export function createWorld(canvas) {
     if (ptr.drag) {
       if (ptr.moved > 10) {
         aimDrag(ptr.drag, x, y);
+        // la velocidad del lanzamiento se mide con el dedo (no depende de cuántos cuadros dibuje el teléfono)
+        if (ptr.drag.throwable && ptr.drag.target) { const tr = (ptr.drag.track ||= []); tr.push({ t: performance.now(), x: ptr.drag.target.x, y: ptr.drag.target.y }); if (tr.length > 10) tr.shift(); }
         // lo que toca la palomita es el objeto (que va un poquito más arriba que el dedo), no el dedo
         let part = null;
         if (dove.group.visible && ptr.drag.target) {
@@ -308,7 +373,7 @@ export function createWorld(canvas) {
     if (ptr.drag) {
       const id = ptr.drag.id;
       releaseDrag();
-      if (!paused && e.type === 'pointerup' && ptr.moved <= 10) emit('tapProp', { id });
+      if (!paused && e.type === 'pointerup' && ptr.moved <= 10) { room?.poke(id); emit('tapProp', { id }); }
       return;
     }
     if (paused) return;
@@ -379,6 +444,7 @@ export function createWorld(canvas) {
     const k = 1 - Math.exp(-dt * 16), kb = 1 - Math.exp(-dt * 7);
     for (const d of draggables()) {
       const o = d.obj;
+      if (d.flight) { stepFlight(d, dt); continue; }
       if (d.held && d.target) {
         const vx = (d.target.x - o.position.x);
         o.position.lerp(d.target, k);
@@ -477,7 +543,7 @@ export function createWorld(canvas) {
     if (document.hidden || paused) { last = now; return; }
     if (now - modalCheck > 500) { modalCheck = now; modalOpen = !!document.querySelector('.modal-scrim'); }
     const idle = now - lastInput;
-    const busy = ptr.id !== null || waterTimer > 0 || arrival || growthT < 1;
+    const busy = ptr.id !== null || waterTimer > 0 || arrival || growthT < 1 || !!room?.ballBusy;
     const minGap = busy ? 0 : modalOpen ? 80 : idle > 120000 ? 64 : idle > 30000 ? 31 : 0;
     if (minGap && now - last < minGap) return;
     let dt = (now - last) / 1000; last = now;
@@ -500,6 +566,11 @@ export function createWorld(canvas) {
     setDoveVisible(v) { dove.group.visible = !!v; blob.visible = !!v && bedK < 0.05; },
     get doveVisible() { return dove.group.visible; },
     water(seconds = 3) { waterTimer = Math.max(waterTimer, seconds); },
+    setSky(sky) { skyNow = sky; for (const r of rooms.values()) r.setSky(sky); },
+    setFlowers(n) { flowersNow = n | 0; for (const r of rooms.values()) r.setFlowers(flowersNow); },
+    setLiturgy(o) { liturgyNow = o; for (const r of rooms.values()) r.setLiturgy(o); },
+    setCrib(list) { cribNow = list; for (const r of rooms.values()) r.setCrib(list); },
+    setDecor(deco) { decorNow = { ...(deco || {}) }; for (const r of rooms.values()) r.setDecor(decorNow); },
     // Dónde está en pantalla un objeto que se arrastra (px CSS), para pistas y pruebas.
     screenOf(id) {
       const d = draggables().find(q => q.id === id);
@@ -539,6 +610,7 @@ export function createWorld(canvas) {
     },
     stats() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; },
     get quality() { return gfx; },
+    get lastThrow() { return lastThrow; },
     setQuality,
     dispose() {
       window.removeEventListener('pointerdown', onAnyInput, true);

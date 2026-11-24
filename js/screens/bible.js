@@ -16,6 +16,7 @@ import { h, clear, button, iconButton, toast, meter, reduceMotion } from '../cor
 import { sfx } from '../core/audio.js';
 import { go, back } from '../core/router.js';
 import * as R from '../core/reminders.js';
+import { missionButton } from '../core/missions.js';
 import { sceneEl, SCENE_IDS, isFloating, hasOrb } from '../art/scenes.js';
 
 // ───────────────────────── Datos fijos de la pantalla ─────────────────────────
@@ -736,6 +737,7 @@ export async function mount(el, params = {}) {
             h('h3', null, deco('💛'), 'Para tu corazón'),
             h('ul', null, messages.map(m => h('li', null, m)))) : null,
           note('mission', '🌟', 'Tu misión de hoy', mission),
+          mission ? missionButton(mission, txt(p.title)) : null,
           note('pray', '🙏', 'Oración', p.prayer),
           ending({ readId: `parable:${p.id}`, quizKey: `parable:${p.id}`, quiz: p.quiz, what: 'esta lectura' }),
           play,

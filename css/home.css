@@ -165,3 +165,81 @@
 @keyframes home-aviso-in { from { transform: translateY(-8px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .home-aviso { animation: none; } }
 .home-side--figus.is-new::after { content: "✉️"; position: absolute; top: -8px; right: -6px; font-size: 0.95rem; line-height: 1; animation: home-zz 1.8s ease-in-out infinite; }
+
+/* ── Versión 1.3 ── */
+/* Mi día (reemplaza al botón del regalo): contador de tareas */
+.home-side--day { position: relative; }
+.home-side__count { position: absolute; top: -6px; left: -6px; min-width: 26px; height: 20px; padding: 0 5px; border-radius: var(--r-pill); background: var(--sun); color: var(--ink);
+  font-family: var(--font-display); font-weight: 800; font-size: 0.72rem; line-height: 20px; text-align: center; box-shadow: 0 2px 0 var(--sun-deep); }
+.md-modal .modal__body { display: flex; flex-direction: column; gap: 10px; }
+.md-lead { text-align: center; font-weight: 700; }
+.md-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.md-task { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 16px; background: #f8f4ec; }
+.md-task.is-done { background: #e6f6e8; }
+.md-task__icon { font-size: 1.7rem; flex: none; }
+.md-task__text { flex: 1; font-weight: 700; line-height: 1.25; }
+.md-task__ok { font-size: 1.3rem; }
+.md-task__go { appearance: none; border: 0; cursor: pointer; flex: none; min-height: 40px; padding: 6px 14px; border-radius: var(--r-pill); background: var(--sun); color: var(--ink);
+  font-family: var(--font-display); font-weight: 800; box-shadow: 0 3px 0 var(--sun-deep); }
+.md-task__go:active { transform: translateY(2px); box-shadow: none; }
+.md-gift { appearance: none; border: 0; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 8px 14px; border-radius: 16px; cursor: pointer;
+  background: linear-gradient(135deg, #ffe08a, #ffc94a); font-family: var(--font-display); font-weight: 800; color: var(--ink); box-shadow: 0 4px 0 var(--sun-deep); }
+.md-gift span:first-child { font-size: 1.4rem; }
+.md-gift.is-done { background: #f3eee6; box-shadow: none; cursor: default; color: var(--ink-soft); }
+
+/* Aviso de la Primera Comunión */
+.home-aviso--comunion { background: linear-gradient(135deg, #efe8ff, #ffe9b3); box-shadow: 0 4px 0 #c9b6f2, 0 8px 16px var(--shade); color: #4a2f8a; }
+
+/* La pestaña del cuarto que necesita se mueve; al tocar la barrita se señala */
+.home-tab.is-needed { animation: home-need 2.2s ease-in-out infinite; }
+.home-tab.is-pointed { animation: home-point 0.5s ease-in-out 4; box-shadow: 0 0 0 4px var(--sun); }
+@keyframes home-need { 0%, 82%, 100% { transform: none; } 86% { transform: translateY(-4px) rotate(-4deg); } 92% { transform: translateY(-4px) rotate(4deg); } }
+@keyframes home-point { 50% { transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .home-tab.is-needed, .home-tab.is-pointed { animation: none; } }
+
+/* Globito que se puede tocar para hacer algo (oración de la mañana o de la noche) */
+.home__bubble.has-action { box-shadow: 0 0 0 3px var(--sun), 0 6px 14px var(--shade); }
+
+/* Pasaporte de la Misa: colores */
+.mp-colors { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 10px; }
+.mp-color { appearance: none; border: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px; border-radius: 16px; background: #f8f4ec;
+  font-family: var(--font-display); font-weight: 800; color: var(--ink); }
+.mp-color__dot { width: 44px; height: 44px; border-radius: 50%; border: 3px solid rgba(61, 43, 36, 0.18); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.12); }
+.mp-color:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.mi-mission { text-align: center; font-family: var(--font-display); font-weight: 800; font-size: var(--fs-md); line-height: 1.35; padding: 10px 12px; border-radius: 16px; background: #fff4d6; }
+
+/* ¿A qué jugamos? */
+.pl-choices { display: flex; flex-direction: column; gap: 10px; }
+.pl-choice { appearance: none; border: 0; cursor: pointer; display: grid; grid-template-columns: 2.6rem 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center; text-align: left;
+  padding: 10px 12px; border-radius: 18px; background: #f8f4ec; color: var(--ink); box-shadow: 0 3px 0 var(--paper-edge); }
+.pl-choice > span:first-child { grid-row: span 2; font-size: 2rem; text-align: center; }
+.pl-choice b { font-family: var(--font-display); font-size: var(--fs-md); }
+.pl-choice > span:last-child { font-size: var(--fs-sm); color: var(--ink-soft); font-weight: 700; }
+.pl-choice:active { transform: translateY(2px); box-shadow: none; }
+
+/* Simón dice */
+.sm-box { position: absolute; left: 50%; top: calc(var(--safe-t) + 128px); transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 8px; pointer-events: none; }
+.sm-banner { padding: 8px 16px; border-radius: var(--r-pill); background: rgba(61, 43, 36, 0.86); color: var(--white); font-family: var(--font-display); font-weight: 800; font-size: var(--fs-md); white-space: nowrap; }
+.sm-exit { pointer-events: auto; appearance: none; border: 0; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; background: var(--white); color: var(--ink); font-size: 1rem; box-shadow: 0 3px 0 var(--paper-edge); }
+.sm-ring { position: absolute; z-index: 5; width: 74px; height: 74px; margin: -37px 0 0 -37px; border-radius: 50%; border: 5px solid var(--sun); pointer-events: none; animation: sm-ring 0.9s ease-out forwards; }
+.sm-ring--ok { border-color: var(--leaf); }
+.sm-ring--want { border-color: var(--coral); border-style: dashed; }
+@keyframes sm-ring { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.35); opacity: 0; } }
+
+/* Ropero: una tira baja para que la palomita quede a la vista */
+.rp { position: absolute; left: var(--gutter-l); right: var(--gutter-r); bottom: calc(var(--safe-b) + 152px); z-index: 6; display: flex; flex-direction: column; gap: 6px; padding: 8px 8px 6px;
+  border-radius: var(--r-lg); background: rgba(255, 250, 240, 0.95); box-shadow: 0 6px 18px var(--shade); }
+.rp-head { display: flex; align-items: center; gap: 8px; min-height: 40px; }
+.rp-title { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.1; }
+.rp-title b { font-family: var(--font-display); font-size: var(--fs-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-coins { font-size: var(--fs-xs); font-weight: 800; color: var(--ink-soft); }
+.rp-act { min-height: 38px; padding: 6px 12px; font-size: var(--fs-sm); flex: none; }
+.rp-close { flex: none; appearance: none; border: 0; cursor: pointer; width: 38px; height: 38px; border-radius: 50%; background: var(--white); box-shadow: 0 2px 0 var(--paper-edge); }
+.rp-strip { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 4px; scroll-snap-type: x proximity; }
+.rp-item { appearance: none; border: 0; cursor: pointer; flex: none; width: 54px; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; border-radius: 14px;
+  background: var(--white); box-shadow: 0 3px 0 var(--paper-edge); scroll-snap-align: center; color: var(--ink); }
+.rp-item.is-sel { box-shadow: 0 0 0 3px var(--grape), 0 3px 0 var(--paper-edge); }
+.rp-item.is-owned { background: #fff7e6; }
+.rp-item.is-on { background: #e6f6e8; }
+.rp-item__icon { font-size: 1.5rem; line-height: 1.1; }
+.rp-item__tag { font-family: var(--font-display); font-weight: 800; font-size: 0.7rem; color: var(--ink-soft); }

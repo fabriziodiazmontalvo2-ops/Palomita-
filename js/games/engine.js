@@ -60,6 +60,7 @@ import { getGame } from './registry.js';
 import { levelConfig, levelSpec, MAX_LEVEL } from './levels.js';
 import { grantLevel, showChest } from '../core/rewards.js';
 import { keepAwake } from '../core/device.js';
+import { missionButton } from '../core/missions.js';
 
 const LOGICAL_W = 360;
 const KEYMAP = {
@@ -74,6 +75,9 @@ const FALLBACK_PARABLE = {
 };
 
 let current = null;
+// Gesto principal de cada juego: en el nivel 1 una manito lo muestra (para los que todavía leen poco).
+const GESTURE = { noe: 'hold', oveja: 'drag', sembrador: 'tap', samaritano: 'drag', roca: 'tap', talentos: 'tap', mostaza: 'drag', prodigo: 'tap', perla: 'tap', panes: 'tap', luz: 'tap' };
+const GESTURE_TEXT = { hold: 'Mantén presionado', drag: 'Arrastra con el dedo', tap: 'Toca la pantalla' };
 
 function mulberry32(a) {
   return () => {
@@ -380,6 +384,7 @@ export async function startGame(id, { onExit, skipIntro = false, seed, level } =
       parableLine(),
       h('div', { class: 'game-panel__how' }, h('ul', null, def.how.map(t => h('li', null, t)))),
       h('p', { class: 'game-panel__goal' }, `🏅 Meta: ${spec.label}`),
+      h('div', { class: 'game-panel__row' }, listenButton(() => [def.title, ...def.how, `Meta: ${spec.label}`])),
       starsRow(state.levelProgress(id).stars(spec.level), 'Tu mejor resultado en este nivel'),
       h('div', { class: 'game-panel__row' },
         button('¡Jugar!', { kind: 'leaf', icon: '▶️', onClick: () => begin() })),
@@ -413,6 +418,15 @@ export async function startGame(id, { onExit, skipIntro = false, seed, level } =
     hud.hidden = false;
     renderHearts(); renderTime();
     resize();
+    // Nivel 1: una manito muestra el gesto durante unos segundos o hasta el primer toque.
+    if (spec.level <= 2 && GESTURE[id]) {
+      const g = GESTURE[id];
+      const hand = h('div', { class: `game-hand game-hand--${g}`, 'aria-hidden': 'true' }, h('span', { class: 'game-hand__icon' }, '👆'), h('span', { class: 'game-hand__text' }, GESTURE_TEXT[g]));
+      overlay.append(hand);
+      const off = () => { hand.remove(); canvas.removeEventListener('pointerdown', off); };
+      canvas.addEventListener('pointerdown', off, { once: true });
+      setTimeout(off, 4200);
+    }
     try { instance = mod.create(api); } catch (e) { fail(e); return; }
     phase = 'playing';
     last = performance.now();
@@ -516,7 +530,7 @@ export async function startGame(id, { onExit, skipIntro = false, seed, level } =
       h('div', { class: 'parable__head' }, h('div', { class: 'parable__emoji', 'aria-hidden': 'true' }, parable.emoji || def.icon),
         h('div', null, h('h2', null, parable.title || def.title), parable.ref ? h('p', { class: 'parable__ref' }, parable.ref) : null)),
       h('div', { class: 'parable__msg' }, h('p', { class: 'eyebrow' }, 'Mensaje para tu corazón'), h('p', null, msg)),
-      h('div', { class: 'parable__mission' }, h('p', { class: 'eyebrow' }, 'Tu misión de hoy'), h('p', null, mission)),
+      h('div', { class: 'parable__mission' }, h('p', { class: 'eyebrow' }, 'Tu misión de hoy'), h('p', null, mission), missionButton(mission, parable.title || def.title)),
       parable.verse ? h('blockquote', { class: 'parable__verse', style: { margin: 0 } }, h('p', null, `«${parable.verse.text}»`), h('cite', null, parable.verse.ref)) : null,
       storyBox,
       h('div', { class: 'game-rewards' }, h('span', { class: 'chip' }, `+${feGain} Fe 🕯️`)),

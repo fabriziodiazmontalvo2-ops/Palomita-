@@ -20,7 +20,7 @@
 //   lookAt(nx, ny)  : hacia dónde mira, normalizado -1..1 (x derecha, y arriba; 0,0 = a la cámara).
 //                     La cabeza gira un poco y las pupilas siguen. Se suaviza dentro de update.
 //   play(action)    : animación de una sola vez, mezclada sobre el reposo. Devuelve la duración en segundos.
-//                     'hop' | 'flap' | 'eat' | 'giggle' | 'nod' | 'shake' | 'dance' | 'pray' | 'wave' | 'spin' |
+//                     'hop' | 'flap' | 'eat' | 'giggle' | 'nod' | 'shake' | 'dance' | 'pray' | 'wave' | 'waveR' | 'spin' |
 //                     'sneeze' | 'surprise' | 'sad'
 //   setTalking(v)   : 0..1 apertura del pico mientras "habla" (se llama en cada cuadro; 0 lo cierra).
 //   setDirt(v)      : 0..1 manchitas de barro que aparecen sobre el cuerpo.
@@ -728,7 +728,7 @@ export function createDove(THREE, opts = {}) {
   const SLEEP = mkPose({ bodyY: -0.075, squash: -0.075, headPitch: 0.34, headRoll: 0.2, headYaw: 0.22, lidU: -0.36, lidL: -0.5,
     tailPitch: -0.35, idle: 0, breath: 2.6, breathRate: 1.15, lookW: 0, wag: 0, wUp: 0.04, crestPitch: -0.3, blush: 0.9 });
 
-  const DUR = { hop: 0.75, flap: 1.3, eat: 2.1, giggle: 1.5, nod: 1.0, shake: 1.1, dance: 2.8, pray: 3.0, wave: 1.6, spin: 1.2, sneeze: 1.4, surprise: 1.1, sad: 2.2 };
+  const DUR = { hop: 0.75, flap: 1.3, eat: 2.1, giggle: 1.5, nod: 1.0, shake: 1.1, dance: 2.8, pray: 3.0, wave: 1.6, waveR: 1.6, spin: 1.2, sneeze: 1.4, surprise: 1.1, sad: 2.2 };
   const to = (P, ch, v, w) => { P[ch] += (v - P[ch]) * w; };
   const both = (P, a, b, v) => { P[a] += v; P[b] += v; };
 
@@ -823,6 +823,14 @@ export function createDove(THREE, opts = {}) {
       to(P, C.wLOpen, 0.95, e); to(P, C.wLUp, 1.32 + 0.3 * wv, e);
       P[C.wRUp] += 0.08 * e;
       P[C.headRoll] -= 0.13 * e; P[C.bodyRoll] -= 0.05 * e; P[C.headPitch] -= 0.04 * e;
+      to(P, C.lidL, -0.2, e); P[C.beak] += e * (0.25 + 0.1 * wv);
+    },
+    // saludo con la otra ala (la de la izquierda de la pantalla), para «Simón dice»
+    waveR(P, t, p) {
+      const e = env(p, 0.2, 0.84), wv = Math.cos(TAU * (t - 0.5) / 0.42);
+      to(P, C.wROpen, 0.95, e); to(P, C.wRUp, 1.32 + 0.3 * wv, e);
+      P[C.wLUp] += 0.08 * e;
+      P[C.headRoll] += 0.13 * e; P[C.bodyRoll] += 0.05 * e; P[C.headPitch] -= 0.04 * e;
       to(P, C.lidL, -0.2, e); P[C.beak] += e * (0.25 + 0.1 * wv);
     },
     // giro: una vuelta completa con saltito

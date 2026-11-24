@@ -14,6 +14,13 @@ import { dailyGiftDue, showDailyGift, showChest, takeLevelUps } from '../core/re
 import * as reminders from '../core/reminders.js';
 import * as stickers from '../core/stickers.js';
 import { grownGate } from '../core/grown.js';
+import { createMiDia } from '../home/midia.js';
+import { createMoments } from '../home/moments.js';
+import { createPlay } from '../home/play.js';
+import { createRopero } from '../home/ropero.js';
+import { applySeason, musicFor } from '../home/season.js';
+import { skyFor } from '../pet/rooms.js';
+import { maybeShowNews } from './novedades.js';
 
 const ROOMS = [
   { id: 'sala', icon: '🏠', name: 'Nido' },
@@ -22,6 +29,8 @@ const ROOMS = [
   { id: 'dormitorio', icon: '🌙', name: 'Dormir' },
   { id: 'capilla', icon: '🙏', name: 'Oración' },
 ];
+// Cuarto donde se atiende cada necesidad (para señalar la pestaña).
+const NEED_ROOM = { hambre: 'cocina', energia: 'dormitorio', limpieza: 'bano', alegria: 'sala', fe: 'capilla' };
 const TIPS = {
   hambre: 'Ve a la cocina 🍞 y dale de comer.',
   energia: 'Llévala a dormir 🌙 y apaga la luz.',
@@ -61,6 +70,7 @@ function stubWorld() {
   return { dove, ROOMS: ROOMS.map(r => r.id), room: 'sala', setRoom(id) { this.room = id; return Promise.resolve(); }, setLights: noop, setCandle: noop, start: noop, stop: noop, resize: noop,
     setPaused: noop, on: () => noop, project: () => ({ x: innerWidth / 2, y: innerHeight * 0.3 }), hitDove: () => 'belly', wear: noop,
     setBed: noop, setDoveVisible: noop, doveVisible: true, water: noop, screenOf: () => null, snapshot: () => null, setGrowth: noop,
+    setSky: noop, setFlowers: noop, setLiturgy: noop, setCrib: noop, setDecor: noop,
     fx: new Proxy({}, { get: () => noop }) };
 }
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -102,7 +112,13 @@ export async function mount(el, params = {}) {
   const meters = {};
   const metersRow = h('div', { class: 'home__meters' }, state.STATS.map(n => {
     const m = meter(state.stat(n), state.STAT_META[n].color);
-    const b = h('button', { type: 'button', class: 'home-meter', 'aria-label': state.STAT_META[n].label, onclick: () => { sfx('tap'); toast(`${state.STAT_META[n].label}: ${TIPS[n]}`, { icon: state.STAT_META[n].icon, ms: 3200 }); } },
+    const b = h('button', { type: 'button', class: 'home-meter', 'aria-label': state.STAT_META[n].label, onclick: () => {
+      sfx('tap');
+      toast(`${state.STAT_META[n].label}: ${TIPS[n]}`, { icon: state.STAT_META[n].icon, ms: 3200 });
+      if (tts.available() && state.setting('voice') !== false) tts.speak(`${state.STAT_META[n].label}. ${TIPS[n]}`);
+      const tab = [...tabs.children].find(t => t.dataset.room === NEED_ROOM[n]);
+      if (tab) { tab.classList.add('is-pointed'); setTimeout(() => tab.classList.remove('is-pointed'), 2400); }
+    } },
       h('span', { class: 'home-meter__icon', 'aria-hidden': 'true' }, state.STAT_META[n].icon), m);
     meters[n] = { m, b };
     return b;
@@ -110,7 +126,9 @@ export async function mount(el, params = {}) {
   const side = (icon, label, fn, cls = '') => h('button', { type: 'button', class: `home-side ${cls}`.trim(), onclick: () => { sfx('pop'); fn(); } },
     h('span', { class: 'home-side__icon', 'aria-hidden': 'true' }, icon), h('span', { class: 'home-side__label' }, label));
   const verseBtn = side('💌', 'Mensaje', () => showVerse(), 'home-side--verse');
-  const giftBtn = side('🎁', 'Regalo', () => openGift(), 'home-side--gift');
+  const giftBtn = side('☀️', 'Mi día', () => midia.open(), 'home-side--gift home-side--day');
+  const dayCount = h('span', { class: 'home-side__count', 'aria-hidden': 'true' });
+  giftBtn.append(dayCount);
   const figusBtn = side('📒', 'Figuritas', () => go('figuritas', stickers.packsAvailable() > 0 ? { tab: 'sobres' } : {}), 'home-side--figus');
   const paintFigus = () => { let n = 0; try { n = stickers.packsAvailable(); } catch { /* nada */ } figusBtn.classList.toggle('is-new', n > 0); };
   // Aviso de Misa o catequesis (hoy o mañana) de la parroquia.
@@ -119,11 +137,21 @@ export async function mount(el, params = {}) {
     clear(avisoBox);
     let ev = null;
     try { ev = reminders.todayBanner(); } catch (e) { console.warn(e); }
-    if (!ev) return;
+    if (!ev) {
+      // Cuenta regresiva a la Primera Comunión (cuando faltan 60 días o menos).
+      let c = null;
+      try { c = reminders.nextEvent('comunion'); } catch { /* nada */ }
+      if (!c || c.days > 60) return;
+      const txt = c.days === 0 ? '¡Hoy es tu Primera Comunión!' : c.days === 1 ? '¡Mañana es tu Primera Comunión!' : `Faltan ${c.days} días para tu Primera Comunión`;
+      avisoBox.append(h('button', { type: 'button', class: 'home-aviso home-aviso--comunion', onclick: () => { sfx('tap'); go('grandia'); } },
+        h('span', { class: 'home-aviso__icon', 'aria-hidden': 'true' }, '🕊️'), h('span', { class: 'home-aviso__text' }, txt + (c.days > 0 && c.days <= 9 ? ' · Tu tarea de hoy 👉' : ''))));
+      return;
+    }
     avisoBox.append(h('button', { type: 'button', class: `home-aviso home-aviso--${ev.kind}`, onclick: () => { sfx('tap'); go('parroquia', { tab: ev.kind === 'misa' ? 'misas' : 'catequesis' }); } },
       h('span', { class: 'home-aviso__icon', 'aria-hidden': 'true' }, ev.icon), h('span', { class: 'home-aviso__text' }, ev.text.replace(/ ([ap])\. m\./g, '\u00a0$1.\u00a0m.'))));
   }
-  const bubble = h('button', { type: 'button', class: 'home__bubble', hidden: true, 'aria-live': 'polite', onclick: () => hideBubble() });
+  let bubbleAction = null;
+  const bubble = h('button', { type: 'button', class: 'home__bubble', hidden: true, 'aria-live': 'polite', onclick: () => { const a = bubbleAction; hideBubble(); a?.(); } });
   const tray = h('div', { class: 'home__tray' });
   const tabs = h('nav', { class: 'home__tabs', 'aria-label': 'Habitaciones' }, ROOMS.map(r =>
     h('button', { type: 'button', class: 'home-tab', dataset: { room: r.id }, onclick: () => { sfx('tap'); setRoom(r.id); } },
@@ -143,6 +171,15 @@ export async function mount(el, params = {}) {
     bubble,
     h('div', { class: 'home__bottom' }, tray, tabs)));
 
+  // ── Partes nuevas de la casa (ver js/home/) ──
+  const celebrate = () => { world.fx.confetti(); world.fx.sparkles(14); };
+  const midia = createMiDia({ setRoom: id => setRoom(id), showVerse: () => showVerse(), openGift: () => openGift(), celebrate: () => { celebrate(); dove.play('dance'); }, go, repaint: () => refreshTop() });
+  let simonBusy = false;
+  const play = createPlay({ el, world, dove, say: (t, ms) => say(t, ms), joy: a => joy(a), celebrate, alive: () => alive, setBusy: v => { simonBusy = v; hideBubble(); }, dance: () => playWithDove() });
+  const ropero = createRopero({ el, world, dove, say: (t, ms) => say(t, ms), applyWear: () => applyWear() });
+  const moments = createMoments({ world, dove, say: (t, ms) => say(t, ms), celebrate, go, alive: () => alive });
+  let seasonInfo = null;
+
   // ── Refrescos ──
   function refreshTop() {
     const s = state.get();
@@ -150,13 +187,19 @@ export async function mount(el, params = {}) {
     nameEl.textContent = s.name;
     const gr = growthFor(s.level);
     stageEl.textContent = gr.name;
-    giftBtn.classList.toggle('is-new', dailyGiftDue());
+    const done = midia.count();
+    dayCount.textContent = `${done}/3`;
+    giftBtn.classList.toggle('is-new', dailyGiftDue() || done < 3);
+    giftBtn.setAttribute('aria-label', `Mi día: ${done} de 3 tareas${dailyGiftDue() ? '; hay un regalo para abrir' : ''}`);
     xpBar.set(Math.min(100, (s.xp / state.xpForLevel(s.level)) * 100));
     clear(coins).append(h('span', { 'aria-hidden': 'true' }, state.COIN.icon), String(s.coins));
     verseBtn.classList.toggle('is-new', !state.doneToday('verse'));
   }
   function refreshMeters() {
     for (const n of state.STATS) { const v = state.stat(n); meters[n].m.set(v); meters[n].b.classList.toggle('is-low', v < 25); }
+    // La pestaña del cuarto que necesita se mueve un poquito (para los que todavía leen poco).
+    const need = state.get().sleeping ? null : state.need();
+    for (const t of tabs.children) t.classList.toggle('is-needed', !!need && t.dataset.room === NEED_ROOM[need] && room !== NEED_ROOM[need]);
   }
   function refreshDove() {
     dove.setMood(state.mood());
@@ -172,14 +215,16 @@ export async function mount(el, params = {}) {
     bubble.style.left = `${Math.max(100, Math.min(r.width - 100, p.x))}px`;
     bubble.style.top = `${Math.max(150, p.y - 8)}px`;
   }
-  function say(text, ms = 4200) {
+  function say(text, ms = 4200, action = null) {
     if (!alive || !text || world.doveVisible === false) return;   // dormida en otro cuarto: no habla
     bubble.textContent = text;
+    bubbleAction = action;
+    bubble.classList.toggle('has-action', !!action);
     bubble.hidden = false;
     placeBubble();
     bubbleTimer = ms / 1000;
   }
-  function hideBubble() { bubble.hidden = true; bubbleTimer = 0; }
+  function hideBubble() { bubble.hidden = true; bubbleTimer = 0; bubbleAction = null; bubble.classList.remove('has-action'); }
   function talkAboutNeeds() {
     if (state.get().sleeping || talking) return;
     const need = state.need();
@@ -210,10 +255,14 @@ export async function mount(el, params = {}) {
     room = id;
     world.setRoom(id);
     placeDove();
+    if (id !== 'sala') { ropero.close(); play.stop(); }
     for (const b of tabs.children) { const on = b.dataset.room === id; b.classList.toggle('is-on', on); b.setAttribute('aria-current', on ? 'true' : 'false'); }
     renderTray();
+    refreshMeters();
     hideBubble();
     if (!silent) nextTalk = 2.5;
+    // En la capilla, una vez al día, la palomita cuenta qué tiempo litúrgico vivimos.
+    if (id === 'capilla' && seasonInfo?.line && !state.get().sleeping && state.dailyOnce('seasonLine')) setTimeout(() => { if (alive && room === 'capilla') { say(seasonInfo.line, 5200); nextTalk = 10; } }, 900);
   }
 
   function trayButton(icon, label, fn, { kind = '', cls = '' } = {}) {
@@ -225,10 +274,10 @@ export async function mount(el, params = {}) {
     tray.dataset.room = room;
     avisoBox.hidden = room === 'bano';   // en pantallas bajas el aviso taparía la regadera
     if (room === 'sala') {
-      tray.append(trayButton('🎾', 'Jugar', playWithDove));
+      tray.append(trayButton('🎾', 'Jugar', () => { if (!isAsleep()) play.choose(); }, { kind: 'accent' }));
+      if (!worldFailed) tray.append(trayButton('👗', 'Ropero', () => { if (!isAsleep()) ropero.open(); }));
       if (!worldFailed) tray.append(trayButton('📷', 'Foto', takePhoto));
       tray.append(trayButton('🖼️', 'Álbum', openAlbum));
-      tray.append(trayButton('🎮', 'Juegos', () => go('games'), { kind: 'accent' }));
     } else if (room === 'cocina') {
       const have = FOODS.filter(f => state.countItem(f.id) > 0);
       const strip = h('div', { class: 'home-foods' },
@@ -245,7 +294,8 @@ export async function mount(el, params = {}) {
       const sleeping = state.get().sleeping;
       tray.append(trayButton(sleeping ? '☀️' : '💡', sleeping ? 'Despertar' : 'Apagar la luz', () => (sleeping ? wake() : goToSleep()), { kind: sleeping ? 'accent' : '', cls: 'home-tool--wide' }));
     } else if (room === 'capilla') {
-      tray.append(trayButton('🙏', 'Rezar', choosePrayer, { kind: 'accent' }), trayButton('📖', 'Biblia', () => go('bible')), trayButton('🕯️', 'Mi camino', () => go('bible', { tab: 'catecismo' })));
+      tray.append(trayButton('🙏', 'Rezar', choosePrayer, { kind: 'accent' }), trayButton('📿', 'Rosario', () => go('rosario')),
+        trayButton('🕯️', 'Mi ratito', () => go('ratito')), trayButton('📖', 'Biblia', () => go('bible')));
     }
   }
 
@@ -255,6 +305,7 @@ export async function mount(el, params = {}) {
     if (isAsleep()) return;
     dove.play(pick(['dance', 'hop', 'spin', 'flap', 'wave']));
     world.fx.notes(); sfx('chirp');
+    state.dailyOnce('play');
     if (playCool <= 0) { joy(4); state.addStat('energia', -1); playCool = 4; }
   }
   // ── Fotos de la palomita ──
@@ -429,6 +480,7 @@ export async function mount(el, params = {}) {
     dove.play('eat'); sfx('eat');
     setTimeout(() => { if (alive) world.fx.crumbs(); }, 380);
     state.addStat('hambre', f.hambre); state.addStat('alegria', f.alegria); state.addXp(2);
+    state.dailyOnce('feed');
     if (D.facts[id] && Math.random() < 0.4) say(D.facts[id], 7000); else say(pick(D.phrases.fed));
     renderTray();
   }
@@ -465,6 +517,7 @@ export async function mount(el, params = {}) {
     if (washSoaped) {
       washSoaped = false; washGain = 0;
       state.setStat('limpieza', 100); joy(3); state.addXp(3);
+      state.dailyOnce('wash');
       world.fx.sparkles(12); sfx('sparkle'); dove.play('flap');
       say(pick(D.phrases.clean));
     }
@@ -520,6 +573,8 @@ export async function mount(el, params = {}) {
     for (const b of tabs.children) b.classList.toggle('is-sleeping', sleeping && b.dataset.room === 'dormitorio');
   }
   function applySleep(on, { instant = false } = {}) {
+    musicFor({ sleeping: on, christmas: !!seasonInfo?.christmas });     // dormida: canción de cuna
+    if (on) { play.stop(); ropero.close(); }
     world.setLights(!on);
     dove.setSleeping(on);
     world.fx.zzz(on);
@@ -624,6 +679,7 @@ export async function mount(el, params = {}) {
 
   // ── Toques sobre la palomita y los objetos ──
   offs.push(world.on('tap', ({ part }) => {
+    if (play.playing) { play.onTap(part); return; }
     if (isAsleep()) return;
     const act = { head: 'giggle', belly: 'giggle', feet: 'hop', wingL: 'wave', wingR: 'wave', beak: 'surprise', tail: 'spin' }[part] || 'giggle';
     dove.play(act); sfx(part === 'beak' ? 'chirp' : 'coo'); world.fx.hearts(3);
@@ -631,7 +687,7 @@ export async function mount(el, params = {}) {
     if (Math.random() < 0.3) say(pick(D.phrases.petted), 2600);
   }));
   offs.push(world.on('stroke', ({ dx, dy }) => {
-    if (state.get().sleeping) return;
+    if (state.get().sleeping || simonBusy) return;
     const d = Math.hypot(dx, dy);
     if (room === 'bano' && foam > 0) { addFoam(d * 0.0009); return; }
     strokeAcc += d;
@@ -653,7 +709,17 @@ export async function mount(el, params = {}) {
   offs.push(state.on('level', () => { refreshTop(); setTimeout(() => { if (alive) celebrateLevels(); }, 300); }));
   offs.push(state.on('settings', paintEar));
   offs.push(state.on('change', ({ evt }) => { if (evt === 'xp' || evt === 'names') refreshTop(); }));
-  offs.push(state.on('wear', applyWear));
+  offs.push(state.on('wear', e => { if (e && e.decor) world.setDecor(state.get().decor); else applyWear(); }));
+  offs.push(world.on('ballHit', ({ n }) => { if (alive) play.onBallHit(n); }));
+  offs.push(state.on('change', ({ evt }) => { if (evt === 'deed') world.setFlowers(state.deeds().length); if (evt === 'mass' || evt === 'mission') refreshTop(); }));
+  // Al volver después de muchas horas con la app en segundo plano: «¡Te extrañé!» y el cielo de la hora.
+  offs.push(state.on('resume', ({ mins }) => {
+    if (!alive) return;
+    world.setSky(skyFor());
+    applySeason(world).then(info => { if (alive) seasonInfo = info; }).catch(() => {});
+    paintAviso(); refreshTop();
+    if (mins >= 360) moments.reunion(state.takeAway());
+  }));
   // Si la app se va al fondo, el micrófono se apaga de verdad (no solo en pausa); al volver se enciende solo si se quiere.
   const onVisibility = () => {
     if (document.hidden) { if (listener && (listener.state !== 'off' || listener.busy)) listener.stop(); }
@@ -673,6 +739,10 @@ export async function mount(el, params = {}) {
     applySleep(!!state.get().sleeping, { instant: true });
     world.resize(); world.start();
     renderTray();
+    world.setFlowers(state.deeds().length);
+    world.setDecor(state.get().decor);
+    applySeason(world).then(info => { if (!alive) return; seasonInfo = info; musicFor({ sleeping: !!state.get().sleeping, christmas: !!info?.christmas }); }).catch(e => console.warn(e));
+    reminders.refreshFeed().then(ok => { if (ok && alive) paintAviso(); }).catch(() => {});
   } catch (e) {
     // Si la pantalla no llega a montarse, no deja nada escuchando por detrás.
     alive = false;
@@ -683,6 +753,7 @@ export async function mount(el, params = {}) {
 
   // ── Latido de la pantalla (4 veces por segundo) ──
   const STEP = 0.25;
+  let skyCheck = 60;
   // (empieza después de preparar la pantalla: si algo falla al montar, no queda un reloj suelto)
   const timer = setInterval(() => {
     if (!alive || document.hidden) return;
@@ -691,7 +762,10 @@ export async function mount(el, params = {}) {
     if (bubbleTimer > 0) { bubbleTimer -= STEP; if (bubbleTimer <= 0) bubble.hidden = true; else placeBubble(); }
     if (bathTalk > 0) bathTalk -= STEP;
     nextTalk -= STEP;
+    if (simonBusy) nextTalk = Math.max(nextTalk, 8);
     if (nextTalk <= 0) { nextTalk = 16 + Math.random() * 10; if (bubble.hidden && !document.querySelector('.modal-scrim')) talkAboutNeeds(); }
+    skyCheck -= STEP;
+    if (skyCheck <= 0) { skyCheck = 60; world.setSky(skyFor()); }
     refreshDove();
     if (state.get().sleeping && state.stat('energia') >= 99.5) { wake(); toast('¡Ya descansó!', { icon: '☀️' }); }
     if (talking || earState === 'hearing') nextTalk = Math.max(nextTalk, 6);
@@ -725,12 +799,34 @@ export async function mount(el, params = {}) {
       return;
     }
     applyGrowth(false);
+    if (params.ropero && room === 'sala' && !state.get().sleeping) { ropero.open(String(params.ropero)); return; }
     if (state.get().sleeping) return;
+    const awayMins = state.takeAway();
     if (params.from === 'game') { say(pick(D.phrases.afterGame)); dove.play('hop'); }
-    else { const hr = new Date().getHours(); say(pick(hr < 11 ? D.phrases.morning : hr >= 19 ? D.phrases.night : D.phrases.greet)); dove.play('wave'); nextTalk = 12; }
+    else if (awayMins < 360) { const hr = new Date().getHours(); say(pick(hr < 11 ? D.phrases.morning : hr >= 19 ? D.phrases.night : D.phrases.greet)); dove.play('wave'); nextTalk = 12; }
     await celebrateLevels();
-    if (alive && dailyGiftDue()) setTimeout(() => { if (alive && !document.querySelector('.modal-scrim')) openGift(); }, 1500);
-    else if (alive && state.setting('listen') === undefined) setTimeout(() => { if (alive && !document.querySelector('.modal-scrim')) askMic(); }, 2500);
+    if (!alive) return;
+    let shown = 0;
+    try { if (await maybeShowNews()) shown++; } catch (e) { console.warn(e); }
+    if (!alive) return;
+    try { shown += await moments.run({ awayMins }); } catch (e) { console.warn(e); }
+    if (!alive) return;
+    refreshTop();
+    // «Mi día» se abre solo una vez al día (con el regalo adentro), si no hubo otras ventanas.
+    if (!shown && state.dailyOnce('midiaShown')) setTimeout(() => { if (alive && !document.querySelector('.modal-scrim')) midia.open(); }, 1500);
+    else if (state.setting('listen') === undefined) setTimeout(() => { if (alive && !document.querySelector('.modal-scrim')) askMic(); }, 2500);
+    // Oración de la mañana o de la noche (una vez al día): tocar el globito la abre.
+    const hr = new Date().getHours();
+    const tip = hr >= 5 && hr < 11 && !state.doneToday('pray:ofrecimiento-de-la-manana') && state.dailyOnce('morningTip') ? ['ofrecimiento-de-la-manana', '¡Buenos días! ¿Le ofrecemos el día a Jesús? Tócame 🌅']
+      : (hr >= 19 || hr < 2) && !state.doneToday('pray:oracion-de-la-noche') && state.dailyOnce('nightTip') ? ['oracion-de-la-noche', 'Ya es de noche… ¿rezamos juntos antes de dormir? Tócame 🌙'] : null;
+    if (tip) setTimeout(() => {
+      if (!alive || document.querySelector('.modal-scrim') || state.get().sleeping) return;
+      const p = D.prayers.find(x => x.id === tip[0]);
+      if (p) { if (tip[0] === 'oracion-de-la-noche') dove.play('nod'); say(tip[1], 7000, () => prayerModal(p)); nextTalk = 14; }
+    }, shown ? 9000 : 6000);
+    // Una intención por alguien enfermo: la palomita se acuerda unos días después.
+    const sick = state.intentions().find(x => x.sick && Date.now() - x.at > 2 * 86400000 && Date.now() - x.at < 20 * 86400000);
+    if (sick && !tip && state.dailyOnce('sickFollow')) setTimeout(() => { if (alive && !document.querySelector('.modal-scrim')) say(`Sigo rezando ${sick.label.replace(/^Por /, 'por ').toLowerCase()} 🙏`, 5000); }, 8000);
   };
   welcomeFlow();
 

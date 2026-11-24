@@ -64,3 +64,77 @@
 .bb-family__pray { font-style: italic; }
 .bb-goal__count { font-family: var(--font-display); font-weight: 800; color: var(--grape-deep); }
 .bb-goal__btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
+
+/* ── El Rosario ── */
+.ro-ints { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.ro-int { appearance: none; border: 0; cursor: pointer; display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 8px 10px; border-radius: 16px; background: var(--white);
+  box-shadow: 0 3px 0 var(--paper-edge); text-align: left; font-weight: 800; line-height: 1.2; color: var(--ink); }
+.ro-int span:first-child { font-size: 1.5rem; }
+.ro-int:active { transform: translateY(2px); box-shadow: none; }
+.ro-other { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.ro-full { display: flex; align-items: center; gap: 10px; margin: 14px 0; font-weight: 700; cursor: pointer; }
+.ro-full input { width: 24px; height: 24px; accent-color: var(--grape); }
+.ro-how { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; font-weight: 600; line-height: 1.4; }
+.ro-head { display: flex; flex-direction: column; gap: 6px; }
+.ro-head h2 { font-size: var(--fs-xl); }
+.ro-myst { font-weight: 600; line-height: 1.5; }
+.ro-for { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; padding: 4px 12px; border-radius: var(--r-pill); background: #efe8ff; color: var(--grape-deep); font-weight: 800; }
+.ro-chain { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin: 16px 0 10px; padding: 14px 10px; border-radius: var(--r-lg); background: #f6f1fb; }
+.ro-bead { appearance: none; border: 0; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffffff, #c9b6f2 60%, #9b7be8);
+  box-shadow: 0 3px 0 #7556c9; transition: transform 0.12s; }
+.ro-bead--big { width: 46px; height: 46px; background: radial-gradient(circle at 35% 35%, #fff, #ffd95e 60%, #f0a51e); box-shadow: 0 3px 0 #c9861a; }
+.ro-bead.is-now { transform: scale(1.18); box-shadow: 0 0 0 4px var(--sun), 0 3px 0 #7556c9; animation: ro-glow 1.2s ease-in-out infinite; }
+.ro-bead.is-done { filter: saturate(0.4) brightness(1.08); }
+.ro-bead[disabled] { cursor: default; opacity: 0.55; }
+.ro-bead:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+@keyframes ro-glow { 50% { box-shadow: 0 0 0 8px rgba(255, 201, 74, 0.35), 0 3px 0 #7556c9; } }
+@media (prefers-reduced-motion: reduce) { .ro-bead.is-now { animation: none; } }
+.ro-lines { display: flex; flex-direction: column; gap: 6px; }
+.ro-now { text-align: center; font-family: var(--font-display); font-weight: 800; color: var(--grape-deep); }
+.ro-text { padding: 12px 14px; border-radius: var(--r-md); background: var(--white); box-shadow: 0 3px 0 var(--paper-edge); }
+.ro-text p { font-weight: 600; line-height: 1.5; }
+.ro-end { text-align: center; }
+.ro-end__icon { font-size: 3.4rem; }
+.ro-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 14px; }
+
+/* ── Mi ratito con Jesús ── */
+.rt-hero, .rt-step { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+.rt-hero p, .rt-text { font-weight: 600; line-height: 1.5; }
+.rt-step h2 { display: flex; align-items: center; gap: 8px; }
+.rt-step.is-silence .rt-text { font-style: italic; }
+.rt-candle { position: relative; width: 44px; height: 96px; margin: 4px auto 0; }
+.rt-candle__body { position: absolute; left: 8px; bottom: 0; width: 28px; height: 64px; border-radius: 6px 6px 4px 4px; background: linear-gradient(90deg, #fff6dd, #ffffff 40%, #f1e3c8); box-shadow: 0 3px 0 #e2cfa6; }
+.rt-candle__flame { position: absolute; left: 13px; top: 2px; width: 18px; height: 30px; border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%;
+  background: radial-gradient(circle at 50% 70%, #fffbe0, #ffd95e 45%, rgba(255, 140, 30, 0.85) 75%, rgba(255, 120, 20, 0)); animation: rt-flicker 1.4s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes rt-flicker { 0%, 100% { transform: scale(1) rotate(-2deg); } 50% { transform: scale(1.06, 0.94) rotate(2deg); } }
+@media (prefers-reduced-motion: reduce) { .rt-candle__flame { animation: none; } }
+.rt-bar { align-self: stretch; height: 10px; border-radius: var(--r-pill); background: #f1e9dc; overflow: hidden; }
+.rt-bar i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #ffd95e, #f0a51e); }
+.rt-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.rt-chip { appearance: none; border: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 12px; border-radius: var(--r-pill); background: var(--white);
+  box-shadow: 0 3px 0 var(--paper-edge); font-weight: 800; color: var(--ink); }
+.rt-chip.is-on { background: #ffe9b3; box-shadow: 0 0 0 3px var(--sun); }
+.rt-chip span:first-child { font-size: 1.3rem; }
+.rt-ints { padding: 12px 14px; border-radius: var(--r-md); background: #efe8ff; margin-bottom: 12px; }
+.rt-ints ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rt-ints li { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.rt-ints li .pq-mini { margin-left: auto; min-width: 36px; min-height: 36px; }
+.rt-diary { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rt-diary li { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 16px; background: var(--white); box-shadow: 0 2px 0 var(--paper-edge); }
+.rt-diary__day { display: flex; flex-direction: column; align-items: center; min-width: 40px; font-family: var(--font-display); line-height: 1; }
+.rt-diary__day b { font-size: 1.3rem; }
+.rt-diary__day span { font-size: var(--fs-xs); color: var(--ink-soft); font-weight: 800; }
+.rt-diary__thanks { display: flex; gap: 6px; font-size: 1.5rem; }
+.rt-muted { font-size: var(--fs-sm); color: var(--ink-soft); font-weight: 700; }
+
+/* ── Pasaporte de la Misa ── */
+.mp-sum { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.mp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.mp-cell { --mc: transparent; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 70px; border-radius: 16px;
+  background: var(--white); border: 3px dashed #e6dccb; }
+.mp-cell.is-on { border: 3px solid var(--mc, var(--grape)); background: #fbf7ff; }
+.mp-cell.is-future { opacity: 0.5; }
+.mp-cell.is-com { border-color: var(--sun-deep); background: #fff6dc; opacity: 1; }
+.mp-cell__d { font-family: var(--font-display); font-weight: 800; font-size: 0.78rem; color: var(--ink-soft); }
+.mp-cell__s { font-size: 1.6rem; line-height: 1; min-height: 1.6rem; }
+.mp-cell__ok { position: absolute; top: 2px; right: 6px; color: var(--leaf-btn); font-weight: 900; }
