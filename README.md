@@ -13,6 +13,7 @@ El niño cuida a una palomita en 3D —come, se baña, duerme, juega y reza— y
 - **Mi parroquia — Santo Cura de Ars (Pío Pata, El Tambo, Huancayo)**: datos del párroco y del diácono, dirección con mapa, oficina parroquial, teléfono, fotos de la iglesia y del altar, **horarios de Misa** y **fechas de catequesis** (los edita un adulto) y **avisos en el teléfono** antes de la Misa y de la catequesis.
 - **Álbum de figuritas** (como el de las mascotas virtuales): 48 figuritas en 6 páginas —Jesús Resucitado de la parroquia, mi parroquia, el Santo Cura de Ars, «nuestros pastores explican», íconos de la fe y mi Primera Comunión— que salen en **sobres** (regalo diario, cofres de los juegos, lecciones terminadas o comprados con semillas), con figuritas brillantes, repetidas para cambiar y premios por página.
 - **Premios como en las mascotas virtuales**: regalo diario, cofre al subir de nivel, tienda de alimentos de la Biblia y accesorios (incluidos un chullo y una chalina andinos), y fotos de la palomita en un álbum.
+- **Varón o mujer, con ropa a la moda** (versión 1.4): al empezar, el niño elige si su mascota es palomito o palomita. Cada uno tiene su moda en 3D —la camiseta de la Selección, polera con capucha, casaca jean, camisa y chaleco, gorra al revés, audífonos, lentes y zapatillas; o vestido de flores, falda tutú, chompa de corazones, vestido blanco, vincha, tiara, lentes de corazón, bolsito y zapatitos— y en la tienda solo aparece la de su género (más las cosas para todos: las de la fe, las andinas, las de fiesta). La palomita y la app le hablan en masculino o femenino. Se cambia en Ajustes y la ropa de antes queda guardada.
 - **La palomita habla**: dice en voz alta sus globitos con una vocecita propia, grabada aparte (se apaga en Ajustes).
 - **Mi día y la casa viva** (versión 1.3): tres tareas cortitas cada día, misiones de buenas obras que hacen brotar flores, juegos con la palomita (pelota y «Simón dice»), un ropero para probarle accesorios y decoración para el Nido. La capilla sigue el **año de la Iglesia**: su color, la corona de Adviento y el nacimiento que se arma del 16 al 24 de diciembre; las ventanas siguen la hora real.
 - **Rezar**: el **Rosario** tocando las cuentas (un misterio o completo, por quien el niño elija), **Mi ratito con Jesús** (oración guiada de tres minutos) con su **diario de gracias**, y el **pasaporte de la Misa** del domingo.
@@ -137,6 +138,11 @@ pip install piper-tts       # y descarga es_MX-claude-high.onnx (+ .onnx.json) d
 node tools/narration-texts.mjs --json > /tmp/narracion.json
 python3 tools/gen-voice.py /tmp/narracion.json es_MX-claude-high.onnx assets/voz
 ```
+
+La **ropa** se modela por código en `js/pet/accessories.js`; las prendas se cortan a la medida del cuerpo con
+`anchor.userData.tailor` (`js/pet/dove.js`), que deja libres las alas. Las fotos de la tienda (`assets/ropa/<id>.webp`)
+se sacan con `node tools/ropa-fotos.mjs` (con el servidor de pruebas encendido). Los textos que cambian si es palomito
+se escriben así: `Estoy aburrid{a|o}` (ver `js/core/genero.js`); la voz se graba en las dos formas.
 
 Cada cambio que se sube al repositorio pasa por las mismas pruebas en GitHub (`.github/workflows/ci.yml`): contenidos,
 calendario, empaquetado y la prueba de humo en un navegador real. Para publicar en Google Play: [`PLAY.md`](PLAY.md).

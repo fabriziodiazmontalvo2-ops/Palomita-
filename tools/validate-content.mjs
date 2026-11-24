@@ -267,6 +267,9 @@ const VALIDATORS = {
     const P = m.PHRASES;
     if (!P || typeof P !== 'object') return err(f, 'falta export const PHRASES = {…}');
     const keys = ['greet', 'morning', 'night', 'hungry', 'sleepy', 'dirty', 'bored', 'happy', 'fed', 'clean', 'petted', 'pray', 'afterGame', 'levelUp', 'wakeUp', 'facts'];
+    for (const [k, list] of Object.entries(P)) for (const t of Array.isArray(list) ? list : []) {
+      if (/[{}]/.test(String(t).replace(/\{[^{}|]*\|[^{}|]*\}/g, ''))) err(f, `PHRASES.${k}: «${t}» tiene llaves sueltas (se escribe {femenino|masculino})`);
+    }
     for (const k of keys) {
       if (!Array.isArray(P[k]) || P[k].length < (k === 'facts' ? 20 : 5)) { err(f, `PHRASES.${k}: mínimo ${k === 'facts' ? 20 : 5} frases`); continue; }
       P[k].forEach((s, i) => checkText(f, `PHRASES.${k}[${i}]`, s, k === 'facts' ? 150 : 70, 3));
@@ -465,6 +468,34 @@ Object.assign(VALIDATORS, {
     P.sections.forEach(x => { checkText(f, `PARENTS_CORNER.${x.id}.title`, x.title, 60, 3); if (!Array.isArray(x.paragraphs) || !x.paragraphs.length) err(f, `PARENTS_CORNER.${x.id}.paragraphs`); });
     checkText(f, 'PRIVACY_NOTE', m.PRIVACY_NOTE, 1200, 100);
   },
+  async items(m, f) {
+    const A = m.ACCESSORIES, SL = m.SLOTS || [];
+    if (!Array.isArray(A) || !A.length) return err(f, 'falta ACCESSORIES');
+    uniqueIds(f, A);
+    for (const a of A) {
+      const w = `ACCESSORIES.${a.id}`;
+      if (!SL.includes(a.slot)) err(f, `${w}.slot: uno de ${SL.join(', ')}`);
+      if (a.gender !== undefined && !['varon', 'mujer'].includes(a.gender)) err(f, `${w}.gender: 'varon' | 'mujer' (o nada si es para todos)`);
+      checkText(f, `${w}.name`, a.name, 30, 3);
+      if (!a.reward && (!Number.isInteger(a.price) || a.price <= 0)) err(f, `${w}.price`);
+      if (!fs.existsSync(path.join(root, 'assets/ropa', `${a.id}.webp`))) warn(f, `${w}: falta la foto assets/ropa/${a.id}.webp (node tools/ropa-fotos.mjs ${a.id})`);
+    }
+    for (const g of ['varon', 'mujer']) for (const slot of ['body', 'head', 'face', 'neck', 'feet']) {
+      if (!A.some(a => a.gender === g && a.slot === slot && !a.reward)) err(f, `la moda de ${g === 'varon' ? 'varón' : 'mujer'} no tiene nada para «${slot}»`);
+    }
+    // Cada cosa tiene su modelo 3D (se arma sobre la palomita, sin navegador).
+    try {
+      const THREE = await imp('vendor/three/three.module.min.js');
+      const dove = (await imp('js/pet/dove.js')).createDove(THREE);
+      const { dressSlot } = await imp('js/pet/accessories.js');
+      for (const a of A) {
+        const gs = dressSlot(THREE, dove, a.slot, a.id);
+        let meshes = 0;
+        for (const gr of gs) { gr.traverse(o => { if (o.isMesh) meshes++; }); gr.parent.remove(gr); }
+        if (!meshes) err(f, `ACCESSORIES.${a.id}: no tiene modelo 3D en js/pet/accessories.js`);
+      }
+    } catch (e) { err(f, `no se pudieron armar los modelos 3D: ${e.message}`); }
+  },
   decor(m, f) {
     const D = m.DECOR, slots = (m.DECOR_SLOTS || []).map(x => x.id);
     if (!Array.isArray(D) || !D.length) return err(f, 'falta DECOR');
@@ -485,6 +516,7 @@ const FILES = {
   'bible-milagros': 'js/data/bible-milagros.js', lessons: 'js/data/lessons.js', confession: 'js/data/confession.js', mass: 'js/data/mass.js',
   'oraciones-extra': 'js/data/oraciones-extra.js', dudas: 'js/data/dudas.js', 'gran-dia': 'js/data/gran-dia.js', ratito: 'js/data/ratito.js',
   'cura-ars': 'js/data/cura-ars.js', fiestas: 'js/data/fiestas.js', familia: 'js/data/familia.js', papas: 'js/data/papas.js', decor: 'js/data/decor.js',
+  items: 'js/data/items.js',
 };
 
 const wanted = process.argv.slice(2);

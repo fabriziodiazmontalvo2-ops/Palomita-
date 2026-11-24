@@ -71,3 +71,21 @@ span.shop-card__art { cursor: default; }
   font-family: var(--font-display); font-weight: 800; font-size: var(--fs-xs); }
 .shop-lock--earn { font-size: var(--fs-xs); line-height: 1.2; text-align: center; color: var(--grape-deep); }
 .shop-see { align-self: center; margin-bottom: 10px; }
+
+/* Fotos de la ropa puesta (assets/ropa/<id>.webp) */
+.acc-art { display: inline-grid; place-items: center; }
+.acc-art img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.shop-card__art.acc-art { width: 84px; height: 84px; }
+.shop-card__art.acc-art.has-img { border-radius: 18px; background: radial-gradient(circle at 50% 40%, #ffffff 0, #e8f5ff 70%); }
+.shop-group--moda { color: var(--grape-deep); }
+/* Bienvenida: ¿varón o mujer? */
+.wel__picks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wel__pick { appearance: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px 12px; border-radius: var(--r-lg);
+  border: 3px solid color-mix(in srgb, var(--pick) 35%, white); background: color-mix(in srgb, var(--pick) 10%, white); color: var(--ink); font: inherit;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--pick) 45%, white); }
+.wel__pick:active { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--pick) 45%, white); }
+.wel__pick:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.wel__pick-art { width: 110px; height: 110px; }
+.wel__pick b { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-lg); color: var(--pick); line-height: 1.1; }
+.wel__pick span { font-size: var(--fs-sm); font-weight: 700; color: var(--ink-soft); }
+.wel__hint { text-align: center; font-size: var(--fs-sm); color: var(--ink-soft); }

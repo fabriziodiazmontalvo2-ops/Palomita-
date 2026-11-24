@@ -6,6 +6,7 @@ import { h, clear, button, toast } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { go, back } from '../core/router.js';
 import * as R from '../core/reminders.js';
+import { G } from '../core/genero.js';
 import { arr, txt, deco, smooth, shuffle, loadData, lifecycle, shell, tabBar, soon, quiz, speakBtn, rewardRow, grant, celebrate } from './catequesis.js';
 
 const TABS = [
@@ -325,7 +326,7 @@ export async function mount(el, params = {}) {
     const key = state.massKey();
     return [
       h('div', { class: 'ct-intro' }, h('h2', null, 'Mi pasaporte de la Misa'),
-        h('p', null, 'Cada domingo que vas a Misa, tu palomita pone un sello. La Misa de la tarde del sábado también cuenta.')),
+        h('p', null, G('Cada domingo que vas a Misa, tu {palomita|palomito} pone un sello. La Misa de la tarde del sábado también cuenta.'))),
       h('div', { class: 'mp-sum' }, h('span', { class: 'chip' }, `⛪ ${n} ${n === 1 ? 'Misa' : 'Misas'}`),
         h('span', { class: 'chip' }, `🎁 Faltan ${nextPrize} para el próximo premio`),
         ev ? h('span', { class: 'chip' }, `🕊️ Primera Comunión: ${R.fmtDate(ev.start)}`) : null),
@@ -343,7 +344,7 @@ export async function mount(el, params = {}) {
         state.logMass(key, {});
         sfx('sticker');
         const total = Object.keys(state.massLog()).length;
-        if (total % 4 === 0 && !state.owns('collar-cruz')) { state.own('collar-cruz'); toast('¡Premio! Crucecita de madera para tu palomita', { icon: '✝️', ms: 3200 }); }
+        if (total % 4 === 0 && !state.owns('collar-cruz')) { state.own('collar-cruz'); toast(G('¡Premio! Crucecita de madera para tu {palomita|palomito}'), { icon: '✝️', ms: 3200 }); }
         else toast('¡Sello en tu pasaporte!', { icon: '⛪' });
         show('pasaporte');
       } }) : null,

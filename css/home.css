@@ -243,3 +243,5 @@
 .rp-item.is-on { background: #e6f6e8; }
 .rp-item__icon { font-size: 1.5rem; line-height: 1.1; }
 .rp-item__tag { font-family: var(--font-display); font-weight: 800; font-size: 0.7rem; color: var(--ink-soft); }
+.rp-item__icon.acc-art { width: 44px; height: 44px; }
+.rp-item__icon.acc-art.has-img { border-radius: 10px; }

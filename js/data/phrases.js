@@ -1,21 +1,21 @@
 // Lo que dice la palomita en sus globitos, y un dato bíblico por cada alimento de la tienda.
-// La palomita habla como amiga del niño. (La paloma nos recuerda al Espíritu Santo, pero ella es solo una palomita amiga.)
+// La palomita habla como amiga del niño. Lo que cambia si es varón va como {femenino|masculino} (ver js/core/genero.js). (La paloma nos recuerda al Espíritu Santo, pero ella es solo una palomita amiga.)
 export const PHRASES = {
   greet: ['¡Hola! ¡Qué alegría verte!', '¡Llegaste! Te estaba esperando 💕', '¡Qué bueno que viniste!', '¡Hola, amigo! ¿Jugamos hoy?', '¡Te extrañé un montón!', '¡Cu-cú! Aquí estoy 🕊️'],
   morning: ['¡Buenos días! ☀️', '¡Buen día! ¿Le damos gracias a Dios?', '¡Arriba! Hoy será un gran día', '¡Qué lindo amaneció!', 'Buenos días. ¿Desayunamos juntos?'],
   night: ['¡Buenas noches! 🌙', 'Ya salió la luna. ¡Qué linda!', 'Antes de dormir, ¿rezamos?', 'Hoy fue un buen día, ¿verdad?', 'Se acerca la hora de soñar ✨'],
   hungry: ['¡Tengo hambre! 🍞', 'Mi pancita hace ruido…', '¿Vamos a la cocina?', '¡Qué rico sería un pancito!', 'Mmm… ¿me das de comer?', 'Tengo un hambre de elefante 🐘'],
   sleepy: ['Tengo sueñito… 😴', 'Se me cierran los ojitos', '¿Me llevas a dormir?', 'Aaah… qué sueño tengo', 'Mis alitas están cansadas'],
-  dirty: ['¿Me das un bañito? 🫧', '¡Estoy llena de barro!', 'Necesito jabón y agüita', 'Uy, mis plumas están sucias', '¿Vamos al baño? ¡Quiero burbujas!'],
-  bored: ['¿Jugamos? 🎈', '¡Quiero jugar contigo!', '¿Probamos un juego nuevo?', 'Estoy aburrida… ¿me haces cosquillas?', '¡Vamos a divertirnos!'],
+  dirty: ['¿Me das un bañito? 🫧', '¡Estoy llen{a|o} de barro!', 'Necesito jabón y agüita', 'Uy, mis plumas están sucias', '¿Vamos al baño? ¡Quiero burbujas!'],
+  bored: ['¿Jugamos? 🎈', '¡Quiero jugar contigo!', '¿Probamos un juego nuevo?', 'Estoy aburrid{a|o}… ¿me haces cosquillas?', '¡Vamos a divertirnos!'],
   happy: ['¡Qué feliz estoy contigo!', '¡Eres mi mejor amigo!', 'Dios te quiere muchísimo 💛', '¡Hoy es un día precioso!', 'Me encanta estar a tu lado', '¿Sabes? Jesús es tu amigo', '¡Gracias por cuidarme tan bien!'],
   fed: ['¡Qué rico! Gracias 😋', '¡Mmm, delicioso!', '¡Gracias, Dios, por la comida!', '¡Pancita contenta!', '¡Estaba riquísimo!', '¡Ñam, ñam! ¡Gracias!'],
-  clean: ['¡Quedé brillante! ✨', '¡Qué rico huelo!', '¡Mis plumas están blanquitas!', '¡Me encantan las burbujas!', '¡Fresquita y limpia!'],
+  clean: ['¡Quedé brillante! ✨', '¡Qué rico huelo!', '¡Mis plumas están blanquitas!', '¡Me encantan las burbujas!', '¡Fresquit{a|o} y limpi{a|o}!'],
   petted: ['¡Ji, ji! Me haces cosquillas', '¡Qué rico mimo! 💕', '¡Otra vez, otra vez!', '¡Te quiero mucho!', 'Cu-cu-rrú… ¡qué feliz!', '¡Ja, ja, ja!'],
   pray: ['¿Rezamos juntos? 🙏', '¿Le contamos a Jesús cómo fue el día?', '¿Vamos al rincón de oración?', 'Hablar con Dios me da paz', '¿Leemos una historia de la Biblia? 📖', 'Hoy quiero darle gracias a Dios'],
   afterGame: ['¡Qué divertido!', '¡Jugaste muy bien!', '¡Me encantó ese juego!', '¿Te acuerdas del mensaje del juego?', '¡Otra partida más tarde!'],
   levelUp: ['¡Subimos de nivel! 🎉', '¡Cada día crecemos más!', '¡Lo logramos juntos!', '¡Qué gran equipo somos!', '¡Bravo, bravo!'],
-  wakeUp: ['¡Ya desperté! ☀️', '¡Qué bien dormí!', '¡Buenos días! Tengo mucha energía', 'Aaah… ¡qué rico descansé!', '¡Lista para un nuevo día!'],
+  wakeUp: ['¡Ya desperté! ☀️', '¡Qué bien dormí!', '¡Buenos días! Tengo mucha energía', 'Aaah… ¡qué rico descansé!', '¡List{a|o} para un nuevo día!'],
   facts: [
     '¿Sabías que la Biblia tiene 73 libros? 46 del Antiguo Testamento y 27 del Nuevo.',
     '¿Sabías que la palabra «Biblia» significa «los libros»?',

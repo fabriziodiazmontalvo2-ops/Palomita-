@@ -675,12 +675,131 @@ export function createDove(THREE, opts = {}) {
   const hCrown = pt(HEAD_C, [0, 1, 0]);
   const hNeck = pt([0, 1.06, 0.05], [0, -0.1, 1]);
   const hBack = pt(BODY_C, [0, 0.62, -0.78]);
+  const hFace = pt(HEAD_C, dirYP(0, -3));
   const anchors = {
     head: anchor('head', bHead, hCrown.x, hCrown.y, hCrown.z),
     neck: anchor('neck', bBody, hNeck.x, hNeck.y, hNeck.z),
     beak: anchor('beak', bHead, 0, beakO[1] - Math.sin(BEAK_TILT) * 0.2 - 0.02, beakO[2] + Math.cos(BEAK_TILT) * 0.2),
     back: anchor('back', bBody, hBack.x, hBack.y, hBack.z),
+    // Ropa: el origen es el centro del cuerpo; userData.tailor corta una prenda a la medida (ver más abajo).
+    body: anchor('body', bBody, ...BODY_C),
+    // Lentes: el origen es el frente de la cara a la altura de los ojos (+Z hacia fuera).
+    face: anchor('face', bHead, hFace.x, hFace.y, hFace.z),
+    // Zapatos: el origen es el pie en el suelo; los dedos apuntan a +Z.
+    footL: anchor('footL', bFootL, FOOT_X, 0, FOOT_Z),
+    footR: anchor('footR', bFootR, -FOOT_X, 0, FOOT_Z),
   };
+  // Medidas de la cara para los lentes: dónde está cada ojo (en el espacio del ancla 'face') y hacia dónde mira.
+  anchors.face.userData.eyes = [1, -1].map(s => {
+    const e = pt(HEAD_C, dirYP(28 * s, -3));
+    return { x: e.x - hFace.x, y: e.y - hFace.y, z: e.z - hFace.z, nx: e.nx, ny: e.ny, nz: e.nz };
+  });
+  anchors.face.userData.head = { x: HEAD_C[0] - hFace.x, y: HEAD_C[1] - hFace.y, z: HEAD_C[2] - hFace.z, rx: E_HEAD[3], ry: E_HEAD[4], rz: E_HEAD[5] };
+  anchors.head.userData.head = { x: HEAD_C[0] - hCrown.x, y: HEAD_C[1] - hCrown.y, z: HEAD_C[2] - hCrown.z, rx: E_HEAD[3], ry: E_HEAD[4], rz: E_HEAD[5] };
+  // Perfil del pecho bajo el cuello (para la corbata): puntos [y, z] en el espacio del ancla 'neck', de arriba abajo.
+  anchors.neck.userData.front = [];
+  for (let y = hNeck.y - 0.02; y > 0.42; y -= 0.05) { const f = surf([0, y, -0.02], 0, 0, 1, {}); anchors.neck.userData.front.push([f.y - hNeck.y, f.z - hNeck.z]); }
+
+  // ───────────── el «sastre»: prendas cortadas a la medida del cuerpo ─────────────
+  // tailor(spec) → { geometry, top, bottom }   (posiciones en el espacio del ancla 'body')
+  //   y0, y1     alturas (en el modelo) del ruedo y del cuello de la prenda
+  //   inflate    separación de la piel (grosor aparente de la tela)
+  //   flare      cuánto se abre hacia abajo desde flareFrom (faldas y vestidos); ruffle: ondas del vuelo
+  //   front      medio ángulo (radianes) que queda abierto adelante; puede ser una función de u (0 abajo … 1 arriba)
+  //   wings      true → deja libre lo que tapan las alas (así no se esconden bajo la ropa)
+  //   color(u, phi, x, y, z) → [r, g, b]    pinta la tela (phi = 0 adelante, + hacia el ala izquierda)
+  //   top / bottom: puntos del borde de arriba y de abajo (null donde la tela está cortada), para ribetes y cuellos.
+  const W_SH = [84 * RAD, 26 * RAD], W_TP = [141 * RAD, -12 * RAD];
+  const W_CE = Math.cos((W_SH[1] + W_TP[1]) / 2);
+  let W_UX = (W_TP[0] - W_SH[0]) * W_CE, W_UY = W_TP[1] - W_SH[1];
+  const W_LEN = Math.hypot(W_UX, W_UY); W_UX /= W_LEN; W_UY /= W_LEN;
+  const W_A0 = W_LEN * 0.4, W_A1 = W_LEN * 0.6, W_BW = 0.37;
+  const W_C0 = [W_SH[0] + W_UX * W_A0 / W_CE, W_SH[1] + W_UY * W_A0];
+  // ¿Este punto de la piel queda debajo de un ala? (la huella del ala en reposo, un poco agrandada)
+  function underWing(x, y, z, margin = 1.12) {
+    const dx = x - WING_C[0], dy = y - WING_C[1], dz = z - WING_C[2];
+    const l = Math.hypot(dx, dy, dz) || 1;
+    const psi = Math.atan2(Math.abs(dx) / l, dz / l), eps = Math.asin(clamp(dy / l, -1, 1));
+    const P = (psi - W_C0[0]) * W_CE, E = eps - W_C0[1];
+    const a = P * W_UX + E * W_UY, b = -P * W_UY + E * W_UX;
+    const A = (a > 0 ? W_A1 : W_A0) * margin, pw = a > 0 ? 1.8 : 2;
+    return Math.pow(Math.abs(a) / A, pw) + Math.pow(Math.abs(b) / (W_BW * margin), pw) <= 1;
+  }
+  const tailorCache = new Map();          // muestras de la piel ya medidas (ponerse la misma prenda otra vez es instantáneo)
+  function tailor({ y0 = 0.3, y1 = 0.97, inflate = 0.02, flare = 0, flareFrom = 0.5, ruffle = 0, ruffleN = 12, front = 0,
+    wings = true, wingMargin = 0.96, seg = 112, rows = 40, color = () => [1, 1, 1] } = {}) {
+    // Cada fila da la vuelta de θ = open (al borde de la abertura delantera) a 2π − open; sin abertura, de 0 a 2π
+    // (el primer y el último punto coinciden adelante y se les empareja la normal: no se nota la costura).
+    const openAt = typeof front === 'function' ? front : () => front;
+    const opens = Array.from({ length: rows + 1 }, (_, i) => clamp(openAt(i / rows), 0, PI * 0.9));
+    const cols = seg + 1, n = (rows + 1) * cols;
+    const key = [y0, y1, rows, seg, opens.map(o => o.toFixed(4)).join(':')].join('|');
+    let S = tailorCache.get(key);
+    if (!S) {
+      S = { p: new Float32Array(n * 3), nr: new Float32Array(n * 3) };
+      const h = {};
+      for (let i = 0; i <= rows; i++) {
+        const y = lerp(y0, y1, i / rows);
+        // eje del cuerpo a esta altura: punto medio entre el pecho y la espalda
+        const zc = (surf([0, y, -0.02], 0, 0, 1, {}).z + surf([0, y, -0.02], 0, 0, -1, {}).z) / 2;
+        for (let j = 0; j < cols; j++) {
+          const th = opens[i] + (TAU - 2 * opens[i]) * j / seg;
+          surf([0, y, zc], Math.sin(th), 0, Math.cos(th), h);
+          const k = (i * cols + j) * 3;
+          S.p[k] = h.x; S.p[k + 1] = h.y; S.p[k + 2] = h.z; S.nr[k] = h.nx; S.nr[k + 1] = h.ny; S.nr[k + 2] = h.nz;
+        }
+      }
+      tailorCache.set(key, S);
+      if (tailorCache.size > 16) tailorCache.delete(tailorCache.keys().next().value);
+    }
+    const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), cut = new Uint8Array(n), idx = [];
+    for (let i = 0; i <= rows; i++) {
+      const u = i / rows, y = lerp(y0, y1, u);
+      const fl = y < flareFrom ? flare * Math.pow((flareFrom - y) / Math.max(1e-3, flareFrom - y0), 1.4) : 0;
+      for (let j = 0; j < cols; j++) {
+        const v = i * cols + j, k = v * 3;
+        const th = opens[i] + (TAU - 2 * opens[i]) * j / seg, phi = th > PI ? th - TAU : th;     // −π … π, 0 = adelante
+        const sx = Math.sin(th), cz = Math.cos(th), rf = fl * (1 + ruffle * Math.sin(th * ruffleN));
+        const hx = S.p[k], hy = S.p[k + 1], hz = S.p[k + 2];
+        const x = hx + S.nr[k] * inflate + sx * rf, yy = hy + S.nr[k + 1] * inflate - fl * 0.18, z = hz + S.nr[k + 2] * inflate + cz * rf;
+        pos[k] = x - BODY_C[0]; pos[k + 1] = yy - BODY_C[1]; pos[k + 2] = z - BODY_C[2];
+        const c3 = color(u, phi, x, yy, z);
+        col[k] = c3[0]; col[k + 1] = c3[1]; col[k + 2] = c3[2];
+        cut[v] = wings && fl < 0.02 && underWing(hx, hy, hz, wingMargin) ? 1 : 0;
+      }
+    }
+    for (let i = 0; i < rows; i++) for (let j = 0; j < seg; j++) {
+      const a = i * cols + j, b = a + 1, c = a + cols, d = b + cols;
+      if (cut[a] || cut[b] || cut[c] || cut[d]) continue;
+      idx.push(a, b, d, a, d, c);
+    }
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new BufferAttribute(pos, 3));
+    geometry.setAttribute('color', new BufferAttribute(col, 3));
+    geometry.setIndex(idx);
+    geometry.computeVertexNormals();
+    const nor = geometry.attributes.normal;
+    for (let i = 0; i <= rows; i++) if (opens[i] === 0) {            // costura invisible adelante
+      const a = i * cols, b = a + seg;
+      const nx = nor.getX(a) + nor.getX(b), ny = nor.getY(a) + nor.getY(b), nz = nor.getZ(a) + nor.getZ(b), l = Math.hypot(nx, ny, nz) || 1;
+      nor.setXYZ(a, nx / l, ny / l, nz / l); nor.setXYZ(b, nx / l, ny / l, nz / l);
+    }
+    const vtx = v => new Vector3(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]);
+    const rowOf = u => Math.round(clamp(u, 0, 1) * rows);
+    const colOf = (i, phi) => { const th = phi < 0 ? phi + TAU : phi; return Math.round(clamp((th - opens[i]) / (TAU - 2 * opens[i]), 0, 1) * seg); };
+    const ring = i => {
+      const r = Array.from({ length: opens[i] > 0 ? cols : seg }, (_, j) => (cut[i * cols + j] ? null : vtx(i * cols + j)));
+      r.open = opens[i] > 0;
+      return r;
+    };
+    return {
+      geometry, top: ring(rows), bottom: ring(0),
+      ringAt: u => ring(rowOf(u)),                                                  // borde a cualquier altura (cinturones)
+      at: (u, phi) => { const i = rowOf(u); return vtx(i * cols + colOf(i, phi)); }, // un punto de la tela (botones, lazos)
+      normalAt: (u, phi) => { const i = rowOf(u), v = i * cols + colOf(i, phi); return new Vector3(nor.getX(v), nor.getY(v), nor.getZ(v)); },
+    };
+  }
+  anchors.body.userData.tailor = tailor;
 
   group.traverse(o => { if (o.isMesh) o.castShadow = true; });
 

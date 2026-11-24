@@ -23,7 +23,7 @@ const NEWS = {
   26: '🌱 ¡Nuevo: talentos enterrados! Tócalos para desenterrarlos',
   31: '🎁 ¡Nuevo: talento que se multiplica! Su pareja vale 2',
   36: '🌇 ¡Nuevo: atardecer! Se cambian dos parejas a la vez',
-  41: '🕊️ ¡Nuevo: carta de Palomita! Te enseña una pareja',
+  41: '🕊️ ¡Nuevo: carta de {Palomita|Palomito}! Te enseña una pareja',
   46: '🔀 ¡Nuevo: también se barajan a mitad del juego!',
   51: '🤔 ¡Nuevo: piedritas sin pareja! No te confundas',
   61: '🔄 ¡Nuevo: una fila entera da una vueltita!',
@@ -49,7 +49,7 @@ const TWINS = {
 const SPECIAL = {
   gold: { n: 'Tiempo', c: '#ffe58f' },        // talento de oro: su pareja regala segundos
   multi: { n: 'Vale 2', c: '#ffd3ec' },       // talento que se multiplica: su pareja cuenta doble
-  dove: { n: 'Palomita', c: '#dff0ff' },      // carta sola: Palomita enseña una pareja un momento
+  dove: { n: '{Palomita|Palomito}', c: '#dff0ff' },      // carta sola: la palomita enseña una pareja (api.t elige palomita o palomito)
   stone: { n: 'Sin pareja', c: '#e4e7ec' },   // carta sola: no tiene pareja
 };
 // Paisaje según el momento del día.
@@ -371,7 +371,7 @@ export default {
       } else if (k === 'dove') kit.dove(g, -es * 0.08, ey + es * 0.08, es / 50, { flap: 0.5 + 0.5 * Math.sin(t * 9), dir: 1 });
       else if (k === 'stone') kit.rock(g, 0, ey + es * 0.32, es / 46, PAL.stoneDeep);
       const lab = Math.max(12, Math.min(15, w * 0.19));
-      kit.text(g, c.gift.n, 0, h / 2 - lab * 0.85 - 3, { size: lab, color: PAL.ink, maxWidth: w - 6 });
+      kit.text(g, api.t(c.gift.n), 0, h / 2 - lab * 0.85 - 3, { size: lab, color: PAL.ink, maxWidth: w - 6 });
     }
     function drawCard(g, c) {
       if (c.fade <= 0.01 || c.dl <= 0) return;

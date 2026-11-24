@@ -4,6 +4,7 @@ import * as state from './state.js';
 import { sfx } from './audio.js';
 import { h, modal, toast } from './ui.js';
 import { FOODS, ACCESSORIES, accessory } from '../data/items.js';
+import { fits } from './genero.js';
 import { MEDALS, isChest } from '../games/levels.js';
 import { grantPack } from './stickers.js';
 
@@ -14,16 +15,26 @@ function packItem(reason) {
 
 const COIN = state.COIN.icon;
 
-// Accesorios que se ganan juntando estrellas en los juegos (no se venden en la tienda).
+// Accesorios que se ganan juntando estrellas en los juegos (no se venden en la tienda). En 75 hay uno para cada
+// género (collar de perlas para la palomita, lentes de aviador para el palomito): ver starRewards().
 export const STAR_REWARDS = [
   { stars: 25, id: 'corona-olivo' },
   { stars: 75, id: 'collar-perlas' },
+  { stars: 75, id: 'lentes-aviador' },
   { stars: 150, id: 'bufanda-arcoiris' },
   { stars: 300, id: 'gorro-estrellas' },
   { stars: 600, id: 'sombrero-pastor' },
   { stars: 1000, id: 'campanita' },
   { stars: 2000, id: 'corona-trigo' },
 ];
+
+// Los premios por estrellas que le tocan a esta palomita (según su género).
+export const starRewards = () => STAR_REWARDS.filter(r => fits(accessory(r.id)));
+// Entrega los premios por estrellas que ya se ganó y todavía no tiene (por ejemplo, al elegir el género).
+export function catchUpStarRewards() {
+  const total = state.totalStars();
+  return starRewards().filter(r => total >= r.stars && !state.owns(r.id)).map(r => giveAccessory(r.id)).filter(Boolean);
+}
 
 function randomFoods(count, maxLevel) {
   const pool = FOODS.filter(f => f.level <= Math.max(1, maxLevel));
@@ -74,7 +85,7 @@ export function grantLevel(game, n, rec, { won }) {
   // Accesorios por estrellas acumuladas.
   if (won && rec.gainedStars > 0) {
     const total = state.totalStars();
-    for (const r of STAR_REWARDS) {
+    for (const r of starRewards()) {
       if (total >= r.stars && !state.owns(r.id)) {
         const got = giveAccessory(r.id);
         if (got) {
@@ -114,7 +125,7 @@ export function levelUpRewards(level) {
   state.addCoins(coins);
   const items = [{ icon: COIN, text: `+${coins} ${state.COIN.name}` }, ...giveFoods(randomFoods(level % 5 === 0 ? 3 : 2, level + 1))];
   const newFoods = FOODS.filter(f => f.level === level).map(f => ({ icon: f.emoji, text: `Nuevo en la tienda: ${f.name}` }));
-  const newAcc = ACCESSORIES.filter(a => a.level === level && !a.reward).map(a => ({ icon: a.emoji, text: `Nuevo en la tienda: ${a.name}` }));
+  const newAcc = ACCESSORIES.filter(a => a.level === level && !a.reward && fits(a)).map(a => ({ icon: a.emoji, text: `Nuevo en la tienda: ${a.name}` }));
   return [...items, ...newFoods, ...newAcc];
 }
 
@@ -171,7 +182,7 @@ export function showDailyGift() {
 // Aviso amable al juntar estrellas suficientes para el próximo accesorio.
 export function nextStarReward() {
   const t = state.totalStars();
-  return STAR_REWARDS.find(r => !state.owns(r.id) && t < r.stars) || null;
+  return starRewards().find(r => !state.owns(r.id) && t < r.stars) || null;
 }
 
 export function toastReward(text, icon = '🎁') { toast(text, { icon, ms: 2800 }); }

@@ -12,7 +12,7 @@
 //   world.project(nombre) → { x, y }   px CSS dentro del canvas: 'beak' | 'head' | 'body' | 'feet'
 //   world.hitDove(x, y) → parte | null
 //   world.fx.hearts(n) sparkles(n) crumbs() notes() stars() splash() confetti() · zzz(on) · foam(0..1) · shower(on)
-//   world.wear(slot, id | null)        accesorios ('head' | 'neck' | 'beak')
+//   world.wear(slot, id | null)        ropa y accesorios ('body' | 'head' | 'face' | 'neck' | 'beak' | 'feet')
 //   world.stats() → { calls, triangles }
 //   world.setGrowth(escala 0.5..1, { animate })   tamaño de la palomita (crece con su nivel)
 //   world.startArrival() → Promise   escena de llegada en la jaulita (el niño toca para abrirla)
@@ -31,7 +31,7 @@
 import * as THREE from 'three';
 import { createDove } from './dove.js';
 import { buildRoom, ROOM_IDS, ROOM_LIGHT } from './rooms.js';
-import { createAccessory } from './accessories.js';
+import { dressSlot } from './accessories.js';
 import { createArrival } from './arrival.js';
 import { sfx } from '../core/audio.js';
 
@@ -209,12 +209,8 @@ export function createWorld(canvas) {
   // ── Accesorios ──
   const wearing = {};
   function wear(slot, id) {
-    const anchor = dove.anchors[slot];
-    if (!anchor) return;
-    if (wearing[slot]) { anchor.remove(wearing[slot]); wearing[slot].userData.dispose?.(); wearing[slot] = null; }
-    if (!id) return;
-    const acc = createAccessory(THREE, id);
-    if (acc) { anchor.add(acc); wearing[slot] = acc; }
+    for (const acc of wearing[slot] || []) { acc.parent?.remove(acc); acc.userData.dispose?.(); }
+    wearing[slot] = id ? dressSlot(THREE, dove, slot, id) : [];
   }
 
   // ── Proyección y toques ──

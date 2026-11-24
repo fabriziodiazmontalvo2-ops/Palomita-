@@ -5,12 +5,14 @@ import * as tts from '../core/tts.js';
 import { sfx } from '../core/audio.js';
 import { h, clear, button, modal, toast, meter } from '../core/ui.js';
 import { go } from '../core/router.js';
-import { FOODS, food } from '../data/items.js';
+import { FOODS, food, SLOTS, accessory } from '../data/items.js';
+import { G, fits } from '../core/genero.js';
 import * as talkback from '../pet/talkback.js';
 import * as photos from '../core/photos.js';
 import { growthFor } from '../pet/arrival.js';
 import { music } from '../core/audio.js';
-import { dailyGiftDue, showDailyGift, showChest, takeLevelUps } from '../core/rewards.js';
+import { dailyGiftDue, showDailyGift, showChest, takeLevelUps, catchUpStarRewards } from '../core/rewards.js';
+import { doveFront, doveLook } from '../games/kit.js';
 import * as reminders from '../core/reminders.js';
 import * as Rv from '../core/review.js';
 import * as stickers from '../core/stickers.js';
@@ -34,10 +36,10 @@ const ROOMS = [
 const NEED_ROOM = { hambre: 'cocina', energia: 'dormitorio', limpieza: 'bano', alegria: 'sala', fe: 'capilla' };
 const TIPS = {
   hambre: 'Ve a la cocina 🍞 y dale de comer.',
-  energia: 'Llévala a dormir 🌙 y apaga la luz.',
+  energia: 'Lléva{la|lo} a dormir 🌙 y apaga la luz.',
   limpieza: 'En el baño 🛁: primero jabón y luego ducha.',
-  alegria: 'Acaríciala, juega con ella o entra a los juegos 🎮.',
-  fe: 'Reza con ella 🙏, lee la Biblia 📖 o mira el mensaje de hoy 💌.',
+  alegria: 'Acarícia{la|lo}, juega con {ella|él} o entra a los juegos 🎮.',
+  fe: 'Reza con {ella|él} 🙏, lee la Biblia 📖 o mira el mensaje de hoy 💌.',
 };
 const FALLBACK_PHRASES = {
   greet: ['¡Hola! ¡Qué alegría verte!', '¡Llegaste! Te estaba esperando 💕'], morning: ['¡Buenos días! ☀️'], night: ['¡Buenas noches! 🌙'],
@@ -87,7 +89,7 @@ export async function mount(el, params = {}) {
 
   // ── Mundo 3D ──
   if (!world) {
-    canvas = h('canvas', { class: 'home__canvas', 'aria-label': 'Tu palomita' });
+    canvas = h('canvas', { class: 'home__canvas', 'aria-label': G('Tu {palomita|palomito}') });
     el.append(canvas);
     try {
       const { createWorld } = await import('../pet/world.js');
@@ -119,8 +121,8 @@ export async function mount(el, params = {}) {
     const m = meter(state.stat(n), state.STAT_META[n].color);
     const b = h('button', { type: 'button', class: 'home-meter', 'aria-label': state.STAT_META[n].label, onclick: () => {
       sfx('tap');
-      toast(`${state.STAT_META[n].label}: ${TIPS[n]}`, { icon: state.STAT_META[n].icon, ms: 3200 });
-      if (tts.available() && state.setting('voice') !== false) tts.speak(`${state.STAT_META[n].label}. ${TIPS[n]}`);
+      toast(`${state.STAT_META[n].label}: ${G(TIPS[n])}`, { icon: state.STAT_META[n].icon, ms: 3200 });
+      if (tts.available() && state.setting('voice') !== false) tts.speak(`${state.STAT_META[n].label}. ${G(TIPS[n])}`);
       const tab = [...tabs.children].find(t => t.dataset.room === NEED_ROOM[n]);
       if (tab) { tab.classList.add('is-pointed'); setTimeout(() => tab.classList.remove('is-pointed'), 2400); }
     } },
@@ -212,7 +214,11 @@ export async function mount(el, params = {}) {
     const clean = state.stat('limpieza');
     dove.setDirt(clean < 60 ? Math.min(1, (60 - clean) / 45) : 0);
   }
-  function applyWear() { const w = state.get().wearing || {}; for (const slot of ['head', 'neck', 'beak']) world.wear(slot, w[slot] || null); }
+  function applyWear() {
+    const w = state.get().wearing || {};
+    const bath = room === 'bano';            // para bañarse se quita la ropa; al salir del baño se la vuelve a poner
+    for (const slot of SLOTS) { const a = accessory(w[slot]); world.wear(slot, !bath && a && fits(a) ? a.id : null); }
+  }
 
   // ── Globito de diálogo ──
   function placeBubble() {
@@ -223,6 +229,7 @@ export async function mount(el, params = {}) {
   }
   function say(text, ms = 4200, action = null) {
     if (!alive || !text || world.doveVisible === false) return;   // dormida en otro cuarto: no habla
+    text = G(text);                                                  // palomita o palomito: «aburrid{a|o}»
     bubble.textContent = text;
     bubbleAction = action;
     bubble.classList.toggle('has-action', !!action);
@@ -267,7 +274,7 @@ export async function mount(el, params = {}) {
   }
   function isAsleep(msg = true) {
     if (!state.get().sleeping) return false;
-    if (msg) toast(room === 'dormitorio' ? 'Shh… está dormida. Toca ☀️ Despertar.' : `${state.get().name} duerme en su camita 😴`, { icon: '😴' });
+    if (msg) toast(room === 'dormitorio' ? G('Shh… está dormid{a|o}. Toca ☀️ Despertar.') : `${state.get().name} duerme en su camita 😴`, { icon: '😴' });
     return true;
   }
 
@@ -275,8 +282,10 @@ export async function mount(el, params = {}) {
   function setRoom(id, { silent = false } = {}) {
     // Si está dormida, sigue durmiendo en su camita mientras el niño recorre la casa.
     if (id !== 'bano' && foam > 0) { foam = 0; washSoaped = false; world.fx.foam(0); }
+    const bathChange = (id === 'bano') !== (room === 'bano');
     room = id;
     world.setRoom(id);
+    if (bathChange) applyWear();
     placeDove();
     if (id !== 'sala') { ropero.close(); play.stop(); }
     for (const b of tabs.children) { const on = b.dataset.room === id; b.classList.toggle('is-on', on); b.setAttribute('aria-current', on ? 'true' : 'false'); }
@@ -311,7 +320,7 @@ export async function mount(el, params = {}) {
       // Sin botones a la vista: la regadera y el jabón se mueven con el dedo dentro del baño (o se tocan).
       // Para quien usa lector de pantalla quedan dos botones invisibles que hacen lo mismo.
       tray.append(h('p', { class: 'home-bath-hint' }, h('span', { 'aria-hidden': 'true' }, '🧼'), ' Arrastra el jabón · luego la regadera ', h('span', { 'aria-hidden': 'true' }, '🚿')),
-        h('button', { type: 'button', class: 'sr-only', onclick: () => { if (!isAsleep()) addFoam(0.25); } }, 'Enjabonar a la palomita'),
+        h('button', { type: 'button', class: 'sr-only', onclick: () => { if (!isAsleep()) addFoam(0.25); } }, G('Enjabonar a {la palomita|el palomito}')),
         h('button', { type: 'button', class: 'sr-only', onclick: () => { if (!isAsleep()) world.water(3); } }, 'Abrir la regadera'));
     } else if (room === 'dormitorio') {
       const sleeping = state.get().sleeping;
@@ -367,7 +376,7 @@ export async function mount(el, params = {}) {
     const list = photos.list();
     const body = list.length
       ? h('div', { class: 'home-album' }, list.map(p => h('button', { type: 'button', class: 'home-album__item', 'aria-label': 'Ver foto', onclick: () => viewPhoto(p, m) }, h('img', { src: p.src, alt: '' }))))
-      : h('p', { style: { textAlign: 'center' } }, 'Todavía no hay fotos. Toca 📷 Foto para sacarle una a tu palomita.');
+      : h('p', { style: { textAlign: 'center' } }, G('Todavía no hay fotos. Toca 📷 Foto para sacarle una a tu {palomita|palomito}.'));
     const m = modal({ title: 'Mi álbum', icon: '🖼️', body: [body, list.length ? h('p', { class: 'home-prayer__note' }, `Hasta ${photos.MAX_PHOTOS} fotos. Se guardan solo en este teléfono.`) : null], buttons: [{ label: 'Cerrar', kind: 'sun' }] });
   }
   function viewPhoto(p, parent) {
@@ -390,7 +399,7 @@ export async function mount(el, params = {}) {
     const on = wantsListen();
     earBtn.className = `home-ear${on ? ' is-on' : ''}${earState === 'hearing' ? ' is-hearing' : ''}${earState === 'speaking' ? ' is-speaking' : ''}`;
     earBtn.textContent = !on ? '🔇' : earState === 'hearing' ? '👂' : earState === 'speaking' ? '🗣️' : '👂';
-    earBtn.setAttribute('aria-label', on ? 'La palomita te está escuchando. Toca para que deje de escuchar.' : 'Toca para que la palomita repita lo que dices');
+    earBtn.setAttribute('aria-label', G(on ? '{La palomita|El palomito} te está escuchando. Toca para que deje de escuchar.' : 'Toca para que {la palomita|el palomito} repita lo que dices'));
     earBtn.title = on ? 'Te escucho' : 'No escucha';
   }
   function ensureListener() {
@@ -425,7 +434,7 @@ export async function mount(el, params = {}) {
     const on = !wantsListen();
     // La primera vez que se enciende el micrófono lo decide un grande.
     if (on && !state.flag('micOk')) {
-      if (!(await grownGate({ reason: 'Para que la palomita use el micrófono y repita lo que el niño dice.' }))) return;
+      if (!(await grownGate({ reason: G('Para que {la palomita|el palomito} use el micrófono y repita lo que el niño dice.') }))) return;
       state.setFlag('micOk');
     }
     state.setSetting('listen', on);
@@ -445,7 +454,7 @@ export async function mount(el, params = {}) {
         { label: '¡Sí, repíteme!', kind: 'leaf', icon: '🎤', onClick: () => {
           setTimeout(async () => {
             if (!state.flag('micOk')) {
-              if (!(await grownGate({ reason: 'Para que la palomita use el micrófono y repita lo que el niño dice.' }))) { state.setSetting('listen', false); paintEar(); return; }
+              if (!(await grownGate({ reason: G('Para que {la palomita|el palomito} use el micrófono y repita lo que el niño dice.') }))) { state.setSetting('listen', false); paintEar(); return; }
               state.setFlag('micOk');
             }
             state.setSetting('listen', true); paintEar(); setTimeout(syncListen, 50);
@@ -498,7 +507,7 @@ export async function mount(el, params = {}) {
     if (isAsleep()) return;
     const f = food(id);
     if (!f || state.countItem(id) <= 0) return;
-    if (state.stat('hambre') >= 98) { dove.play('shake'); sfx('wrong'); say('¡Estoy llenita! Gracias 😊'); return; }
+    if (state.stat('hambre') >= 98) { dove.play('shake'); sfx('wrong'); say('¡Estoy llenit{a|o}! Gracias 😊'); return; }
     state.useItem(id);
     dove.play('eat'); sfx('eat');
     setTimeout(() => { if (alive) world.fx.crumbs(); }, 380);
@@ -590,7 +599,7 @@ export async function mount(el, params = {}) {
     sleepNote.hidden = here;
     if (!here) {
       clear(sleepNote).append(h('span', { class: 'home-sleepnote__z', 'aria-hidden': 'true' }, '💤'),
-        h('span', null, `${state.get().name} está dormida en su camita.`),
+        h('span', null, G(`${state.get().name} está dormid{a|o} en su camita.`)),
         h('button', { type: 'button', class: 'home-sleepnote__go', onclick: () => { sfx('tap'); setRoom('dormitorio'); } }, 'Ir a verla 🌙'));
     }
     for (const b of tabs.children) b.classList.toggle('is-sleeping', sleeping && b.dataset.room === 'dormitorio');
@@ -796,6 +805,36 @@ export async function mount(el, params = {}) {
   }, STEP * 1000);
 
   paintEar();
+  // ¿Varón o mujer? Para quien ya usaba la app antes de la versión 1.4. Lo comprado del otro género se devuelve en semillas.
+  async function askGender() {
+    let picked = null, m = null;
+    const pick = (g, label, sub, color) => {
+      const c = h('canvas', { class: 'wel__pick-art', width: 150, height: 150, 'aria-hidden': 'true' });
+      const cx = c.getContext('2d');
+      doveFront(cx, 75, 136, 1.55, { mood: 'happy' });
+      doveLook(cx, 75, 136, 1.55, g);
+      const b = h('button', { type: 'button', class: `wel__pick wel__pick--${g}`, onclick: () => { sfx('pop'); picked = g; m?.close(); } }, c, h('b', null, label), h('span', null, sub));
+      b.style.setProperty('--pick', color);
+      return b;
+    };
+    m = modal({ title: '¡Novedad!', icon: '👕', dismissible: false, className: 'gender-modal',
+      body: [h('p', { style: { textAlign: 'center' } }, `Ahora ${state.get().name} puede ser varón o mujer, y hay ropa a la moda en la tienda. ¿Qué quieres que sea?`),
+        h('div', { class: 'wel__picks' }, pick('varon', 'Varón', 'Palomito', '#3d7be0'), pick('mujer', 'Mujer', 'Palomita', '#ec5f8e')),
+        h('p', { class: 'wel__hint' }, 'Después lo puedes cambiar en Ajustes.')],
+      buttons: [] });
+    await m.closed;
+    const g = picked || 'mujer';
+    const back = state.setGender(g, { refund: true });
+    const other = g === 'varon' ? 'Palomita' : 'Palomito';
+    if (state.get().name === other) state.setNames({ name: g === 'varon' ? 'Palomito' : 'Palomita' });
+    const got = catchUpStarRewards();
+    applyWear(); refreshTop();
+    sfx('sticker');
+    toast(G('¡Listo! Tu {palomita|palomito} ya tiene su ropa en la tienda'), { icon: g === 'varon' ? '💙' : '💗', ms: 3200 });
+    if (back) setTimeout(() => toast(`Te devolví ${back} semillas por la ropa que no es para ${g === 'varon' ? 'un palomito' : 'una palomita'}`, { icon: state.COIN.icon, ms: 3800 }), 1400);
+    if (got.length) setTimeout(() => toast(`¡Ganaste ${got.map(x => x.text.replace(/[¡!]/g, '')).join(' y ')} por tus estrellas!`, { icon: '🌟', ms: 3600 }), 3000);
+  }
+
   const welcomeFlow = async () => {
     if (!state.flag('arrived') && world.startArrival) {
       // Primera vez: la palomita llega pequeñita en una jaulita.
@@ -822,6 +861,8 @@ export async function mount(el, params = {}) {
       return;
     }
     applyGrowth(false);
+    // Quien ya tenía la app: una sola vez, ¿varón o mujer? (así la tienda le muestra su ropa)
+    if (!state.gender()) { await askGender(); if (!alive) return; }
     if (params.ropero && room === 'sala' && !state.get().sleeping) { ropero.open(String(params.ropero)); return; }
     if (state.get().sleeping) return;
     const awayMins = state.takeAway();

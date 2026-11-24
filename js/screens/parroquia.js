@@ -7,6 +7,7 @@
 import { h, clear, button, modal, toast, confirmDialog } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { go, back } from '../core/router.js';
+import { G } from '../core/genero.js';
 import * as tts from '../core/tts.js';
 import * as R from '../core/reminders.js';
 import { grownGate as sharedGate, lock as lockGrown } from '../core/grown.js';
@@ -278,7 +279,7 @@ export async function mount(el, params = {}) {
     return [
       h('div', { class: 'pq-intro pq-intro--cat' },
         h('span', { class: 'pq-intro__art', 'aria-hidden': 'true' }, '📖'),
-        h('div', null, h('h2', null, 'Mi catequesis'), h('p', null, 'Tu catequista te dirá los días. Un grande los anota aquí y la palomita te recuerda.'))),
+        h('div', null, h('h2', null, 'Mi catequesis'), h('p', null, G('Tu catequista te dirá los días. Un grande los anota aquí y {la palomita|el palomito} te recuerda.')))),
       comunionCard(),
       !grown && !R.classes().length && !R.events().length ? h('div', { class: 'pq-paste-hint' },
         h('p', null, deco('💬'), ' ¿Tu catequista mandó los horarios por WhatsApp? Un grande puede pegarlos aquí.'),
@@ -554,7 +555,7 @@ export async function mount(el, params = {}) {
     return [
       h('div', { class: 'pq-intro pq-intro--avisos' },
         h('span', { class: 'pq-intro__art', 'aria-hidden': 'true' }, '⏰'),
-        h('div', null, h('h2', null, 'Avisos'), h('p', null, 'La palomita te recuerda cuándo hay Misa y cuándo tienes catequesis.'))),
+        h('div', null, h('h2', null, 'Avisos'), h('p', null, G('{La palomita|El palomito} te recuerda cuándo hay Misa y cuándo tienes catequesis.')))),
       h('label', { class: 'pq-card pq-switch', for: 'pq-on' },
         h('span', { class: 'pq-switch__icon', 'aria-hidden': 'true' }, a.on ? '🔔' : '🔕'),
         h('span', { class: 'pq-switch__text' }, h('b', null, 'Avisarme'), h('span', null, a.on ? 'Los avisos están encendidos' : 'Los avisos están apagados')),

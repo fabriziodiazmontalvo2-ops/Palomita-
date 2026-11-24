@@ -2,6 +2,17 @@
 // y desde Ajustes → «¿Qué hay de nuevo?». Frases cortas para niños y papás.
 export const NEWS = [
   {
+    version: '1.4.0',
+    title: '¡Ropa a la moda!',
+    items: [
+      { icon: '💙', text: 'Tu palomita puede ser varón (palomito) o mujer (palomita). ¡Tú eliges!' },
+      { icon: '👕', text: 'Moda de varón: la camiseta de la Selección, polera, casaca jean, gorra al revés, lentes de sol y zapatillas.' },
+      { icon: '👗', text: 'Moda de mujer: vestido de flores, falda tutú, chompa de corazones, tiara, lentes de corazón y zapatitos.' },
+      { icon: '🛍️', text: 'En la tienda aparece la ropa que le corresponde, con su foto. ¡Pruébasela antes de comprar!' },
+      { icon: '⚙️', text: 'Si quieres cambiar, ve a Ajustes: la ropa de antes queda guardada.' },
+    ],
+  },
+  {
     version: '1.3.0',
     title: '¡Palomita tiene novedades!',
     items: [

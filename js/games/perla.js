@@ -24,7 +24,7 @@ const NEWS = {
   31: '⚪ ¡Nuevo: a veces hay dos perlas! Encuentra las dos',
   36: '🟡 ¡Nuevo: perla dorada! Vale 2',
   41: '🌇 ¡Nuevo: atardecer! Las conchas bailan en ronda',
-  46: '🕊️ ¡Nuevo: acierta 3 seguidas y Palomita te trae un corazón!',
+  46: '🕊️ ¡Nuevo: acierta 3 seguidas y {Palomita|Palomito} te trae un corazón!',
   51: '🐟 ¡Nuevo: pececitos que pasan por delante!',
   56: '🐚 ¡Nuevo: seis conchas en dos filas!',
   61: '😄 ¡Nuevo: amagos! A veces solo hacen como que se cambian',

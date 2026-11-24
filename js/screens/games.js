@@ -50,7 +50,7 @@ export async function mount(el, params = {}) {
 
   // Mis premios: medallas de cada juego y accesorios que se ganan con estrellas.
   async function album() {
-    const { STAR_REWARDS, nextStarReward } = await import('../core/rewards.js');
+    const { starRewards, nextStarReward } = await import('../core/rewards.js');
     const { accessory } = await import('../data/items.js');
     const total = state.totalStars();
     const games = h('div', { class: 'gm-album' }, GAMES.map(def => {
@@ -61,7 +61,7 @@ export async function mount(el, params = {}) {
         h('span', { class: 'gm-album__medals' }, [25, 50, 75, 100].map(m => h('span', { class: lp.medals.includes(m) ? 'is-on' : '', title: MEDALS[m].name }, MEDALS[m].icon))));
     }));
     const next = nextStarReward();
-    const prizes = h('div', { class: 'gm-prizes' }, STAR_REWARDS.map(r => {
+    const prizes = h('div', { class: 'gm-prizes' }, starRewards().map(r => {
       const a = accessory(r.id), got = state.owns(r.id);
       return h('div', { class: `gm-prize${got ? ' is-on' : ''}` }, h('span', { 'aria-hidden': 'true' }, a?.emoji || '🎁'), h('small', null, got ? a?.name : `${r.stars} ★`));
     }));

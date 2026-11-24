@@ -25,6 +25,7 @@ const SAVE = {
   coins: 400, xp: 0, level: 3, inventory: { pan: 3, agua: 2, manzana: 2, uvas: 1 }, owned: [], wearing: { head: null, neck: null, beak: null },
   decor: {}, games: {}, read: {}, quiz: {}, prayers: {}, daily: { date: '', done: {} }, days: 1,
   settings: { sound: false, music: false, voice: false, listen: false }, flags: { onboarded: true, tutorialHome: true, arrived: true, micAsked: true },
+  gender: 'mujer',
 };
 
 const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
@@ -83,6 +84,45 @@ console.log('Bienvenida');
   const name = await page.evaluate(() => window.__palomita?.current()?.name);
   if (name !== 'welcome') note('bienvenida', `se esperaba la pantalla welcome y se abrió ${name}`);
   await checkLayout(page, 'bienvenida'); flush(errors, 'bienvenida');
+  // Elige «Varón»: el nombre por defecto pasa a Palomito y el género queda guardado.
+  await page.evaluate(() => document.querySelector('.wel__pick--varon')?.click());
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: path.join(outDir, '01-bienvenida-nombre.png') });
+  const picked = await page.evaluate(() => ({ g: window.__palomita.state.get().gender, n: document.getElementById('wel-name')?.value }));
+  if (picked.g !== 'varon' || picked.n !== 'Palomito') note('bienvenida', `al elegir varón quedó ${JSON.stringify(picked)}`);
+  await checkLayout(page, 'bienvenida (nombre)'); flush(errors, 'bienvenida (nombre)');
+  await ctx.close();
+}
+
+// ── 1a. Quien venía de la 1.3 (sin género): la casa pregunta una vez y devuelve las semillas de lo del otro género ──
+console.log('Sin género (de la versión 1.3)');
+{
+  const old = { ...SAVE, owned: ['lazo'], wearing: { head: 'lazo', neck: null, beak: null }, coins: 100 };
+  delete old.gender;
+  const { ctx, page, errors } = await newPage({ width: 390, height: 844 }, old);
+  await page.waitForFunction(() => !!document.querySelector('.gender-modal'), null, { timeout: 8000 }).catch(() => note('sin género', 'no apareció la pregunta ¿varón o mujer?'));
+  await page.screenshot({ path: path.join(outDir, '01-sin-genero.png') });
+  await page.evaluate(() => document.querySelector('.gender-modal .wel__pick--varon')?.click());
+  await page.waitForTimeout(700);
+  const st = await page.evaluate(() => { const s = window.__palomita.state.get(); return { g: s.gender, coins: s.coins, owned: s.owned, head: s.wearing.head }; });
+  if (st.g !== 'varon' || st.coins !== 140 || st.owned.includes('lazo') || st.head) note('sin género', `al elegir varón quedó ${JSON.stringify(st)}`);
+  flush(errors, 'sin género');
+  await ctx.close();
+}
+
+// ── 1b. La tienda muestra solo la ropa de su género (y la que es para todos) ──
+console.log('Ropa por género');
+for (const g of ['varon', 'mujer']) {
+  const { ctx, page, errors } = await newPage({ width: 390, height: 844 }, { ...SAVE, gender: g, level: 20, flags: { ...SAVE.flags, lastVersion: '9.9.9' } });
+  await page.evaluate(() => window.__palomita.go('shop', { tab: 'accesorios' }));
+  await page.waitForTimeout(900);
+  await page.screenshot({ path: path.join(outDir, `01-tienda-${g}.png`) });
+  const wrong = await page.evaluate(async gg => {
+    const { ACCESSORIES } = await import('./js/data/items.js');
+    return [...document.querySelectorAll('[data-acc]')].map(e => ACCESSORIES.find(a => a.id === e.dataset.acc)).filter(a => a?.gender && a.gender !== gg).map(a => a.id);
+  }, g);
+  if (wrong.length) note(`tienda ${g}`, `aparece ropa del otro género: ${wrong.join(', ')}`);
+  await checkLayout(page, `tienda ${g}`); flush(errors, `tienda ${g}`);
   await ctx.close();
 }
 

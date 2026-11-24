@@ -353,6 +353,26 @@ export function doveFront(g, x, y, s = 1, { mood = 'happy', wings = 0, bob = 0 }
   g.fillStyle = PAL.beak; g.beginPath(); g.moveTo(-4.5, -40.5); g.quadraticCurveTo(0, -43, 4.5, -40.5); g.quadraticCurveTo(0, -33, -4.5, -40.5); g.fill();
   g.restore();
 }
+// Lo que lleva puesto en el dibujo: una gorra azul (varón) o un moño rosado (mujer). Mismas medidas que doveFront.
+export function doveLook(g, x, y, s, gender, bob = 0) {
+  if (gender !== 'varon' && gender !== 'mujer') return;
+  g.save(); g.translate(x, y + bob * s); g.scale(s, s);
+  if (gender === 'varon') {
+    g.fillStyle = '#3d7be0';
+    g.beginPath(); g.ellipse(0, -53, 16.5, 11, 0, Math.PI, 0); g.fill();
+    g.fillStyle = '#2b5fb8';
+    g.beginPath(); g.ellipse(9, -53, 12, 3.4, -0.08, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#ffffff';
+    g.beginPath(); g.arc(0, -63.5, 2.2, 0, Math.PI * 2); g.fill();
+  } else {
+    g.fillStyle = '#ff7fa8';
+    for (const d of [-1, 1]) { g.beginPath(); g.ellipse(11 + d * 6, -58 - d * 1.5, 6.5, 4.6, d * 0.5, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = '#ec5f8e';
+    g.beginPath(); g.arc(11, -58, 2.8, 0, Math.PI * 2); g.fill();
+  }
+  g.restore();
+}
+
 // Ovejita. (x, y) = suelo. dir 1 mira a la derecha.
 export function sheep(g, x, y, s = 1, { dir = 1, t = 0, sad = false, hop = 0 } = {}) {
   shadow(g, x, y, 17 * s, 4.5 * s);

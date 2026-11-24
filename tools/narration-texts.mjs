@@ -37,7 +37,10 @@ const quiz = list => arr(list).flatMap(q => [txt(q.q), ...arr(q.options).map(txt
 
 const groups = [];
 // voice: 'palomita' → la vocecita de la palomita (claves con «p» delante; tools/gen-voice.py le sube el tono).
-const add = (group, texts, voice = '') => groups.push({ group, texts: arr(texts).map(txt).filter(Boolean), voice });
+// Los textos con {femenino|masculino} (palomita o palomito, ver js/core/genero.js) se graban en las dos formas.
+const TPL = /\{([^{}|]*)\|([^{}|]*)\}/g;
+const both = t => { const f = t.replace(TPL, (_, a) => a), m = t.replace(TPL, (_, a, b) => b); return f === m ? [f] : [f, m]; };
+const add = (group, texts, voice = '') => groups.push({ group, texts: arr(texts).map(txt).filter(Boolean).flatMap(both), voice });
 const src = f => fs.readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
 
 // Rótulos que las pantallas ponen delante de los textos.

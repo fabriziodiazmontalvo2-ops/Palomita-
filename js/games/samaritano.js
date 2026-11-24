@@ -98,7 +98,7 @@ export default {
       11: '❤️ ¡Nuevo: un abrazo, para quien está triste!',
       16: '🫒 ¡Nuevo: aceite, para quien está enfermo!'.replace('🫒', BY.aceite.e),
       21: '👧 ¡Nuevo: niños en el camino! Se cansan rápido de esperar',
-      26: '🕊️ ¡Nuevo: toca a Palomita y todos esperan con calma!',
+      26: '🕊️ ¡Nuevo: toca a {Palomita|Palomito} y todos esperan con calma!',
       31: '☀️ ¡Nuevo: personas que necesitan dos cosas!',
       41: `👴 ¡Nuevo: abuelitos cansados! Llévalos en tu burrito${BY.burro.draw ? '' : ' 🫏'}`,
       51: '⏳ ¡Nuevo: viajeros con prisa al atardecer! Ayúdalos primero',

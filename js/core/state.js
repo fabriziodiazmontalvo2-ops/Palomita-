@@ -20,10 +20,12 @@
 //   Mis repasos: reviewMiss(clave) / reviewHit(clave) / reviewDue() / reviewCount() / reviewNext() / reviewDrop(clave)
 //   Intenciones y diario: intentions() / addIntention(it) / removeIntention(at) / journal() / addJournal(entry)
 //   Actividad (para el informe de los papás): logActivity(puntos) / activity(días)
+//   Género de la palomita: gender() → 'varon' | 'mujer' | null (todavía no lo eligió) / setGender(g, { refund })
 //
 // Cada niño (perfil) tiene su propia partida: ver js/core/profiles.js. Una vez al día se guarda una copia
 // de la partida anterior (clave + '.prev') para poder recuperarla si algo se daña o se borra sin querer.
 import { keyFor } from './profiles.js';
+import { ACCESSORIES } from '../data/items.js';
 
 const KEY = keyFor('palomita.save.v1');
 const VERSION_DATA = 2;
@@ -60,7 +62,8 @@ function defaults() {
     level: 1,
     inventory: { pan: 3, agua: 3, manzana: 2, uvas: 1 },
     owned: [],
-    wearing: { head: null, neck: null, beak: null },
+    gender: null,           // 'varon' | 'mujer': lo elige el niño al empezar (null = todavía no)
+    wearing: { body: null, head: null, face: null, neck: null, beak: null, feet: null },
     decor: {},
     games: {},
     read: {},
@@ -112,7 +115,7 @@ function merge(base, saved) {
     if (s === undefined || s === null) continue;
     if (b && typeof b === 'object' && !Array.isArray(b)) base[k] = { ...b, ...(typeof s === 'object' && !Array.isArray(s) ? s : {}) };
     else if (Array.isArray(b)) base[k] = Array.isArray(s) ? s.slice() : b;
-    else if (typeof s === typeof b) base[k] = s;
+    else if (b === null || typeof s === typeof b) base[k] = s;      // null en la partida nueva: lo guardado vale (p. ej. gender)
   }
   return base;
 }
@@ -153,6 +156,9 @@ function migrate(st) {
     st.v = 2;
   }
   if (!Array.isArray(st.deeds)) st.deeds = [];
+  // 1.4: la palomita tiene género y ropa nueva (ropa, lentes y zapatos)
+  if (st.gender !== 'varon' && st.gender !== 'mujer') st.gender = null;
+  st.wearing = { body: null, head: null, face: null, neck: null, beak: null, feet: null, ...(st.wearing || {}) };
   if (!Array.isArray(st.intentions)) st.intentions = [];
   if (!Array.isArray(st.journal)) st.journal = [];
   if (st.v > VERSION_DATA) st.v = VERSION_DATA;
@@ -354,6 +360,25 @@ export function wear(slot, id) {
   S.wearing[slot] = id || null;
   emit('wear', { slot, id: id || null });
   saveSoon();
+}
+// Género: se quita lo puesto que no es para ese género (queda en «Mis cosas» por si vuelve a cambiar).
+// refund: la primera vez que lo elige quien ya usaba la app, se devuelven las semillas de lo comprado del otro género
+// y esas cosas salen de sus cosas. Devuelve las semillas devueltas.
+export function gender() { return S.gender || null; }
+export function setGender(g, { refund = false } = {}) {
+  if (g !== 'varon' && g !== 'mujer') return 0;
+  S.gender = g;
+  let back = 0;
+  for (const a of ACCESSORIES) {
+    if (!a.gender || a.gender === g) continue;
+    if (S.wearing[a.slot] === a.id) S.wearing[a.slot] = null;
+    if (refund && S.owned.includes(a.id)) { S.owned = S.owned.filter(x => x !== a.id); back += a.reward ? 0 : a.price; }
+  }
+  if (back) { S.coins += back; emit('coins', { coins: S.coins, delta: back }); }
+  save();
+  emit('wear', { gender: g });
+  emit('change', { evt: 'gender', gender: g });
+  return back;
 }
 export function setDecor(key, id) {
   S.decor[key] = id;

@@ -49,7 +49,7 @@ export default {
       41: '💧 ¡Nuevo: charcos grandes!',
       46: '🌇 ¡Nuevo: camino al atardecer!',
       51: '👀 ¡Nuevo: toneles que ruedan hacia ti!',
-      56: '🕊️ ¡Nuevo: Palomita te cuida de un tropiezo!',
+      56: '🕊️ ¡Nuevo: {Palomita|Palomito} te cuida de un tropiezo!',
       61: '❤️ ¡Nuevo: caminos en zigzag! Sigue los corazones',
       66: '🌉 ¡Nuevo: arroyos con un solo puente!',
       71: '🌙 ¡Nuevo: camino de noche con luciérnagas!',
@@ -398,7 +398,7 @@ export default {
         api.burst(x, y, { color: '#e9a45a', count: 10, speed: 100, size: 4, life: 0.5 });
       } else if (o.kind === 'dove') {
         shield = true; shieldGone = 0; api.sfx('coo');
-        api.floatText(x, y - 40, '¡Palomita te cuida!', { color: '#ffffff', size: 18 });
+        api.floatText(x, y - 40, '¡{Palomita|Palomito} te cuida!', { color: '#ffffff', size: 18 });
         api.burst(x, y - 20, { color: '#ffffff', count: 12, speed: 110, size: 4, life: 0.6 });
       }
     }
@@ -416,7 +416,7 @@ export default {
       if (shield) {
         // Palomita recibe el golpe por él y sale volando
         shield = false; shieldGone = 0.9; api.sfx('flap');
-        api.floatText(x, y - 110, '¡Palomita te cuidó!', { color: '#ffffff', size: 18 });
+        api.floatText(x, y - 110, '¡{Palomita|Palomito} te cuidó!', { color: '#ffffff', size: 18 });
         return;
       }
       hurtT = 0.9; slowT = 1;

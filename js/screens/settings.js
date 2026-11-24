@@ -10,6 +10,8 @@ import { h, button, iconButton, confirmDialog, toast } from '../core/ui.js';
 import { go, back } from '../core/router.js';
 import { available as talkAvailableFn } from '../pet/talkback.js';
 import { showNews } from './novedades.js';
+import { G, gender as genderNow } from '../core/genero.js';
+import { catchUpStarRewards } from '../core/rewards.js';
 
 export function mount(el) {
   const talkAvailable = talkAvailableFn();
@@ -20,7 +22,7 @@ export function mount(el) {
       // El micrófono: la primera vez lo enciende un grande.
       if (key === 'listen' && input.checked && !state.flag('micOk')) {
         input.checked = false;
-        if (!(await grownGate({ reason: 'Para que la palomita use el micrófono y repita lo que el niño dice.' }))) return;
+        if (!(await grownGate({ reason: G('Para que {la palomita|el palomito} use el micrófono y repita lo que el niño dice.') }))) return;
         state.setFlag('micOk');
         input.checked = true;
       }
@@ -46,7 +48,33 @@ export function mount(el) {
       seg);
   };
 
-  const nameIn = h('input', { id: 'set-name', class: 'wel__input', type: 'text', maxlength: '14', value: state.get().name, autocomplete: 'off', 'aria-label': 'Nombre de tu palomita' });
+  const nameIn = h('input', { id: 'set-name', class: 'wel__input', type: 'text', maxlength: '14', value: state.get().name, autocomplete: 'off', 'aria-label': G('Nombre de tu {palomita|palomito}') });
+  // ¿Varón o mujer? La ropa del otro género queda guardada (vuelve a aparecer si cambia otra vez).
+  const genderRow = () => {
+    const seg = h('div', { class: 'set-seg set-seg--gender', role: 'radiogroup', 'aria-label': G('Tu {palomita|palomito} es') });
+    const paint = () => { [...seg.children].forEach(b => b.setAttribute('aria-checked', String(b.dataset.g === genderNow()))); };
+    for (const [g, label] of [['mujer', '💗 Mujer'], ['varon', '💙 Varón']]) {
+      seg.append(h('button', { type: 'button', role: 'radio', class: 'set-seg__b', dataset: { g }, onclick: async () => {
+        if (g === genderNow() && state.gender()) return;
+        sfx('tap');
+        const ok = await confirmDialog(g === 'varon' ? '¿Cambiamos a palomito? La ropa de mujer queda guardada y vuelve si eliges mujer otra vez.'
+          : '¿Cambiamos a palomita? La ropa de varón queda guardada y vuelve si eliges varón otra vez.', { yes: 'Sí, cambiar', no: 'No', icon: g === 'varon' ? '💙' : '💗', kind: 'leaf' });
+        if (!ok) return;
+        state.setGender(g);
+        const old = g === 'varon' ? 'Palomita' : 'Palomito';
+        if (state.get().name === old) { state.setNames({ name: g === 'varon' ? 'Palomito' : 'Palomita' }); nameIn.value = state.get().name; }
+        catchUpStarRewards();
+        sfx('sticker');
+        toast(G('¡Listo! Mira su ropa nueva en la tienda'), { icon: g === 'varon' ? '💙' : '💗' });
+        paint();
+      } }, label));
+    }
+    paint();
+    return h('div', { class: 'set-row set-row--static' },
+      h('span', { class: 'set-row__icon', 'aria-hidden': 'true' }, '🕊️'),
+      h('span', { class: 'set-row__text' }, h('b', null, 'Varón o mujer'), h('span', null, 'Cambia la ropa que aparece en la tienda')),
+      seg);
+  };
   const kidIn = h('input', { id: 'set-kid', class: 'wel__input', type: 'text', maxlength: '14', value: state.get().kid, autocomplete: 'off', placeholder: 'Tu nombre', 'aria-label': 'Tu nombre' });
 
   async function reset() {
@@ -67,12 +95,13 @@ export function mount(el) {
         toggle('sound', '🔔', 'Sonidos'),
         toggle('music', '🎵', 'Música'),
         toggle('voice', '🔊', 'Voz de la narradora', tts.recorded() ? 'Una voz cálida lee en voz alta historias, lecciones y oraciones.' : tts.available() ? 'Lee en voz alta historias y oraciones.' : 'Este dispositivo no tiene voz para leer.'),
-        tts.recorded() ? toggle('doveVoice', '🕊️', 'La palomita habla', 'Dice en voz alta lo que pone en sus globitos.') : null,
-        talkAvailable ? toggle('listen', '👂', 'La palomita repite lo que digo', 'Usa el micrófono solo mientras estás con la palomita. Nada se guarda.') : null,
+        tts.recorded() ? toggle('doveVoice', '🕊️', G('{La palomita|El palomito} habla'), 'Dice en voz alta lo que pone en sus globitos.') : null,
+        talkAvailable ? toggle('listen', '👂', G('{La palomita|El palomito} repite lo que digo'), G('Usa el micrófono solo mientras estás con {la palomita|el palomito}. Nada se guarda.')) : null,
         fontRow()),
       h('section', { class: 'panel set-card' },
-        h('h2', { class: 'set-title' }, 'Nombres'),
-        h('label', { class: 'wel__label', for: 'set-name' }, 'Tu palomita se llama'), nameIn,
+        h('h2', { class: 'set-title' }, G('Tu {palomita|palomito}')),
+        genderRow(),
+        h('label', { class: 'wel__label', for: 'set-name' }, 'Se llama'), nameIn,
         h('label', { class: 'wel__label', for: 'set-kid' }, 'Y tú te llamas'), kidIn,
         button('Guardar nombres', { kind: 'leaf', small: true, onClick: () => { state.setNames({ name: nameIn.value, kid: kidIn.value }); toast('¡Guardado!', { icon: '✅' }); } })),
       many ? h('section', { class: 'panel set-card' },

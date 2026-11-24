@@ -44,6 +44,7 @@
 //   api.floatText(x, y, texto, { color, size })      texto que sube y se desvanece
 //   api.shake(fuerza = 6, ms = 250)     api.flash(color = '#fff', ms = 160)
 //   api.hint(texto, ms = 2600)          cartelito de ayuda al centro (p. ej. al empezar)
+//   api.t(texto)                        «{Palomita|Palomito}» → según el género de la palomita (hint y floatText ya lo hacen)
 //   api.pointer             { x, y, down } del dedo principal          api.keys   Set con teclas presionadas
 //   api.overlay             <div> sobre el lienzo para juegos que necesiten HTML (p. ej. preguntas con texto largo).
 //                           Sus hijos reciben toques; el motor lo vacía al reiniciar o salir.
@@ -52,6 +53,7 @@
 //
 // Depuración/pruebas: window.__game = { id, api, phase, instance, start(), finish(opts), restart(), exit() } y window.__gameError.
 import * as state from '../core/state.js';
+import { G as gtext } from '../core/genero.js';
 import * as audio from '../core/audio.js';
 import * as tts from '../core/tts.js';
 import * as kit from './kit.js';
@@ -177,16 +179,17 @@ export async function startGame(id, { onExit, skipIntro = false, seed, level } =
         particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - speed * 0.35, life, max: life, size: size * (0.6 + Math.random() * 0.8), color, emoji, gravity, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 8 });
       }
     },
-    floatText(x, y, text, { color = '#ffffff', size = 20 } = {}) { if (floats.length < 30) floats.push({ x, y, text: String(text), color, size, life: 0.9, max: 0.9 }); },
+    floatText(x, y, text, { color = '#ffffff', size = 20 } = {}) { if (floats.length < 30) floats.push({ x, y, text: gtext(String(text)), color, size, life: 0.9, max: 0.9 }); },
     shake(amount = 6, ms = 250) { if (motionOff) return; shakeAmt = amount; shakeLeft = shakeDur = ms / 1000; },
     flash(color = '#fff', ms = 160) {
       if (motionOff) return;
       flashEl.style.transition = 'none'; flashEl.style.background = color; flashEl.style.opacity = '0.45';
       requestAnimationFrame(() => { flashEl.style.transition = `opacity ${ms}ms`; flashEl.style.opacity = '0'; });
     },
+    t: text => gtext(text),
     hint(text, ms = 2600) {
       clearTimeout(hintTimer);
-      hintEl.firstChild.textContent = text; hintEl.hidden = false;
+      hintEl.firstChild.textContent = gtext(text); hintEl.hidden = false;
       hintTimer = setTimeout(() => { hintEl.hidden = true; }, ms);
     },
   };

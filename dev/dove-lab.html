@@ -31,6 +31,8 @@
 //   yaw=<grados> pitch=<grados> dist=<unidades>   cámara orbital (yaw 0 = de frente)
 //   warm=<seg>     segundos de simulación previos (por defecto 1.5)
 //   hud=0          oculta la etiqueta
+//   wear=slot:id,…  le pone ropa y accesorios (ver js/pet/accessories.js → dressSlot)
+//   ty=<altura>    altura del punto que mira la cámara (por defecto 1.0) · bg=none fondo transparente y sin pasto
 // Sin `at` corre en vivo. Con `at`, al terminar pone window.__ready = true (para capturas con Playwright).
 // Con `at` también deja window.__stats = { calls, triangles, geometries, textures } (renderer.info).
 // Errores: window.__error (string) y aparecen en pantalla.
@@ -50,7 +52,9 @@ window.addEventListener('error', e => fail(e.error || e.message));
 window.addEventListener('unhandledrejection', e => fail(e.reason));
 
 const canvas = document.getElementById('c');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+const bgNone = q.get('bg') === 'none';           // fondo transparente (fotos de la ropa para la tienda)
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, alpha: bgNone });
+if (bgNone) renderer.setClearColor(0x000000, 0);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping;
@@ -66,7 +70,7 @@ const scene = new THREE.Scene();
   gr.addColorStop(0, '#8fd0ff'); gr.addColorStop(0.6, '#d9f1ff'); gr.addColorStop(1, '#fff3d6');
   g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-  scene.background = tex;
+  if (!bgNone) scene.background = tex;
 }
 // Iluminación estándar (la misma receta que usará la app)
 scene.add(new THREE.HemisphereLight(0xffffff, 0xffe9d2, 1.9));
@@ -86,12 +90,12 @@ const ground = new THREE.Mesh(
 );
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
-scene.add(ground);
+if (!bgNone) scene.add(ground);
 
 const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 50);
 const yaw = num('yaw', 0) * Math.PI / 180, pitch = num('pitch', 8) * Math.PI / 180, dist = num('dist', 6.4);
 function placeCamera() {
-  const target = new THREE.Vector3(0, 1.0, 0);
+  const target = new THREE.Vector3(0, num('ty', 1.0), 0);
   camera.position.set(
     target.x + Math.sin(yaw) * Math.cos(pitch) * dist,
     target.y + Math.sin(pitch) * dist,
@@ -114,6 +118,11 @@ try {
   window.__dove = dove;
   scene.add(dove.group);
 
+  // wear=body:polo-seleccion,head:gorra-urbana,face:lentes-sol,feet:zapatillas   (ropa y accesorios)
+  if (q.has('wear')) {
+    const { dressSlot } = await import('../js/pet/accessories.js');
+    for (const pair of q.get('wear').split(',')) { const [slot, id] = pair.split(':'); if (slot && id) dressSlot(THREE, dove, slot, id); }
+  }
   if (q.has('mood')) dove.setMood(q.get('mood'));
   if (q.get('sleep') === '1') dove.setSleeping(true);
   if (q.has('dirt')) dove.setDirt(num('dirt', 0));

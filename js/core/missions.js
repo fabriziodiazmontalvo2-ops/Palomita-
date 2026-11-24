@@ -2,6 +2,7 @@
 // Al día siguiente la palomita pregunta si se cumplió (ver js/home/moments.js); cumplirla hace brotar una flor.
 // Decir «sí» no da semillas: así nadie se siente invitado a decir que sí sin haberla hecho.
 import * as state from './state.js';
+import { G } from './genero.js';
 import { h, toast } from './ui.js';
 import { sfx } from './audio.js';
 
@@ -13,7 +14,7 @@ export function missionButton(text, from = '') {
     const had = !!state.mission();
     state.acceptMission({ text, from });
     sfx('sticker');
-    toast(had ? 'Cambiaste tu misión. ¡Mañana te pregunto cómo te fue!' : '¡Misión aceptada! Mañana tu palomita te preguntará cómo te fue', { icon: '🌸', ms: 3400 });
+    toast(had ? 'Cambiaste tu misión. ¡Mañana te pregunto cómo te fue!' : G('¡Misión aceptada! Mañana tu {palomita|palomito} te preguntará cómo te fue'), { icon: '🌸', ms: 3400 });
     paint();
   } });
   const paint = () => {

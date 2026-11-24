@@ -5,6 +5,7 @@
 //   const midia = createMiDia(ctx)    ctx: { setRoom, showVerse, openGift, celebrate, go }
 //   midia.tasks() → [{ id, icon, text, done }]    midia.count() → hechas (0–3)    midia.open()
 import * as state from '../core/state.js';
+import { G } from '../core/genero.js';
 import * as tts from '../core/tts.js';
 import { h, modal, toast } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
@@ -12,11 +13,11 @@ import { dailyGiftDue } from '../core/rewards.js';
 
 const anyRead = () => { state.doneToday('x'); return Object.keys(state.get().daily.done || {}).some(k => k.startsWith('read:') && !k.startsWith('read:lesson:')); };
 const TASKS = {
-  feed: { icon: '🍞', text: 'Dale de comer a tu palomita', room: 'cocina', done: () => state.doneToday('feed') },
-  wash: { icon: '🛁', text: 'Báñala con jabón y agua', room: 'bano', done: () => state.doneToday('wash') },
-  play: { icon: '🎾', text: 'Juega con ella en el Nido', room: 'sala', done: () => state.doneToday('play') },
+  feed: { icon: '🍞', text: 'Dale de comer a tu {palomita|palomito}', room: 'cocina', done: () => state.doneToday('feed') },
+  wash: { icon: '🛁', text: 'Báña{la|lo} con jabón y agua', room: 'bano', done: () => state.doneToday('wash') },
+  play: { icon: '🎾', text: 'Juega con {ella|él} en el Nido', room: 'sala', done: () => state.doneToday('play') },
   photo: { icon: '📷', text: 'Sácale una foto bonita', room: 'sala', done: () => state.doneToday('photo') },
-  pray: { icon: '🙏', text: 'Reza una oración con ella', room: 'capilla', done: () => state.doneToday('prayed') },
+  pray: { icon: '🙏', text: 'Reza una oración con {ella|él}', room: 'capilla', done: () => state.doneToday('prayed') },
   verse: { icon: '💌', text: 'Lee el mensaje de hoy', action: 'verse', done: () => state.doneToday('verse') },
   family: { icon: '👪', text: 'Reza o lee una historia con tu familia', manual: true, done: () => state.doneToday('family') },
   read: { icon: '📖', text: 'Lee una historia de la Biblia', go: ['bible', { tab: 'historias' }], done: anyRead },
@@ -32,7 +33,7 @@ export function createMiDia(ctx) {
     const n = dayNumber();
     return GROUPS.map((g, i) => g[(n + i * 3) % g.length]);
   }
-  function tasks() { return ids().map(id => ({ id, ...TASKS[id], done: !!TASKS[id].done() })); }
+  function tasks() { return ids().map(id => ({ id, ...TASKS[id], text: G(TASKS[id].text), done: !!TASKS[id].done() })); }
   function count() { return tasks().filter(t => t.done).length; }
 
   // Premio al completar las tres (una vez por día).
@@ -70,7 +71,7 @@ export function createMiDia(ctx) {
     m = modal({
       title: 'Mi día', icon: done >= 3 ? '🌟' : '☀️', className: 'md-modal',
       body: [
-        h('p', { class: 'md-lead' }, done >= 3 ? '¡Hiciste las tres! Tu palomita está feliz.' : `Llevas ${done} de 3. ¡Tú puedes!`),
+        h('p', { class: 'md-lead' }, done >= 3 ? G('¡Hiciste las tres! Tu {palomita|palomito} está feliz.') : `Llevas ${done} de 3. ¡Tú puedes!`),
         h('ol', { class: 'md-list' }, list.map(row)),
         gift,
       ],

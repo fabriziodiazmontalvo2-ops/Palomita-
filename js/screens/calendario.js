@@ -10,6 +10,7 @@ import { h, button } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { back } from '../core/router.js';
 import { missionButton } from '../core/missions.js';
+import { G } from '../core/genero.js';
 import { arr, txt, deco, lifecycle, shell, tabBar, soon, speakBtn, miniScene } from './catequesis.js';
 
 const TABS = [{ id: 'hoy', label: 'Hoy', icon: '🗓️' }, { id: 'fiestas', label: 'Fiestas', icon: '🎉' }, { id: 'tiempos', label: 'El año', icon: '🌈' }];
@@ -113,7 +114,7 @@ export async function mount(el, params = {}) {
       h('h3', null, deco('⭐'), `Novena de Navidad · día ${n} de 9`),
       h('div', { class: 'cl-crib', role: 'img', 'aria-label': `Nacimiento: ${n} de 9 figuras` }, N.map(x => h('span', { class: x.day <= n ? 'is-on' : '' }, x.emoji))),
       d ? [h('p', { class: 'cl-advent__title' }, txt(d.figure)), h('p', null, txt(d.text))] : null,
-      h('p', { class: 'pq-small' }, 'En la capilla de tu palomita, el nacimiento también se arma figura por figura.'));
+      h('p', { class: 'pq-small' }, G('En la capilla de tu {palomita|palomito}, el nacimiento también se arma figura por figura.')));
   }
 
   function lentCard() {

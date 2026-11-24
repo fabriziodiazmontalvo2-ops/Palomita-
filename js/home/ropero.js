@@ -2,19 +2,21 @@
 //   const ropero = createRopero(ctx)   ctx: { el, world, dove, say, applyWear }
 //   ropero.open(idInicial?)   ropero.close()
 import * as state from '../core/state.js';
-import { ACCESSORIES } from '../data/items.js';
+import { ACCESSORIES, SLOT_SHORT } from '../data/items.js';
+import { fits } from '../core/genero.js';
+import { accArt } from '../core/accart.js';
 import { h, clear, confirmDialog, toast } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 
-const SLOT = { head: 'Cabeza', neck: 'Cuello', beak: 'Pico' };
 
 export function createRopero(ctx) {
   let box = null, sel = null;
 
-  function canSee(a) { return state.owns(a.id) || (!a.reward && a.level <= state.get().level); }
+  // Solo la ropa de su género y la que es para todos: primero lo suyo, después lo que puede comprar.
+  function canSee(a) { return fits(a) && (state.owns(a.id) || (!a.reward && a.level <= state.get().level)); }
   function list() {
-    const mine = ACCESSORIES.filter(a => state.owns(a.id));
-    const shop = ACCESSORIES.filter(a => !state.owns(a.id) && canSee(a)).sort((a, b) => a.price - b.price);
+    const mine = ACCESSORIES.filter(a => state.owns(a.id) && fits(a));
+    const shop = ACCESSORIES.filter(a => !state.owns(a.id) && canSee(a)).sort((a, b) => (b.gender ? 1 : 0) - (a.gender ? 1 : 0) || a.price - b.price);
     return [...mine, ...shop];
   }
   function preview(a) {
@@ -31,9 +33,9 @@ export function createRopero(ctx) {
     const items = list();
     const strip = h('div', { class: 'rp-strip', role: 'listbox', 'aria-label': 'Accesorios' }, items.map(a => {
       const owned = state.owns(a.id), on = state.get().wearing[a.slot] === a.id;
-      return h('button', { type: 'button', role: 'option', 'aria-selected': String(sel?.id === a.id), 'aria-label': `${a.name}${owned ? (on ? ', puesto' : ', tuyo') : `, ${a.price} semillas`}`,
+      return h('button', { type: 'button', role: 'option', dataset: { acc: a.id }, 'aria-selected': String(sel?.id === a.id), 'aria-label': `${a.name}${owned ? (on ? ', puesto' : ', tuyo') : `, ${a.price} semillas`}`,
         class: `rp-item${sel?.id === a.id ? ' is-sel' : ''}${on ? ' is-on' : ''}${owned ? ' is-owned' : ''}`, onclick: () => preview(a) },
-        h('span', { class: 'rp-item__icon', 'aria-hidden': 'true' }, a.emoji),
+        accArt(a, 'rp-item__icon'),
         h('span', { class: 'rp-item__tag', 'aria-hidden': 'true' }, on ? '✓' : owned ? '♥' : `${a.price}`));
     }));
     let action = null;
@@ -52,7 +54,7 @@ export function createRopero(ctx) {
     }
     clear(box).append(
       h('div', { class: 'rp-head' },
-        h('span', { class: 'rp-title' }, sel ? h('b', null, sel.name) : h('b', null, '👗 Ropero'), h('span', { class: 'rp-coins' }, sel ? SLOT[sel.slot] : `Tienes ${state.get().coins} 🌱`)),
+        h('span', { class: 'rp-title' }, sel ? h('b', null, sel.name) : h('b', null, '👗 Ropero'), h('span', { class: 'rp-coins' }, sel ? SLOT_SHORT[sel.slot] : `Tienes ${state.get().coins} 🌱`)),
         action,
         h('button', { type: 'button', class: 'rp-close', 'aria-label': 'Cerrar el ropero', onclick: () => { sfx('tap'); close(); } }, '✖')),
       strip);
@@ -62,7 +64,7 @@ export function createRopero(ctx) {
     if (!box) { box = h('div', { class: 'rp' }); ctx.el.append(box); }
     sel = null;
     paint();
-    const a = id ? ACCESSORIES.find(x => x.id === id) : null;
+    const a = id ? ACCESSORIES.find(x => x.id === id && fits(x)) : null;
     if (a) preview(a);
   }
   function close() {

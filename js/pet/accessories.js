@@ -1,11 +1,27 @@
-// Accesorios 3D de la palomita, modelados por código con formas simples.
-//   createAccessory(THREE, id) → THREE.Group (o null si el id no existe)
+// Accesorios y ropa 3D de la palomita, modelados por código con formas simples.
+//   dressSlot(THREE, dove, slot, id) → THREE.Group[] ya colgados de sus anclas (los zapatos van en las dos patitas)
+//   createAccessory(THREE, id, ctx)  → THREE.Group (o null si el id no existe); ctx = { anchor, side }
 // Los ids son los de ACCESSORIES en js/data/items.js. Cada accesorio se cuelga de un ancla del modelo:
-//   head → origen en la coronilla (+Y hacia arriba) · neck → origen al frente del cuello (+Z hacia fuera) · beak → punta del pico.
+//   head → origen en la coronilla (+Y hacia arriba) · neck → origen al frente del cuello (+Z hacia fuera) · beak → punta del pico
+//   body → centro del cuerpo: la ropa se corta a la medida con anchor.userData.tailor (ver js/pet/dove.js)
+//   face → frente de la cara a la altura de los ojos (anchor.userData.eyes) · footL / footR → cada pie (dedos hacia +Z).
 // Medidas pensadas para una cabeza de radio ≈ 0.55 y un cuello de radio ≈ 0.6 (ver HEAD_R y NECK_R).
 const HEAD_R = 0.55, NECK_R = 0.6;
 
-export function createAccessory(THREE, id) {
+export function dressSlot(THREE, dove, slot, id) {
+  if (!id || !dove?.anchors) return [];
+  const where = slot === 'feet' ? [['footL', 1], ['footR', -1]] : [[slot, 1]];
+  const out = [];
+  for (const [name, side] of where) {
+    const anchor = dove.anchors[name];
+    if (!anchor) continue;
+    const acc = createAccessory(THREE, id, { anchor, side });
+    if (acc) { anchor.add(acc); out.push(acc); }
+  }
+  return out;
+}
+
+export function createAccessory(THREE, id, { anchor = null, side = 1 } = {}) {
   const g = new THREE.Group();
   g.name = 'accesorio:' + id;
   const M = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.65, ...extra });
@@ -22,6 +38,55 @@ export function createAccessory(THREE, id) {
   const cyl = (rt, rb, h, seg = 20, open = false) => new THREE.CylinderGeometry(rt, rb, h, seg, 1, open);
   const torus = (R, r, seg = 28) => new THREE.TorusGeometry(R, r, 10, seg);
   const dome = r => new THREE.SphereGeometry(r, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+
+  // ── Ropa ──
+  const cloth = (extra = {}) => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, side: THREE.DoubleSide, ...extra });
+  const hex3 = hx => { const c = new THREE.Color(hx); return [c.r, c.g, c.b]; };
+  const mixc = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+  const noise = (a, b) => { const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return v - Math.floor(v); };
+  const edge = (d, w, soft = 0.012) => { const k = Math.min(1, Math.max(0, (d - w + soft) / (2 * soft))); return k * k * (3 - 2 * k); };   // 0 adentro → 1 afuera, sin escalones
+  // Una prenda cortada a la medida del cuerpo (solo en el ancla 'body').
+  function garment(spec, mat = cloth()) {
+    const tailor = anchor?.userData?.tailor;
+    if (!tailor) return null;
+    const cut = tailor(spec);
+    const m = add(cut.geometry, mat);
+    m.receiveShadow = true;
+    return cut;
+  }
+  // Ribete, cuello o cinturón: un tubo que sigue un borde de la prenda (por tramos si la tela está cortada).
+  function trim(ring, color, r = 0.025, extra = {}) {
+    const n = ring.length, mat = M(color, extra);
+    const tube = (pts, closed) => add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, closed), Math.min(160, pts.length * 2), r, 8, closed), mat);
+    if (ring.every(Boolean)) { tube(ring, !ring.open); return; }
+    // por tramos: la tela está cortada (debajo de las alas o en una abertura)
+    const start = ring.open ? 0 : ring.findIndex((p, i) => p && !ring[(i - 1 + n) % n]);
+    if (start < 0) return;
+    for (let k = 0, i = start; k < n;) {
+      const run = [];
+      while (k < n && ring[i]) { run.push(ring[i]); i = (i + 1) % n; k++; }
+      while (k < n && !ring[i]) { i = (i + 1) % n; k++; }
+      if (run.length >= 3) tube(run, false);
+    }
+  }
+  // Un botón (o adorno) apoyado en la tela.
+  function stud(cut, u, phi, r, color, extra = {}) {
+    const p = cut.at(u, phi), n = cut.normalAt(u, phi);
+    return add(sph(r, 10, 8), M(color, extra), p.x + n.x * r * 0.4, p.y + n.y * r * 0.4, p.z + n.z * r * 0.4, { s: [1, 1, 0.55] });
+  }
+  // Un palito entre dos puntos (cadenas, tiras).
+  function rod(a, b, r, mat) {
+    const m = add(cyl(r, r, a.distanceTo(b), 6), mat, (a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+    return m;
+  }
+  const heartShape = r => {
+    const sh = new THREE.Shape();
+    sh.moveTo(0, -r * 0.95);
+    sh.bezierCurveTo(r * 1.25, -r * 0.15, r * 0.95, r * 0.98, 0, r * 0.42);
+    sh.bezierCurveTo(-r * 0.95, r * 0.98, -r * 1.25, -r * 0.15, 0, -r * 0.95);
+    return sh;
+  };
 
   // Moño de dos lazos con nudo.
   function bow(color, knot, size = 1) {
@@ -299,6 +364,219 @@ export function createAccessory(THREE, id) {
       const star = new THREE.Shape();
       for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 0.055 : 0.13; star[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, -Math.sin(a) * r); }
       add(new THREE.ExtrudeGeometry(star, { depth: 0.04, bevelEnabled: true, bevelSize: 0.012, bevelThickness: 0.012, bevelSegments: 2 }), M(0xffd95e, { emissive: 0x6a5010, roughness: 0.35 }), 0.16, 0.0, 0.03, { r: [0, -0.5, -0.2] });
+      break;
+    }
+    // ═══════════════ Moda de varón ═══════════════
+    case 'polo-seleccion': {
+      // La blanquirroja: blanca con la banda roja del hombro derecho a la cadera izquierda.
+      const white = hex3(0xf8f8f6), red = hex3(0xd7192a);
+      const cut = garment({ y0: 0.3, y1: 0.97, inflate: 0.024, color: (u, phi, x, y) => mixc(red, white, edge(Math.abs((y - 0.68) + x * 0.62), 0.075)) });
+      if (cut) { trim(cut.top, 0xd7192a, 0.03); trim(cut.bottom, 0xeeeeea, 0.02); }
+      break;
+    }
+    case 'polera-capucha': {
+      const base = hex3(0x4f7cc9), rib = hex3(0x2f5193), pocket = hex3(0x5a87d4);
+      const cut = garment({ y0: 0.28, y1: 0.98, inflate: 0.032, color: (u, phi, x, y) => {
+        if (u < 0.07) return rib;
+        const knit = mixc(base, [1, 1, 1], noise((phi * 40) | 0, (y * 60) | 0) * 0.06);
+        if (Math.abs(phi) > 1) return knit;
+        // bolsillo canguro con su costura
+        const d = Math.max(Math.abs(x) / 0.25, Math.abs(y - 0.465) / 0.105);
+        return d < 1 ? mixc(pocket, rib, 1 - edge(1 - d, 0.1, 0.05)) : knit;
+      } });
+      if (cut) {
+        trim(cut.top, 0x3a5fa3, 0.04);
+        const bk = cut.at(1, -Math.PI), fr = cut.at(1, 0);
+        add(sph(0.3, 22, 14), M(0x4f7cc9, { roughness: 0.9 }), bk.x, bk.y - 0.05, bk.z - 0.04, { s: [1.15, 0.6, 0.55], r: [0.4, 0, 0] });   // capucha
+        for (const sx of [-1, 1]) {                                                                                                     // cordones
+          add(cyl(0.012, 0.012, 0.2, 6), M(0xffffff), fr.x + sx * 0.09, fr.y - 0.12, fr.z + 0.07, { r: [0.35, 0, 0] });
+          add(sph(0.022, 8, 6), M(0xffffff), fr.x + sx * 0.09, fr.y - 0.22, fr.z + 0.1);
+        }
+      }
+      break;
+    }
+    case 'casaca-jean': {
+      const denim = hex3(0x4f7fbf), dark = hex3(0x395f96), seam = hex3(0xe0b86c);
+      const cut = garment({ y0: 0.3, y1: 0.98, inflate: 0.032, front: 0.2, color: (u, phi, x, y) => {
+        if (u < 0.09) return dark;                                         // pretina
+        if (Math.abs(u - 0.1) < 0.008 || Math.abs(Math.abs(phi) - 0.25) < 0.02) return seam;   // pespuntes
+        return mixc(denim, dark, noise((phi * 70) | 0, (y * 110) | 0) * 0.4);
+      } });
+      if (cut) {
+        trim(cut.top, 0x395f96, 0.045);                                     // cuello
+        for (const u of [0.18, 0.4, 0.62, 0.84]) stud(cut, u, 0.27, 0.026, 0xc9a14a, { metalness: 0.7, roughness: 0.3 });
+        for (const sx of [-1, 1]) stud(cut, 0.66, sx * 0.62, 0.022, 0xc9a14a, { metalness: 0.7, roughness: 0.3 });   // bolsillos del pecho
+      }
+      break;
+    }
+    case 'camisa-terno': {
+      // Camisa blanca y chaleco con escote en V: para la fiesta de la Primera Comunión.
+      const shirt = garment({ y0: 0.3, y1: 0.98, inflate: 0.018, color: () => [1, 1, 1] });
+      const vest = garment({ y0: 0.31, y1: 0.95, inflate: 0.036, front: u => (u < 0.38 ? 0 : 0.62 * Math.pow((u - 0.38) / 0.62, 1.1)),
+        color: u => (u < 0.06 ? hex3(0x23262f) : hex3(0x30364a)) });
+      if (shirt) trim(shirt.top, 0xffffff, 0.035);
+      if (vest) for (const u of [0.1, 0.2, 0.3]) stud(vest, u, 0, 0.022, 0xd9b45a, { metalness: 0.6, roughness: 0.35 });
+      break;
+    }
+    case 'gorra-urbana': {
+      // Gorra al revés, negra con verde flúor.
+      const black = M(0x22252b);
+      add(dome(HEAD_R * 0.8), black, 0, -0.24, -0.03, { s: [1, 0.72, 1], r: [-0.14, 0, 0] });
+      add(cyl(0.3, 0.32, 0.03, 24), M(0x7cf05a), 0, -0.22, -0.45, { s: [1, 1, 0.7], r: [-0.04, 0, 0] });
+      add(sph(0.045), M(0x7cf05a), 0, 0.075, -0.03);
+      add(cyl(0.075, 0.075, 0.012, 18), M(0x7cf05a), 0, -0.1, 0.33, { r: [Math.PI / 2 - 0.55, 0, 0] });
+      break;
+    }
+    case 'audifonos': {
+      const H = anchor?.userData?.head || { x: 0, y: -0.5, z: 0, rx: 0.58, ry: 0.5, rz: 0.54 };
+      add(new THREE.TorusGeometry(H.rx + 0.07, 0.035, 10, 32, Math.PI), M(0x2b2f3a, { roughness: 0.5 }), H.x, H.y, H.z + 0.05, { s: [1, (H.ry + 0.1) / (H.rx + 0.07), 1] });
+      for (const sx of [-1, 1]) {
+        add(cyl(0.15, 0.15, 0.1, 24), M(0xff5a5a, { roughness: 0.35 }), H.x + sx * (H.rx + 0.06), H.y - 0.03, H.z + 0.05, { r: [0, 0, Math.PI / 2] });
+        add(cyl(0.09, 0.09, 0.11, 18), M(0xffffff, { roughness: 0.4 }), H.x + sx * (H.rx + 0.065), H.y - 0.03, H.z + 0.05, { r: [0, 0, Math.PI / 2] });
+      }
+      break;
+    }
+    case 'lentes-sol':
+    case 'lentes-corazon':
+    case 'lentes-aviador': {
+      const eyes = anchor?.userData?.eyes || [{ x: 0.27, y: 0, z: -0.08, nx: 0.47, ny: 0, nz: 0.88 }, { x: -0.27, y: 0, z: -0.08, nx: -0.47, ny: 0, nz: 0.88 }];
+      const heart = id === 'lentes-corazon', aviator = id === 'lentes-aviador';
+      const frame = M(heart ? 0xff4f8b : aviator ? 0xd9a93a : 0x1d1f24, { roughness: 0.3, metalness: aviator ? 0.75 : 0.1 });
+      const lens = M(heart ? 0xff8fb8 : aviator ? 0x5b4a2c : 0x1c2733, { roughness: 0.08, metalness: 0.35, transparent: true, opacity: 0.8 });
+      const centers = [];
+      for (const e of eyes) {
+        const n = new THREE.Vector3(e.nx, e.ny, e.nz).normalize();
+        const c = new THREE.Vector3(e.x, e.y, e.z).addScaledVector(n, 0.08);
+        centers.push(c);
+        const L = new THREE.Group(); L.position.copy(c); L.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n); g.add(L);
+        if (heart) {
+          add(new THREE.ExtrudeGeometry(heartShape(0.2), { depth: 0.025, bevelEnabled: false }), frame, 0, 0, -0.012, { parent: L });
+          add(new THREE.ShapeGeometry(heartShape(0.165)), lens, 0, 0, 0.016, { parent: L });
+        } else {
+          const sx = aviator ? 1 : 1.15, sy = aviator ? 1.1 : 0.82;
+          add(torus(0.165, aviator ? 0.012 : 0.024, 30), frame, 0, aviator ? -0.02 : 0, 0, { s: [sx, sy, 1], parent: L });
+          add(new THREE.CircleGeometry(0.165, 30), lens, 0, aviator ? -0.02 : 0, 0.004, { s: [sx, sy, 1], parent: L });
+        }
+      }
+      const [a, b] = centers, mid = a.clone().add(b).multiplyScalar(0.5);
+      add(new THREE.BoxGeometry(Math.abs(a.x - b.x) - 0.33, aviator ? 0.012 : 0.026, 0.024), frame, mid.x, mid.y + 0.05, Math.max(a.z, b.z) + 0.01);
+      for (const c of centers) {
+        const sx = Math.sign(c.x) || 1, from = new THREE.Vector3(c.x + sx * 0.17, c.y + 0.03, c.z - 0.04), to = new THREE.Vector3(c.x + sx * 0.3, c.y + 0.06, c.z - 0.5);
+        const len = from.distanceTo(to), mid2 = from.clone().add(to).multiplyScalar(0.5);
+        const t = add(new THREE.BoxGeometry(0.022, 0.024, len), frame, mid2.x, mid2.y, mid2.z);
+        t.lookAt(t.position.clone().add(to.clone().sub(from)));
+      }
+      break;
+    }
+    case 'corbata': {
+      const red = M(0xc8202f, { roughness: 0.5 }), dark = M(0x9a1622, { roughness: 0.5 });
+      add(new THREE.CylinderGeometry(0.065, 0.042, 0.09, 4), dark, 0, -0.03, 0.06, { s: [1, 1, 0.55], r: [0.15, Math.PI / 4, 0] });   // nudo
+      const prof = (anchor?.userData?.front || []).filter(([y]) => y < -0.05 && y > -0.5);
+      for (let i = 0; i + 1 < prof.length; i++) {
+        const [y0, z0] = prof[i], [y1, z1] = prof[i + 1];
+        const len = Math.hypot(y1 - y0, z1 - z0), w = 0.075 + 0.05 * (i / Math.max(1, prof.length - 2));
+        add(new THREE.BoxGeometry(w * 2, len + 0.012, 0.022), red, 0, (y0 + y1) / 2, (z0 + z1) / 2 + 0.05, { r: [Math.atan2(z0 - z1, y0 - y1), 0, 0] });
+      }
+      const last = prof[prof.length - 1] || [-0.45, 0.12];
+      add(new THREE.CylinderGeometry(0.17, 0.001, 0.12, 4), red, 0, last[0] - 0.05, last[1] + 0.05, { s: [0.88, 1, 0.13], r: [0, Math.PI / 4, 0] });   // punta
+      break;
+    }
+    case 'zapatillas': {
+      const upper = M(0x2f6fdd, { roughness: 0.5 }), sole = M(0xffffff, { roughness: 0.6 });
+      add(sph(0.12, 20, 12), upper, 0, 0.072, 0.09, { s: [1.22, 0.7, 1.8] });
+      add(sph(0.125, 20, 10), sole, 0, 0.03, 0.09, { s: [1.27, 0.3, 1.86] });
+      add(sph(0.1, 16, 10), sole, 0, 0.06, 0.24, { s: [1.1, 0.55, 0.55] });                       // puntera
+      add(torus(0.062, 0.026, 16), upper, 0, 0.135, -0.01, { r: [Math.PI / 2, 0, 0] });          // tobillo
+      for (let k = 0; k < 3; k++) add(new THREE.BoxGeometry(0.12, 0.014, 0.022), sole, 0, 0.142 - k * 0.016, 0.05 + k * 0.045, { r: [-0.55, 0, 0] });   // pasadores
+      for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.012, 0.035, 0.15), M(0xff5a3c), sx * 0.147, 0.075, 0.07);   // franjas
+      break;
+    }
+    // ═══════════════ Moda de mujer ═══════════════
+    case 'vestido-flores': {
+      const base = hex3(0x8fd3ff), petal = hex3(0xffffff), pink = hex3(0xff9db5), mid = hex3(0xffd95e);
+      const cut = garment({ y0: 0.13, y1: 0.97, inflate: 0.02, flare: 0.27, flareFrom: 0.56, ruffle: 0.07, ruffleN: 9, color: (u, phi, x, y) => {
+        // florecitas de cinco pétalos, repartidas en filas alternadas
+        const cv = y * 4.4, iv = Math.floor(cv), cu = phi * 8.5 / Math.PI + (iv % 2 ? 0.5 : 0), iu = Math.floor(cu);
+        const fu = cu - iu - 0.5, fv = cv - iv - 0.5, d = Math.hypot(fu, fv);
+        const petals = 0.24 + 0.09 * Math.cos(Math.atan2(fv, fu) * 5);
+        const flower = mixc((iu + iv) % 2 ? petal : pink, base, edge(d, petals, 0.03));
+        return mixc(mid, flower, edge(d, 0.085, 0.02));
+      } });
+      if (cut) { trim(cut.ringAt(0.5), 0xff8fb1, 0.034); trim(cut.bottom, 0xffffff, 0.02); trim(cut.top, 0xffffff, 0.026); }
+      break;
+    }
+    case 'falda-tutu': {
+      const a = hex3(0xff86ae), b = hex3(0xffb3cc);
+      const top = garment({ y0: 0.3, y1: 0.52, inflate: 0.02, flare: 0.3, flareFrom: 0.52, ruffle: 0.16, ruffleN: 14, wings: false, rows: 10, color: u => mixc(a, b, u) }, cloth({ transparent: true, opacity: 0.93 }));
+      garment({ y0: 0.36, y1: 0.52, inflate: 0.034, flare: 0.24, flareFrom: 0.52, ruffle: 0.2, ruffleN: 11, wings: false, rows: 8, color: u => mixc(b, [1, 0.9, 0.95], u) }, cloth({ transparent: true, opacity: 0.85 }));
+      if (top) trim(top.top, 0xff6f9f, 0.03);
+      break;
+    }
+    case 'chompa-corazones': {
+      const base = hex3(0xff8fb1), rib = hex3(0xee6d97), white = hex3(0xffffff);
+      const cut = garment({ y0: 0.28, y1: 0.98, inflate: 0.032, seg: 192, rows: 48, color: (u, phi, x, y) => {
+        if (u < 0.07) return rib;
+        // corazoncitos blancos en filas alternadas
+        const cv = y * 3.7, iv = Math.floor(cv), cu = phi * 6.5 / Math.PI + (iv % 2 ? 0.5 : 0);
+        const X = (cu - Math.floor(cu) - 0.5) * 2.9, Y = ((cv - iv) - 0.44) * 2.9;
+        const H = Math.pow(X * X + Y * Y - 1, 3) - X * X * Y * Y * Y;
+        return mixc(white, base, Math.min(1, Math.max(0, (H + 0.06) / 0.12)));
+      } });
+      if (cut) trim(cut.top, 0xee6d97, 0.04);
+      break;
+    }
+    case 'vestido-comunion': {
+      const white = hex3(0xffffff), lace = hex3(0xe9ecf5);
+      const cut = garment({ y0: 0.12, y1: 0.97, inflate: 0.02, flare: 0.3, flareFrom: 0.54, ruffle: 0.06, ruffleN: 10,
+        color: (u, phi, x, y) => (y < 0.5 && Math.sin(phi * 38) * Math.sin(y * 95) > 0.55 ? lace : white) });
+      if (cut) {
+        trim(cut.ringAt(0.49), 0xf0c35a, 0.03, { metalness: 0.4, roughness: 0.35 });   // cinturón dorado
+        trim(cut.bottom, 0xf0c35a, 0.016, { metalness: 0.4, roughness: 0.35 });
+        trim(cut.top, 0xffffff, 0.03);
+        const p = cut.at(0.49, -Math.PI);
+        const b = bow(0xffffff, 0xf0c35a, 0.85); b.position.set(p.x, p.y, p.z - 0.04); b.rotation.y = Math.PI;   // lazo en la espalda
+      }
+      break;
+    }
+    case 'vincha-brillos': {
+      const band = new THREE.Group(); band.position.set(0, -0.47, 0.06); band.rotation.x = -0.15; g.add(band);
+      add(new THREE.TorusGeometry(0.53, 0.032, 8, 28, Math.PI), M(0xb07be8, { roughness: 0.35 }), 0, 0, 0, { parent: band });
+      [0xff5fa2, 0x5fd3ff, 0xffd95e, 0x8be07a, 0xff5fa2].forEach((c, i) => {
+        const a = Math.PI * (0.3 + i * 0.1);
+        add(new THREE.OctahedronGeometry(0.05), M(c, { roughness: 0.15, metalness: 0.2, emissive: c, emissiveIntensity: 0.18 }), Math.cos(a) * 0.53, Math.sin(a) * 0.53, 0.035, { parent: band });
+      });
+      break;
+    }
+    case 'tiara-princesa': {
+      const silver = M(0xe3e9f2, { metalness: 0.75, roughness: 0.22 });
+      const t = new THREE.Group(); t.position.set(0, -0.12, 0.01); t.rotation.x = -0.2; g.add(t);
+      add(new THREE.TorusGeometry(0.4, 0.025, 8, 30, Math.PI), silver, 0, 0, 0, { r: [Math.PI / 2, 0, 0], parent: t });
+      for (let k = 0; k < 5; k++) {
+        const a = Math.PI * (0.18 + k * 0.16), h = k === 2 ? 0.2 : 0.12;
+        add(new THREE.ConeGeometry(0.04, h, 4), silver, Math.cos(a) * 0.4, h / 2, Math.sin(a) * 0.4, { parent: t });
+        add(sph(0.022, 8, 6), M(0xffffff, { roughness: 0.15 }), Math.cos(a) * 0.4, h + 0.015, Math.sin(a) * 0.4, { parent: t });
+      }
+      add(new THREE.OctahedronGeometry(0.055), M(0xff5fa2, { roughness: 0.1, metalness: 0.3, emissive: 0xff5fa2, emissiveIntensity: 0.2 }), 0, 0.07, 0.42, { parent: t });
+      break;
+    }
+    case 'bolsito': {
+      const gold = M(0xf0c35a, { metalness: 0.55, roughness: 0.3 });
+      add(torus(NECK_R * 0.9, 0.014, 32), gold, 0, 0.1, -NECK_R * 0.88, { r: [Math.PI / 2 - 0.22, 0, 0] });
+      const bag = new THREE.Group(); bag.position.set(0.3, -0.3, 0.24); bag.rotation.set(0.2, -0.35, 0.08); bag.scale.setScalar(1.3); g.add(bag);
+      rod(new THREE.Vector3(0.16, -0.02, 0.04), new THREE.Vector3(0.29, -0.2, 0.23), 0.01, gold);   // cadenita
+      add(sph(0.13, 18, 12), M(0x9b6bd6, { roughness: 0.4 }), 0, 0, 0, { s: [1, 0.78, 0.42], parent: bag });
+      add(new THREE.SphereGeometry(0.13, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(0x7d52bd, { roughness: 0.4 }), 0, 0.005, 0.012, { s: [1.02, 0.6, 0.44], r: [0.1, 0, 0], parent: bag });   // tapita
+      add(sph(0.022, 10, 8), gold, 0, -0.02, 0.06, { parent: bag });
+      break;
+    }
+    case 'zapatitos': {
+      const patent = M(0xe8325a, { roughness: 0.12, metalness: 0.15 });
+      add(sph(0.12, 20, 12), patent, 0, 0.06, 0.09, { s: [1.13, 0.56, 1.66] });
+      add(sph(0.122, 20, 10), M(0x7a1830), 0, 0.022, 0.09, { s: [1.16, 0.22, 1.7] });           // suela
+      add(torus(0.06, 0.014, 14), patent, 0, 0.1, 0.0, { r: [Math.PI / 2, 0, 0] });            // tira
+      add(cyl(0.058, 0.058, 0.12, 16), M(0xffffff, { roughness: 0.9 }), 0, 0.155, -0.01);      // medias blancas
+      add(torus(0.066, 0.02, 16), M(0xffffff, { roughness: 0.9 }), 0, 0.215, -0.01, { r: [Math.PI / 2, 0, 0] });
+      const b = bow(0xffd1e1, 0xff8fb1, 0.36); b.position.set(0, 0.105, 0.17); b.rotation.x = -0.55;
       break;
     }
     default:

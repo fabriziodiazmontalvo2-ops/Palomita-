@@ -162,10 +162,10 @@ export function createArrival(THREE, scene, dove, { sfx = () => {}, fx = null } 
 // Tamaño de la palomita según su nivel: llega como pichón y crece hasta ser grande.
 export const GROWTH = [
   { from: 1, name: 'Pichón', scale: 0.56 },
-  { from: 5, name: 'Palomita pequeña', scale: 0.68 },
-  { from: 15, name: 'Palomita joven', scale: 0.82 },
-  { from: 30, name: 'Palomita grande', scale: 0.93 },
-  { from: 50, name: 'Palomita adulta', scale: 1 },
+  { from: 5, name: '{Palomita pequeña|Palomito pequeño}', scale: 0.68 },
+  { from: 15, name: '{Palomita joven|Palomito joven}', scale: 0.82 },
+  { from: 30, name: '{Palomita grande|Palomito grande}', scale: 0.93 },
+  { from: 50, name: '{Palomita adulta|Palomito adulto}', scale: 1 },
 ];
 export function growthFor(level) {
   let i = 0;
