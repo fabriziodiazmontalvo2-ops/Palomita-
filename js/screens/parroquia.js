@@ -6,7 +6,7 @@
 // Se guardan solo en este teléfono (js/core/reminders.js). Todos los textos se insertan como texto.
 import { h, clear, button, modal, toast, confirmDialog } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
-import { back } from '../core/router.js';
+import { go, back } from '../core/router.js';
 import * as tts from '../core/tts.js';
 import * as R from '../core/reminders.js';
 import { grownGate as sharedGate, lock as lockGrown } from '../core/grown.js';
@@ -187,7 +187,9 @@ export async function mount(el, params = {}) {
         h('div', { class: 'pq-saint__badge', 'aria-hidden': 'true' }, '😇'),
         h('h3', { class: 'pq-card__h' }, ABOUT.patron.title),
         h('div', { class: 'ct-text pq-text' }, ABOUT.patron.text.map(t => h('p', null, t))),
-        h('div', { class: 'ct-tools' }, speakBtn(() => [ABOUT.patron.title, ...ABOUT.patron.text], { label: 'Escuchar su historia' }))),
+        h('div', { class: 'ct-tools' }, speakBtn(() => [ABOUT.patron.title, ...ABOUT.patron.text], { label: 'Escuchar' }),
+          button('Su Primera Comunión', { kind: 'sun', small: true, icon: '📖', onClick: () => go('bible', { story: 'primera-comunion-de-juanito', shelf: 'ars' }) }),
+          button('Rezarle', { kind: 'grape', small: true, icon: '🙏', onClick: () => go('bible', { prayer: 'oracion-al-cura-de-ars' }) }))),
       goTab('misas', 'Ver los horarios de Misa', '🔔'),
     ];
   }

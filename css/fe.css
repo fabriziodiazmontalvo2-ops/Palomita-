@@ -26,7 +26,7 @@
 .fe-task p { font-weight: 700; line-height: 1.4; }
 .fe-note { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px; border-radius: var(--r-md); background: #fff4d6; font-weight: 700; line-height: 1.4; }
 .fe-note > span:first-child { font-size: 1.6rem; }
-.fe-note p { flex: 1 1 200px; }
+.fe-note p, .fe-note > div { flex: 1 1 200px; }
 .fe-note--after { background: #e9f7ec; }
 .fe-steps { scroll-margin-top: 12px; }
 .fe-step__art { height: 150px; border-radius: var(--r-md); margin-bottom: 10px; }
@@ -138,3 +138,170 @@
 .mp-cell__d { font-family: var(--font-display); font-weight: 800; font-size: 0.78rem; color: var(--ink-soft); }
 .mp-cell__s { font-size: 1.6rem; line-height: 1; min-height: 1.6rem; }
 .mp-cell__ok { position: absolute; top: 2px; right: 6px; color: var(--leaf-btn); font-weight: 900; }
+
+/* ── Lo sé de memoria (pasaporte de oraciones) ── */
+.mm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin: 12px 0; }
+.mm-stamp { appearance: none; position: relative; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 132px;
+  padding: 12px 8px 10px; border-radius: 22px; border: 3px dashed #e2d6c2; background: var(--white); color: var(--ink); text-align: center; font: inherit; }
+.mm-stamp:active { transform: translateY(2px); }
+.mm-stamp:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.mm-stamp__n { position: absolute; top: 6px; left: 10px; font-family: var(--font-display); font-weight: 800; font-size: var(--fs-xs); color: var(--ink-soft); }
+.mm-stamp__icon { font-size: 2.1rem; line-height: 1; filter: grayscale(0.7); opacity: 0.75; }
+.mm-stamp__title { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-sm); line-height: 1.15; }
+.mm-stamp__state { font-size: var(--fs-xs); font-weight: 800; color: var(--ink-soft); }
+.mm-stamp.is-half { border-style: solid; border-color: #f4d78a; }
+.mm-stamp.is-nino, .mm-stamp.is-grande { border-style: solid; background: #fbf7ff; box-shadow: 0 3px 0 #d9ccf5; }
+.mm-stamp.is-nino { border-color: var(--grape); }
+.mm-stamp.is-grande { border-color: var(--leaf-btn, #3f9a52); background: #effaef; box-shadow: 0 3px 0 #bfe3c1; }
+.mm-stamp.is-nino .mm-stamp__icon, .mm-stamp.is-grande .mm-stamp__icon { filter: none; opacity: 1; }
+.mm-stamp.is-nino .mm-stamp__state { color: var(--grape-deep); }
+.mm-stamp.is-grande .mm-stamp__state { color: #2f7d3e; }
+.mm-head { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; margin-bottom: 10px; }
+.mm-head__icon { font-size: 3rem; line-height: 1; }
+.mm-badge { padding: 4px 12px; border-radius: var(--r-pill); font-weight: 800; font-size: var(--fs-sm); background: #efe8ff; color: var(--grape-deep); }
+.mm-badge--grande { background: #e4f6e2; color: #2f7d3e; }
+.mm-read { padding: 14px; border-radius: var(--r-md); background: var(--white); box-shadow: 0 3px 0 var(--paper-edge); display: flex; flex-direction: column; gap: 10px; }
+.mm-lines p, .mm-lines li { font-size: var(--fs-md); font-weight: 700; line-height: 1.5; }
+.mm-lines--list { margin: 0; padding-left: 1.6em; }
+.mm-read__tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.mm-h { display: flex; align-items: center; gap: 8px; margin: 16px 0 8px; font-size: var(--fs-lg); }
+.mm-retos { display: flex; flex-direction: column; gap: 10px; }
+.mm-reto { appearance: none; border: 0; cursor: pointer; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px; border-radius: var(--r-md); background: var(--white);
+  box-shadow: 0 3px 0 var(--paper-edge), 0 6px 12px var(--shade); text-align: left; color: var(--ink); font: inherit; }
+.mm-reto:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--paper-edge); }
+.mm-reto:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.mm-reto__icon { font-size: 1.9rem; }
+.mm-reto__body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.mm-reto__body b { font-family: var(--font-display); font-size: var(--fs-md); }
+.mm-reto__body span { font-size: var(--fs-sm); font-weight: 700; color: var(--ink-soft); }
+.mm-reto.is-done { background: #effaef; }
+.mm-hint { text-align: center; margin-top: 10px; }
+.mm-game { display: flex; flex-direction: column; gap: 10px; }
+.mm-game h2 { font-size: var(--fs-lg); }
+.mm-prev { padding: 8px 12px; border-radius: 14px; background: #f4efe6; color: var(--ink-soft); font-weight: 700; line-height: 1.4; }
+.mm-prev__k { display: block; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.05em; }
+.mm-built { display: flex; flex-direction: column; gap: 6px; min-height: 48px; padding: 10px 12px; border-radius: var(--r-md); background: #fbf7ff; border: 3px dashed #d9ccf5; margin: 0; }
+.mm-built--list { padding-left: 2.2em; }
+.mm-built__line { font-weight: 800; line-height: 1.4; color: var(--grape-deep); animation: mm-in 0.25s ease-out; }
+@keyframes mm-in { from { opacity: 0; transform: translateY(-6px); } }
+.mm-pool { display: flex; flex-direction: column; gap: 8px; }
+.mm-piece { appearance: none; border: 0; cursor: pointer; min-height: 52px; padding: 10px 14px; border-radius: 16px; background: var(--white); box-shadow: 0 3px 0 var(--paper-edge), 0 5px 10px var(--shade);
+  text-align: left; font: inherit; font-weight: 800; line-height: 1.35; color: var(--ink); }
+.mm-piece:active { transform: translateY(2px); }
+.mm-piece:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.mm-piece.is-used { display: none; }
+.mm-piece.is-hint { box-shadow: 0 0 0 4px var(--sun), 0 3px 0 var(--paper-edge); animation: ro-glow 1.2s ease-in-out infinite; }
+.mm-piece.is-shake { animation: mm-shake 0.35s; }
+@keyframes mm-shake { 25% { transform: translateX(-6px); } 50% { transform: translateX(6px); } 75% { transform: translateX(-3px); } }
+@media (prefers-reduced-motion: reduce) { .mm-piece.is-hint, .mm-piece.is-shake, .mm-built__line { animation: none; } }
+.mm-status { min-height: 1.4em; text-align: center; font-family: var(--font-display); font-weight: 800; color: var(--grape-deep); }
+.mm-line { padding: 14px; border-radius: var(--r-md); background: var(--white); box-shadow: 0 3px 0 var(--paper-edge); font-size: var(--fs-lg); font-weight: 800; line-height: 1.5; text-align: center; }
+.mm-blank { display: inline-block; min-width: 4.5em; border-bottom: 4px solid var(--grape); color: transparent; }
+.mm-blank.is-ok { color: var(--grape-deep); border-color: var(--leaf); min-width: 0; }
+.mm-place { align-self: center; display: grid; place-items: center; width: 72px; height: 72px; border-radius: 50%; background: var(--grape); color: var(--white);
+  font-family: var(--font-display); font-weight: 800; font-size: 2.2rem; box-shadow: 0 4px 0 var(--grape-deep); }
+
+/* ── Mis repasos ── */
+.rv-hero { text-align: center; }
+.rv-hero__icon { font-size: 3.2rem; line-height: 1; }
+.rv-from { list-style: none; margin: 10px 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rv-from li { display: flex; gap: 6px; font-weight: 700; font-size: var(--fs-sm); color: var(--ink-soft); }
+.rv-end { font-weight: 700; line-height: 1.45; text-align: center; }
+.rv-read { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.rv-read p { font-weight: 800; font-size: var(--fs-sm); color: var(--ink-soft); }
+.ct-quiz__from { display: flex; gap: 6px; font-size: var(--fs-xs); font-weight: 800; color: var(--ink-soft); margin-top: -4px; }
+
+/* ── Mi diploma ── */
+.dp-lock, .dp-hello { text-align: center; }
+.dp-lock__icon { font-size: 3.4rem; line-height: 1; filter: grayscale(0.4); }
+.dp-frame { margin: 12px 0; padding: 8px; border-radius: var(--r-md); background: var(--white); box-shadow: 0 4px 0 var(--paper-edge), 0 10px 22px var(--shade); }
+.dp-img { display: block; width: 100%; height: auto; border-radius: 10px; }
+.dp-namebox { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.dp-namebox label { flex: 1 1 100%; font-weight: 800; }
+.dp-name { flex: 1 1 160px; }
+
+/* ── Calendario de la fe ── */
+.cl-hero { --cl-c: #3f8f4e; --cl-bg: #e4f6e2; display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--r-lg); background: var(--cl-bg);
+  border: 3px solid var(--cl-c); box-shadow: 0 4px 0 color-mix(in srgb, var(--cl-c) 45%, white); }
+.cl-hero__top { display: flex; align-items: center; gap: 12px; }
+.cl-hero__top > div { flex: 1; min-width: 0; }
+.cl-hero__emoji { font-size: 2.8rem; line-height: 1; }
+.cl-hero h2 { font-size: var(--fs-xl); }
+.cl-hero__week { font-family: var(--font-display); font-weight: 800; color: var(--ink-soft); }
+.cl-hero__text { font-weight: 600; line-height: 1.5; }
+.cl-color { display: flex; align-items: center; gap: 8px; font-weight: 800; }
+.cl-dot { display: inline-block; flex: none; width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(0, 0, 0, 0.18); }
+.cl-dove { display: flex; gap: 8px; padding: 10px 12px; border-radius: 16px; background: rgba(255, 255, 255, 0.85); font-weight: 800; line-height: 1.4; color: var(--grape-deep); }
+.cl-card { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: var(--r-md); background: var(--white); box-shadow: 0 3px 0 var(--paper-edge), 0 6px 12px var(--shade); }
+.cl-card h3 { display: flex; align-items: center; gap: 8px; font-size: var(--fs-md); }
+.cl-card p { font-weight: 600; line-height: 1.5; }
+.cl-card > .btn { align-self: flex-start; }
+.cl-card--special { background: #fff6dc; }
+.cl-card--feast { background: #fbf7ff; }
+.cl-advent__title { font-family: var(--font-display); font-weight: 800; color: var(--grape-deep); }
+.cl-wreath { display: flex; justify-content: center; align-items: flex-end; gap: 18px; padding: 18px 12px 12px; border-radius: 60px 60px 18px 18px;
+  background: radial-gradient(ellipse at 50% 100%, #4f9a55 0 45%, #2f7d3e 46% 60%, transparent 61%); }
+.cl-candle { position: relative; width: 22px; height: 70px; border-radius: 5px 5px 3px 3px; background: linear-gradient(90deg, #5b2d8f, #8a55c9 45%, #5b2d8f); }
+.cl-candle--rosado { background: linear-gradient(90deg, #c2678f, #ef9cbf 45%, #c2678f); }
+.cl-candle i { position: absolute; left: 4px; top: -22px; width: 14px; height: 20px; border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%; background: transparent; }
+.cl-candle.is-lit i { background: radial-gradient(circle at 50% 70%, #fffbe0, #ffd95e 45%, rgba(255, 140, 30, 0.85) 75%, rgba(255, 120, 20, 0)); animation: rt-flicker 1.4s ease-in-out infinite; transform-origin: 50% 100%; }
+@media (prefers-reduced-motion: reduce) { .cl-candle.is-lit i { animation: none; } }
+.cl-crib { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; font-size: 1.7rem; }
+.cl-crib span { filter: grayscale(1); opacity: 0.3; }
+.cl-crib span.is-on { filter: none; opacity: 1; }
+.cl-lent__tip { font-size: var(--fs-md); font-weight: 800 !important; color: var(--ink); }
+.cl-next { display: flex; flex-direction: column; gap: 8px; }
+.cl-next h3 { display: flex; align-items: center; gap: 8px; }
+.cl-next > .btn { align-self: center; }
+.cl-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cl-feast { appearance: none; border: 0; cursor: pointer; width: 100%; display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 12px; border-radius: 16px;
+  background: var(--white); box-shadow: 0 3px 0 var(--paper-edge); text-align: left; color: var(--ink); font: inherit; }
+.cl-feast:active { transform: translateY(2px); box-shadow: none; }
+.cl-feast:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.cl-feast__emoji { font-size: 1.8rem; }
+.cl-feast__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cl-feast__body b { font-family: var(--font-display); font-weight: 800; line-height: 1.15; }
+.cl-feast__body > span { font-size: var(--fs-sm); font-weight: 700; color: var(--ink-soft); }
+.cl-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.cl-tag { display: inline-block; padding: 2px 10px; border-radius: var(--r-pill); background: #ffe3e3; color: #b5393f; font-weight: 800; font-size: var(--fs-xs); }
+.cl-tag--local { background: #e4f6e2; color: #2f7d3e; }
+.cl-detail { display: flex; flex-direction: column; gap: 10px; }
+.cl-detail__art { height: 170px; border-radius: var(--r-md); }
+.cl-detail h2 { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xl); }
+.cl-prayer { padding: 14px; border-radius: var(--r-md); background: #efe8ff; display: flex; flex-direction: column; gap: 8px; }
+.cl-prayer p { font-weight: 700; font-style: italic; line-height: 1.5; }
+.cl-prayer .btn { align-self: flex-start; }
+.cl-ring { display: flex; justify-content: center; gap: 6px; margin: 10px 0 14px; }
+.cl-ring__seg { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: color-mix(in srgb, var(--seg) 30%, white); border: 3px solid var(--seg); font-size: 1.3rem; }
+.cl-ring__seg.is-now { transform: scale(1.15); box-shadow: 0 0 0 4px var(--sun); }
+.cl-season summary .cl-dot { margin-right: -2px; }
+.cl-now { margin-left: 6px; padding: 2px 10px; border-radius: var(--r-pill); background: var(--sun); font-size: var(--fs-xs); font-weight: 800; }
+
+/* ── El Credo frase por frase ── */
+.cr-hero { text-align: center; }
+.cr-hero__icon { font-size: 3rem; line-height: 1; }
+.cr-all { margin: 10px 0 14px; padding-left: 1.8em; display: flex; flex-direction: column; gap: 4px; }
+.cr-line { appearance: none; border: 0; background: none; cursor: pointer; padding: 6px 4px; text-align: left; font: inherit; font-weight: 700; line-height: 1.4; color: var(--ink); border-radius: 8px; }
+.cr-line:focus-visible { outline: 3px solid var(--ink); }
+.cr-dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-bottom: 12px; }
+.cr-dots i { width: 10px; height: 10px; border-radius: 50%; background: #e6dccb; }
+.cr-dots i.is-done { background: var(--grape); }
+.cr-dots i.is-now { background: var(--sun-deep, #f0a51e); transform: scale(1.3); }
+.cr-card { display: flex; flex-direction: column; gap: 12px; padding: 18px 16px; border-radius: var(--r-lg); background: var(--white); box-shadow: 0 4px 0 var(--paper-edge), 0 8px 16px var(--shade); }
+.cr-card__line { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-xl); line-height: 1.2; color: var(--grape-deep); }
+.cr-card__text { font-size: var(--fs-md); font-weight: 600; line-height: 1.55; }
+
+/* ── Atajos: Mis oraciones, temas, partes de la Misa y álbum ── */
+.bb-quicks { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 10px 0 6px; }
+.bb-quick { appearance: none; border: 0; cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 8px 12px; border-radius: 16px; background: var(--white);
+  box-shadow: 0 3px 0 var(--paper-edge); text-align: left; color: var(--ink); font: inherit; }
+.bb-quick:active { transform: translateY(2px); box-shadow: none; }
+.bb-quick:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.bb-quick--memo { background: #f3eeff; }
+.bb-quick__icon { font-size: 1.7rem; }
+.bb-quick__t { display: flex; flex-direction: column; line-height: 1.15; }
+.bb-quick__t b { font-family: var(--font-display); font-weight: 800; }
+.bb-quick__t span { font-size: var(--fs-xs); font-weight: 800; color: var(--ink-soft); }
+.bb-pextra { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.ms-pray { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.fg-story { margin: 12px auto 0; display: flex; }

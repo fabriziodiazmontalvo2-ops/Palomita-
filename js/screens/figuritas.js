@@ -12,7 +12,7 @@ import * as tts from '../core/tts.js';
 import * as album from '../core/stickers.js';
 import { h, clear, button, modal, toast, reduceMotion } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
-import { back } from '../core/router.js';
+import { go, back } from '../core/router.js';
 import { showChest } from '../core/rewards.js';
 import { lifecycle, shell, tabBar, speakBtn, celebrate, progressMeter, deco } from './catequesis.js';
 import { PAGES, STICKERS, RARITY, PACK_PRICE, TRADE_COST, TRADE_COINS, PAGE_PRIZE } from '../data/stickers.js';
@@ -134,7 +134,9 @@ export async function mount(el, params = {}) {
       list.map(s => slot(s)),
       h('div', { class: `fg-prize${prog.done ? ' is-done' : ''}` },
         h('span', { class: 'fg-prize__icon', 'aria-hidden': 'true' }, prog.done ? '🏅' : '🎁'),
-        h('span', { class: 'fg-prize__text' }, prog.done ? '¡Página completa!' : `Completa la página: +${PAGE_PRIZE.coins} ${state.COIN.icon}`))));
+        h('span', { class: 'fg-prize__text' }, prog.done ? '¡Página completa!' : `Completa la página: +${PAGE_PRIZE.coins} ${state.COIN.icon}`))),
+      pg.id === 'cura-ars' ? h('button', { type: 'button', class: 'btn btn--ghost btn--sm fg-story', onclick: () => { sfx('page'); go('bible', { story: 'primera-comunion-de-juanito', shelf: 'ars' }); } },
+        h('span', { 'aria-hidden': 'true' }, '📖'), 'Leer la historia de su Primera Comunión') : null);
     if (fresh) sh.scroll.scrollTop = 0;
     clear(nav).append(
       h('button', { type: 'button', class: 'fg-arrow', 'aria-label': 'Página anterior', disabled: pageIdx === 0, onclick: () => turn(-1) }, '◀'),

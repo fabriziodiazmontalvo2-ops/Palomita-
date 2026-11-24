@@ -13,6 +13,7 @@ import { h, clear, button, iconButton, meter, reduceMotion } from '../core/ui.js
 import { sfx } from '../core/audio.js';
 import { go, back } from '../core/router.js';
 import * as Rm from '../core/reminders.js';
+import * as Rv from '../core/review.js';
 import { sceneEl, SCENE_IDS, isFloating, hasOrb } from '../art/scenes.js';
 
 // ───────────────────────── Utilidades compartidas ─────────────────────────
@@ -53,6 +54,7 @@ const LOADERS = {
   at: () => import('../data/bible-at.js').then(m => m.STORIES_AT),
   nt: () => import('../data/bible-nt.js').then(m => m.STORIES_NT),
   milagros: () => import('../data/bible-milagros.js').then(m => m.STORIES_MILAGROS),
+  ars: () => import('../data/cura-ars.js').then(m => (m.CURA_ARS_STORY ? [m.CURA_ARS_STORY] : [])),
   parables: () => import('../data/parables.js').then(m => m.PARABLES),
   prayers: () => import('../data/prayers.js').then(m => m.PRAYERS),
 };
@@ -238,7 +240,8 @@ export function speakBtn(getText, { label = 'Escuchar', compact = false, kind = 
 //   key: para state.markQuiz · prize: { coins, fe, xp } (se gana una sola vez)
 //   perfectOnly: el premio solo se gana con todas correctas · fx: contenedor para la celebración
 //   onFinish(slot, { hits, total, perfect, first }): para añadir botones al resultado
-export function quiz(questions, { key, prize = { coins: 10 }, perfectOnly = true, title = '¿Qué aprendiste?', fx = null, onFinish = null } = {}) {
+//   again: false quita «Responder otra vez» (en «Mis repasos») · q.from: de dónde viene la pregunta (se muestra chiquito)
+export function quiz(questions, { key, prize = { coins: 10 }, perfectOnly = true, title = '¿Qué aprendiste?', fx = null, onFinish = null, again = true } = {}) {
   const qs = arr(questions).filter(q => q && arr(q.options).length >= 2 && Number.isInteger(q.answer) && q.answer >= 0 && q.answer < q.options.length);
   if (!qs.length) return null;
   const box = h('section', { class: 'ct-quiz', 'aria-label': title });
@@ -258,6 +261,7 @@ export function quiz(questions, { key, prize = { coins: 10 }, perfectOnly = true
       h('div', { class: 'ct-quiz__qrow' },
         h('p', { class: 'ct-quiz__n' }, `Pregunta ${i + 1} de ${qs.length}`),
         speakBtn(() => [txt(q.q), ...arr(q.options).map((o, k) => `${'ABCD'[k]}: ${txt(o)}`)], { compact: true, label: 'Escuchar la pregunta' })),
+      q.from ? h('p', { class: 'ct-quiz__from' }, deco('📌'), txt(q.from)) : null,
       h('p', { class: 'ct-quiz__q' }, txt(q.q)),
       h('div', { class: 'ct-opts' }, opts), fb);
 
@@ -265,6 +269,7 @@ export function quiz(questions, { key, prize = { coins: 10 }, perfectOnly = true
       tts.stop();
       const right = k === q.answer;
       marks.push(right);
+      Rv.answered(q, right);
       sfx(right ? 'good' : 'wrong');
       opts.forEach((b, n) => {
         b.disabled = true;
@@ -308,7 +313,7 @@ export function quiz(questions, { key, prize = { coins: 10 }, perfectOnly = true
         h('p', { class: 'ct-result__msg', role: 'status' }, msg),
         rewardRow(gains),
         !won && prizeText ? h('p', { class: 'ct-result__hint' }, deco('🎁'), `Responde todas bien para ganar ${prizeText}.`) : null,
-        button('Responder otra vez', { kind: 'ghost', small: true, icon: '🔄', onClick: start }),
+        again ? button('Responder otra vez', { kind: 'ghost', small: true, icon: '🔄', onClick: start }) : null,
         slot));
     onFinish?.(slot, { hits, total: qs.length, perfect, first });
     box.scrollIntoView({ behavior: smooth(), block: 'start' });
@@ -374,6 +379,19 @@ export async function mount(el, params = {}) {
     let retos = 0;
     for (const t of ['todo', 'at', 'jesus', 'parabolas', 'sacramentos', 'misa', 'oraciones', 'maria', 'confesion', 'camino']) if ((Number(state.flag(`reto:best:${t}`)) || 0) >= 6) retos++;
     const kid = txt(state.get().kid).trim();
+    // Para las tarjetas nuevas: sellos de memoria, repasos de hoy y el tiempo de la Iglesia.
+    const [memoSet, L, F] = await Promise.all([
+      import('../data/oraciones-extra.js').then(m => m.MEMORY_SET || []).catch(() => []),
+      import('../core/liturgy.js').catch(() => null), import('../data/fiestas.js').catch(() => null)]);
+    const memoTotal = memoSet.length, memoDone = memoSet.filter(m => state.memorized(m.id)).length;
+    const dueNow = Rv.dueCount();
+    let season = '', seasonHex = '', seasonEmoji = '', nextFeast = '';
+    try {
+      const so = L.seasonOf(new Date());
+      season = F.SEASONS?.[so.id]?.title || so.label; seasonHex = L.colorHex(so.color); seasonEmoji = F.SEASONS?.[so.id]?.emoji || '';
+      const nx = L.nextFeasts(new Date(), 1)[0];
+      if (nx) nextFeast = nx.days === 1 ? `mañana, ${nx.feast.title}` : nx.feast.title;
+    } catch { /* sin calendario */ }
 
     const stat = (icon, label, n, total, color) => h('div', { class: 'ct-stat' },
       h('span', { class: 'ct-stat__top' }, deco(icon), h('b', null, total ? `${n}/${total}` : '—')),
@@ -415,9 +433,19 @@ export async function mount(el, params = {}) {
           note: topics.length ? `${topicsDone} de ${topics.length} temas` : '', onClick: () => go('bible', { tab: 'catecismo' }) }),
         card({ title: 'Historias y milagros', sub: 'La Biblia contada para ti', bg: 'dorado', c: '#f0a51e',
           actors: [{ e: '📖', x: 50, y: 62, s: 1.3 }, { e: '✨', x: 20, y: 28, s: 0.8, anim: 'twinkle' }, { e: '🌟', x: 80, y: 26, s: 0.8, anim: 'twinkle' }],
-          note: stories.length ? `${storiesRead} de ${stories.length} leídas` : '', onClick: () => go('bible', { tab: 'historias' }) })));
+          note: stories.length ? `${storiesRead} de ${stories.length} leídas` : '', onClick: () => go('bible', { tab: 'historias' }) }),
+        card({ title: 'Lo sé de memoria', sub: 'Mi pasaporte de oraciones', bg: 'jardin', c: '#7556c9',
+          actors: [{ e: '🎫', x: 50, y: 60, s: 1.3 }, { e: '⭐', x: 20, y: 28, s: 0.75, anim: 'twinkle' }, { e: '🙏', x: 80, y: 30, s: 0.8, anim: 'float' }],
+          note: memoTotal ? `${memoDone} de ${memoTotal} sellos` : '', onClick: () => go('memoria') }),
+        card({ title: 'Mis repasos', sub: 'Lo que me costó vuelve otro día', bg: 'cielo', c: '#4aa3e0',
+          actors: [{ e: '📚', x: 50, y: 62, s: 1.3 }, { e: '💡', x: 22, y: 28, s: 0.8, anim: 'float' }, { e: '✅', x: 80, y: 30, s: 0.75 }],
+          note: dueNow ? `${dueNow} para hoy` : state.reviewCount() ? '¡Al día! ✓' : 'Nada pendiente', onClick: () => go('repasos') }),
+        card({ title: 'El Credo frase por frase', sub: 'Entiende lo que creemos', bg: 'amanecer', c: '#e2643a',
+          actors: [{ e: '✝️', x: 50, y: 58, s: 1.2 }, { e: '🌅', x: 22, y: 30, s: 0.8 }, { e: '💛', x: 80, y: 28, s: 0.75, anim: 'float' }],
+          note: state.isRead('credo:frases') ? '⭐ Terminado' : '', onClick: () => go('credo') })));
 
     const confDone = state.quizDone('confesion');
+    const allTopics = topics.length > 0 && topicsDone === topics.length;
     const prepare = h('section', { class: 'ct-group', 'aria-label': 'Me preparo' },
       h('h2', { class: 'ct-group__title' }, deco('🎒'), 'Me preparo'),
       h('div', { class: 'ct-grid' },
@@ -436,17 +464,33 @@ export async function mount(el, params = {}) {
         card({ title: 'La Misa paso a paso', sub: 'Qué pasa y qué respondemos', bg: 'templo', c: '#7556c9',
           actors: [{ e: '🍞', x: 34, y: 66, s: 1.1 }, { e: '🍷', x: 64, y: 66, s: 1.1 }, { e: '✨', x: 50, y: 28, s: 0.8, anim: 'twinkle' }],
           note: state.quizDone('misa:practica') ? '⭐ Práctica superada' : '', onClick: () => go('misa') }),
-        card({ title: 'Mis oraciones', sub: 'Escucha y reza conmigo', bg: 'noche', c: '#27325e',
-          actors: [{ e: '🙏', x: 50, y: 62, s: 1.3 }, { e: '⭐', x: 20, y: 26, s: 0.7, anim: 'twinkle' }, { e: '🌙', x: 80, y: 26, s: 0.85 }],
-          onClick: () => go('bible', { tab: 'oraciones' }) }),
         card({ title: 'Reto de fe', sub: '10 preguntas, rachas y premios', bg: 'cielo', c: '#4aa3e0',
           actors: [{ e: '🏆', x: 50, y: 60, s: 1.3 }, { e: '⭐', x: 20, y: 30, s: 0.75, anim: 'twinkle' }, { e: '⭐', x: 80, y: 28, s: 0.75, anim: 'twinkle' }],
           note: retos ? `${retos} de ${RETO_TOPICS} temas superados` : '', onClick: () => go('reto') }),
+        card({ title: 'Mi diploma', sub: allTopics ? '¡Ya lo ganaste!' : 'Al final de «Mi camino»', bg: 'dorado', c: '#d08a12',
+          actors: [{ e: '📜', x: 50, y: 60, s: 1.3 }, { e: allTopics ? '🎉' : '🔒', x: 80, y: 28, s: 0.8 }, { e: '⭐', x: 20, y: 28, s: 0.75, anim: 'twinkle' }],
+          note: allTopics ? '⭐ Listo para compartir' : topics.length ? `Faltan ${topics.length - topicsDone} temas` : '', onClick: () => go('diploma') })));
+
+    const pray = h('section', { class: 'ct-group', 'aria-label': 'Rezo y celebro' },
+      h('h2', { class: 'ct-group__title' }, deco('🙏'), 'Rezo y celebro'),
+      h('div', { class: 'ct-grid' },
+        card({ title: 'Mis oraciones', sub: 'Escucha y reza conmigo', bg: 'noche', c: '#27325e',
+          actors: [{ e: '🙏', x: 50, y: 62, s: 1.3 }, { e: '⭐', x: 20, y: 26, s: 0.7, anim: 'twinkle' }, { e: '🌙', x: 80, y: 26, s: 0.85 }],
+          onClick: () => go('bible', { tab: 'oraciones' }) }),
+        card({ title: 'El Rosario', sub: 'Un misterio o el Rosario completo', bg: 'jardin', c: '#ec6f90',
+          actors: [{ e: '📿', x: 50, y: 60, s: 1.3 }, { e: '🌹', x: 22, y: 30, s: 0.8, anim: 'float' }, { e: '💙', x: 80, y: 28, s: 0.75, anim: 'float' }],
+          note: state.doneToday('pray:rosario') ? '🙏 Rezado hoy' : '', onClick: () => go('rosario') }),
+        card({ title: 'Mi ratito con Jesús', sub: 'Tres minutos para hablar con Él', bg: 'noche', c: '#7556c9',
+          actors: [{ e: '🕯️', x: 50, y: 62, s: 1.25 }, { e: '💛', x: 22, y: 30, s: 0.8, anim: 'float' }, { e: '✨', x: 80, y: 28, s: 0.75, anim: 'twinkle' }],
+          note: state.doneToday('pray:ratito') ? '🙏 Hecho hoy' : '', onClick: () => go('ratito') }),
+        card({ title: 'Calendario de la fe', sub: season ? season : 'Los tiempos y las fiestas', bg: 'campo', c: seasonHex || '#3f9a52',
+          actors: [{ e: '🗓️', x: 50, y: 60, s: 1.25 }, { e: seasonEmoji || '🌱', x: 22, y: 30, s: 0.85 }, { e: '🎉', x: 80, y: 28, s: 0.75, anim: 'float' }],
+          note: nextFeast ? `Próxima fiesta: ${nextFeast}` : '', onClick: () => go('calendario') }),
         card({ wide: true, title: 'Mi parroquia', sub: 'Santo Cura de Ars · horarios de Misa, catequesis y avisos', bg: 'iglesia', c: '#b5393f',
           actors: [{ e: '⛪', x: 50, y: 60, s: 1.3 }, { e: '🔔', x: 18, y: 28, s: 0.8, anim: 'float' }, { e: '🕊️', x: 82, y: 26, s: 0.8, anim: 'float' }],
           onClick: () => go('parroquia') })));
 
-    return { title: 'Catequesis', body: [hello, progress, learn, prepare] };
+    return { title: 'Catequesis', body: [hello, progress, learn, prepare, pray] };
   }
 
   // ── Lista de lecciones ──

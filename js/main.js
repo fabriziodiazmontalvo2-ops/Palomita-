@@ -29,6 +29,11 @@ register('dudas', () => import('./screens/dudas.js'));
 register('grandia', () => import('./screens/grandia.js'));
 register('rosario', () => import('./screens/rosario.js'));
 register('ratito', () => import('./screens/ratito.js'));
+register('memoria', () => import('./screens/memoria.js'));
+register('repasos', () => import('./screens/repasos.js'));
+register('diploma', () => import('./screens/diploma.js'));
+register('calendario', () => import('./screens/calendario.js'));
+register('credo', () => import('./screens/credo.js'));
 setHome('home');
 
 const TICK_SECONDS = 5;

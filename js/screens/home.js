@@ -12,6 +12,7 @@ import { growthFor } from '../pet/arrival.js';
 import { music } from '../core/audio.js';
 import { dailyGiftDue, showDailyGift, showChest, takeLevelUps } from '../core/rewards.js';
 import * as reminders from '../core/reminders.js';
+import * as Rv from '../core/review.js';
 import * as stickers from '../core/stickers.js';
 import { grownGate } from '../core/grown.js';
 import { createMiDia } from '../home/midia.js';
@@ -56,11 +57,15 @@ async function loadData() {
   // Las rutas van escritas tal cual (no en una variable) para que el empaquetador pueda incluir estos archivos.
   const safe = (promise, k, fb) => promise.then(m => m[k] || fb).catch(() => fb);
   const phrasesMod = import('../data/phrases.js');
-  const [phrases, facts, verses, prayers] = await Promise.all([
+  const [phrases, facts, verses, prayers, ars] = await Promise.all([
     safe(phrasesMod, 'PHRASES', null), safe(phrasesMod, 'FOOD_FACTS', {}),
     safe(import('../data/verses.js'), 'VERSES', FALLBACK_VERSES), safe(import('../data/prayers.js'), 'PRAYERS', []),
+    safe(import('../data/cura-ars.js'), 'CURA_ARS_FACTS', []),
   ]);
-  DATA = { phrases: { ...FALLBACK_PHRASES, ...(phrases || {}) }, facts: facts || {}, verses: verses?.length ? verses : FALLBACK_VERSES, prayers: prayers || [] };
+  const P = { ...FALLBACK_PHRASES, ...(phrases || {}) };
+  // Los «¿Sabías que…?» del Santo Cura de Ars, el patrono de la parroquia, se suman a los de siempre.
+  P.facts = [...(P.facts || []), ...(Array.isArray(ars) ? ars : [])];
+  DATA = { phrases: P, facts: facts || {}, verses: verses?.length ? verses : FALLBACK_VERSES, prayers: prayers || [] };
   return DATA;
 }
 // Mundo de reserva por si el dispositivo no tiene WebGL: la interfaz sigue funcionando.
@@ -231,6 +236,10 @@ export async function mount(el, params = {}) {
     const key = { hambre: 'hungry', energia: 'sleepy', limpieza: 'dirty', alegria: 'bored' }[need];
     if (key) say(pick(D.phrases[key]));
     else if (state.stat('fe') < 35 && Math.random() < 0.5) say(pick(D.phrases.pray));
+    else if (Rv.dueCount() && Math.random() < 0.25) {
+      const n = Rv.dueCount();
+      say(`¿Repasamos? Hoy te ${n === 1 ? 'toca una preguntita' : `tocan ${n} preguntitas`} 📚`, 6500, () => go('repasos'));
+    }
     else if (D.phrases.facts.length && Math.random() < 0.3) say(pick(D.phrases.facts), 7500);
     else say(pick(D.phrases.happy));
   }

@@ -81,6 +81,10 @@ const SCREENS = [
   ['home', {}], ['games', {}], ['bible', {}], ['bible', { tab: 'parabolas' }], ['bible', { tab: 'oraciones' }],
   ['bible', { tab: 'catecismo' }], ['bible', { tab: 'versiculos' }], ['shop', {}], ['shop', { tab: 'accesorios' }], ['settings', {}],
   ['levels', { game: 'noe' }], ['catequesis', {}], ['confesion', {}], ['misa', {}], ['reto', {}], ['parroquia', {}], ['figuritas', {}],
+  // Versión 1.3
+  ['dudas', {}], ['grandia', {}], ['rosario', {}], ['ratito', {}], ['ratito', { tab: 'diario' }], ['memoria', {}], ['memoria', { id: 'credo' }],
+  ['repasos', {}], ['diploma', {}], ['calendario', {}], ['calendario', { tab: 'fiestas' }], ['calendario', { tab: 'tiempos' }], ['credo', {}],
+  ['misa', { tab: 'pasaporte' }], ['bible', { story: 'primera-comunion-de-juanito', shelf: 'ars' }],
 ];
 for (const vp of [{ width: 360, height: 640 }, { width: 390, height: 844 }, { width: 540, height: 750 }]) {
   console.log(`Pantallas ${vp.width}×${vp.height}`);

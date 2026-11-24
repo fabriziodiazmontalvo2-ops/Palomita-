@@ -17,7 +17,7 @@
 //   Misiones de buenas obras: mission() / acceptMission({ text, from }) / missionDone() / missionLater() / deeds()
 //   Pasaporte de Misa: massKey(fecha) / massLog() / logMass(clave, datos) / massStamped(clave)
 //   Lo sé de memoria: memorized(id) / setMemorized(id, 'nino' | 'grande' | null)
-//   Mis repasos: reviewMiss(clave) / reviewHit(clave) / reviewDue() / reviewCount()
+//   Mis repasos: reviewMiss(clave) / reviewHit(clave) / reviewDue() / reviewCount() / reviewNext() / reviewDrop(clave)
 //   Intenciones y diario: intentions() / addIntention(it) / removeIntention(at) / journal() / addJournal(entry)
 //   Actividad (para el informe de los papás): logActivity(puntos) / activity(días)
 //
@@ -577,6 +577,14 @@ export function reviewDue() {
   return Object.entries(S.review).filter(([, r]) => r && r.due <= t).map(([k]) => k);
 }
 export function reviewCount() { return Object.keys(S.review).length; }
+// La fecha del próximo repaso que todavía no toca ('' si no hay ninguno).
+export function reviewNext() {
+  const t = todayKey();
+  return Object.values(S.review).map(r => r?.due).filter(d => d && d > t).sort()[0] || '';
+}
+export function reviewBox(key) { return S.review[key]?.box || 0; }
+// Quita una pregunta que ya no existe (cambió el texto en una versión nueva).
+export function reviewDrop(key) { if (S.review[key]) { const n = { ...S.review }; delete n[key]; S.review = n; saveSoon(); } }
 
 // ── Intenciones (por quién rezo) y diario de gracias ──
 export function intentions() { return S.intentions.slice(); }

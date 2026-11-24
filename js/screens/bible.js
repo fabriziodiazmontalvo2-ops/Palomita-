@@ -17,6 +17,7 @@ import { sfx } from '../core/audio.js';
 import { go, back } from '../core/router.js';
 import * as R from '../core/reminders.js';
 import { missionButton } from '../core/missions.js';
+import * as Rv from '../core/review.js';
 import { sceneEl, SCENE_IDS, isFloating, hasOrb } from '../art/scenes.js';
 
 // ───────────────────────── Datos fijos de la pantalla ─────────────────────────
@@ -35,6 +36,7 @@ const SHELVES = [
   { key: 'at', title: 'Antiguo Testamento', sub: 'Dios prepara a su pueblo', icon: '📜', color: 'var(--sun-deep)' },
   { key: 'nt', title: 'Nuevo Testamento', sub: 'Jesús está con nosotros', icon: '✨', color: 'var(--sky-deep)' },
   { key: 'mi', title: 'Milagros de Jesús', sub: 'Jesús sana, ayuda y cuida', icon: '🌟', color: 'var(--grape)' },
+  { key: 'ars', title: 'Nuestro patrono', sub: 'El Santo Cura de Ars', icon: '😇', color: 'var(--coral)' },
 ];
 const SHELF_KEYS = SHELVES.map(sh => sh.key);
 
@@ -92,6 +94,7 @@ const LOADERS = {
   at: () => import('../data/bible-at.js').then(m => m.STORIES_AT),
   nt: () => import('../data/bible-nt.js').then(m => m.STORIES_NT),
   mi: () => import('../data/bible-milagros.js').then(m => m.STORIES_MILAGROS),
+  ars: () => import('../data/cura-ars.js').then(m => (m.CURA_ARS_STORY ? [m.CURA_ARS_STORY] : [])),
   parables: () => import('../data/parables.js').then(m => m.PARABLES),
   // Las oraciones de siempre, más las nuevas (Gloria, Credo largo, Ángelus…). Si la catequista eligió otro
   // Acto de contrición (Mi parroquia → Costumbres), se muestra ese con el mismo id.
@@ -107,6 +110,22 @@ const LOADERS = {
   games: () => import('../games/registry.js').then(m => m.GAMES),
 };
 const cache = {};
+let MEMO = null;
+const memoIds = async () => (MEMO ||= await import('../data/oraciones-extra.js').then(m => (m.MEMORY_SET || []).map(x => x.id)).catch(() => []));
+// Atajos al final de algunos temas de «Mi camino» hacia la pantalla que los practica.
+const TOPIC_LINKS = {
+  credo: [['✝️', 'El Credo frase por frase', ['credo']]],
+  'ano-liturgico': [['🗓️', 'Calendario de la fe', ['calendario']]],
+  rosario: [['📿', 'Rezar el Rosario conmigo', ['rosario']]],
+  oracion: [['🕯️', 'Mi ratito con Jesús', ['ratito']]],
+  'padre-nuestro': [['🎫', 'Ganar el sello del Padre Nuestro', ['memoria', { id: 'padre-nuestro' }]]],
+  mandamientos: [['🎫', 'Aprender los Mandamientos de memoria', ['memoria', { id: 'mandamientos' }]]],
+  sacramentos: [['🎫', 'Aprender los sacramentos de memoria', ['memoria', { id: 'sacramentos' }]]],
+  reconciliacion: [['🤗', 'Mi Primera Confesión', ['confesion']]],
+  misa: [['⛪', 'La Misa paso a paso', ['misa']]],
+  comunion: [['🕊️', 'Mi gran día', ['grandia']]],
+  parroquia: [['😇', 'La Primera Comunión del Santo Cura de Ars', ['bible', { story: 'primera-comunion-de-juanito', shelf: 'ars' }]], ['⛪', 'Mi parroquia', ['parroquia']]],
+};
 async function load(key) {
   if (cache[key]) return cache[key];
   try {
@@ -466,6 +485,7 @@ export async function mount(el, params = {}) {
       function answer(k) {
         const right = k === q.answer;
         marks.push(right);
+        Rv.answered(q, right);
         sfx(right ? 'good' : 'wrong');
         opts.forEach((b, n) => {
           b.disabled = true;
@@ -764,6 +784,16 @@ export async function mount(el, params = {}) {
         h('div', { class: 'bb-intro' },
           h('h2', null, 'Hablar con Dios'),
           h('p', null, 'Rezar es conversar con Dios, que te quiere muchísimo. Elige una oración y dila despacio, con el corazón.')),
+        await (async () => {
+          const ids = await memoIds();
+          const n = ids.filter(id => state.memorized(id)).length;
+          const quick = (icon, title, sub, onClick, cls = '') => h('button', { type: 'button', class: `bb-quick${cls}`, onclick: () => { sfx('pop'); onClick(); } },
+            h('span', { class: 'bb-quick__icon', 'aria-hidden': 'true' }, icon), h('span', { class: 'bb-quick__t' }, h('b', null, title), h('span', null, sub)));
+          return h('div', { class: 'bb-quicks' },
+            ids.length ? quick('🎫', 'Lo sé de memoria', `${n} de ${ids.length} sellos`, () => go('memoria'), ' bb-quick--memo') : null,
+            quick('📿', 'El Rosario', 'Rézalo conmigo', () => go('rosario')),
+            quick('🕯️', 'Mi ratito', 'Con Jesús', () => go('ratito')));
+        })(),
         groups.map(({ g, items }) => h('section', { class: `bb-group bb-group--${g.key}`, 'aria-label': g.title },
           h('h2', { class: 'bb-group__title' }, g.title),
           h('div', { class: 'bb-list' }, items.map(p => {
@@ -866,6 +896,11 @@ export async function mount(el, params = {}) {
     paintCount();
 
     const link = x => x && { title: txt(x.title), go: () => show({ kind: 'prayer', tab: 'oraciones', id: x.id }) };
+    const memo = (await memoIds()).includes(p.id);
+    const stamp = memo ? state.memorized(p.id) : null;
+    const extras = memo || p.id === 'credo' || p.id === 'credo-niceno' ? h('div', { class: 'bb-pextra' },
+      memo ? button(stamp ? (stamp.by === 'grande' ? 'Sello verde ✅' : '¡Ya tengo su sello! ⭐') : 'Ganar mi sello', { kind: stamp ? 'ghost' : 'sun', small: true, icon: '🎫', onClick: () => go('memoria', { id: p.id }) }) : null,
+      p.id === 'credo' || p.id === 'credo-niceno' ? button('El Credo frase por frase', { kind: 'sky', small: true, icon: '✝️', onClick: () => go('credo') }) : null) : null;
     return {
       title: 'Oraciones',
       chip: prayedToday(p.id) ? { icon: '🙏', text: 'hoy', label: 'Ya rezaste esta oración hoy' } : null,
@@ -879,6 +914,7 @@ export async function mount(el, params = {}) {
           karaoke,
           lineBox,
           learnBox,
+          extras,
           note('tip', '💡', '¿Sabías que…?', p.note),
           h('div', { class: 'bb-amen' }, amen, countEl),
           navRow(link(list[i - 1]), link(list[i + 1])))),
@@ -1116,6 +1152,8 @@ export async function mount(el, params = {}) {
             h('span', { class: 'bb-fact__n', 'aria-hidden': 'true' }, String(k + 1)),
             h('div', null, it.title ? h('h3', null, txt(it.title)) : null, it.text ? h('p', null, txt(it.text)) : null)))),
           note('closing', '✨', 'Para llevar en el corazón', c.closing),
+          TOPIC_LINKS[c.id] ? h('div', { class: 'bb-pextra' }, TOPIC_LINKS[c.id].map(([icon, label, [route, prm]]) =>
+            button(label, { kind: 'sky', small: true, icon, onClick: () => (route === 'bible' && prm?.story ? show({ kind: 'story', tab: 'historias', id: prm.story, shelf: prm.shelf }) : go(route, prm)) }))) : null,
           h('div', { class: 'bb-end' }, quizBlock(c.quiz, { key: `cat:${c.id}`, prize: PRIZE.catechism, title: 'Tres preguntas' })),
           familyCard(fam[c.id]),
           navRow(link(list[i - 1], i), link(list[i + 1], i + 2)))),

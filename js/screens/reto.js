@@ -3,6 +3,7 @@
 // rachas ×2 / ×3, comodín 50:50 y premio según aciertos. Sin sopas de letras ni crucigramas.
 //   go('reto')
 import * as state from '../core/state.js';
+import * as Rv from '../core/review.js';
 import * as tts from '../core/tts.js';
 import { h, clear, button, confirmDialog } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
@@ -66,8 +67,8 @@ function triviaTags(topic) {
 }
 
 async function buildBank() {
-  const [trivia, lessons, cat, at, nt, mi, parables, conf, mass] = await Promise.all(
-    ['trivia', 'lessons', 'catechism', 'at', 'nt', 'milagros', 'parables', 'confession', 'mass'].map(loadData));
+  const [trivia, lessons, cat, at, nt, mi, parables, conf, mass, ars] = await Promise.all(
+    ['trivia', 'lessons', 'catechism', 'at', 'nt', 'milagros', 'parables', 'confession', 'mass', 'ars'].map(loadData));
   const bank = [];
   const seen = new Set();
   const add = (q, tags, src, level = 0) => {
@@ -92,6 +93,7 @@ async function buildBank() {
     for (const q of arr(s.quiz)) add(q, ['jesus', ...extra], 'story');
   }
   for (const s of arr(mi)) for (const q of arr(s.quiz)) add(q, ['jesus'], 'story');
+  for (const s of arr(ars)) for (const q of arr(s.quiz)) add(q, ['maria', 'confesion'], 'story');   // el Santo Cura de Ars
   for (const p of Object.values(parables || {})) {
     if (!p) continue;
     const tags = p.kind === 'historia' ? (p.id === 'noe' ? ['at'] : ['jesus']) : ['parabolas'];
@@ -299,6 +301,7 @@ export async function mount(el, params = {}) {
         if (timerId) { clearInterval(timerId); timerId = 0; }
         const ok = k === q.answer;
         q.ok = ok;
+        if (k !== -1) Rv.answered(q, ok);      // lo que se acabó por tiempo no va a «Mis repasos»
         let gained = 0;
         if (ok) { hits++; streak++; bestStreak = Math.max(bestStreak, streak); gained = 10 * mult(streak); score += gained; }
         else streak = 0;

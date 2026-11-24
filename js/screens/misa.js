@@ -4,7 +4,7 @@ import * as state from '../core/state.js';
 import * as tts from '../core/tts.js';
 import { h, clear, button, toast } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
-import { back } from '../core/router.js';
+import { go, back } from '../core/router.js';
 import * as R from '../core/reminders.js';
 import { arr, txt, deco, smooth, shuffle, loadData, lifecycle, shell, tabBar, soon, quiz, speakBtn, rewardRow, grant, celebrate } from './catequesis.js';
 
@@ -15,6 +15,17 @@ const TABS = [
   { id: 'preguntas', label: 'Preguntas', icon: '🎯' },
   { id: 'pasaporte', label: 'Pasaporte', icon: '🎫' },
 ];
+// Partes de la Misa que tienen su oración completa en «Mis oraciones» (y el Credo, también frase por frase).
+const PART_PRAYERS = {
+  perdon: [['yo-confieso', 'El Yo confieso']],
+  gloria: [['gloria-a-dios', 'Rezar el Gloria']],
+  credo: [['credo-niceno', 'El Credo largo'], ['credo', 'El Credo de los Apóstoles'], ['@credo', 'Entenderlo frase por frase']],
+  santo: [['santo', 'Rezar el Santo']],
+  'padre-nuestro': [['padre-nuestro', 'Rezar el Padre Nuestro']],
+  'cordero-de-dios': [['cordero-de-dios', 'Rezar el Cordero de Dios']],
+  'dichosos-los-invitados': [['senor-no-soy-digno', 'Señor, no soy digno']],
+  'accion-de-gracias': [['alma-de-cristo', 'Alma de Cristo']],
+};
 const MASS_COLORS = { morado: '#6b3fa0', blanco: '#f4efe2', verde: '#3f8f4e', rojo: '#c0392b', rosado: '#e48fb3' };
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const GROUPS = [
@@ -99,6 +110,8 @@ export async function mount(el, params = {}) {
             d.priest ? h('div', { class: 'ms-dlg__priest' }, h('span', { class: 'ms-dlg__who' }, deco(LECTOR.has(p.id) ? '📖' : '🧔'), who(p)), h('p', null, `«${txt(d.priest)}»`)) : null,
             d.people ? h('div', { class: 'ms-dlg__people' }, h('span', { class: 'ms-dlg__who' }, deco('🙋'), 'Todos respondemos'), h('p', null, `«${txt(d.people)}»`)) : null))) : null,
           p.tip ? h('p', { class: 'ms-tip' }, deco('💡'), txt(p.tip)) : null,
+          PART_PRAYERS[p.id] ? h('div', { class: 'ms-pray' }, PART_PRAYERS[p.id].map(([id, label]) => button(label, { kind: 'ghost', small: true, icon: id === '@credo' ? '✝️' : '🙏',
+            onClick: () => (id === '@credo' ? go('credo') : go('bible', { prayer: id })) }))) : null,
           p.id === 'cordero-de-dios' && R.customs().posture ? h('p', { class: 'ms-tip ms-tip--parish' }, deco('⛪'),
             `En nuestra parroquia, al terminar el «Cordero de Dios», nos ponemos ${R.customs().posture === 'pie' ? 'de pie' : 'de rodillas'}.`) : null));
     };
