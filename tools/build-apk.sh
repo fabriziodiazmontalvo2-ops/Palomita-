@@ -28,8 +28,10 @@ echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 
 [ -d node_modules/esbuild ] || npm install --no-audit --no-fund
 node tools/build.mjs
+# La app por módulos (dist/app): al abrir carga solo lo necesario; el resto, cuando se usa.
+rm -rf android/app/src/main/assets
 mkdir -p android/app/src/main/assets
-cp dist/palomita.html android/app/src/main/assets/index.html
+cp -r dist/app/. android/app/src/main/assets/
 # Fotos de la parroquia, figuritas y la voz grabada de la narradora (la app las pide por ruta relativa).
 rm -rf android/app/src/main/assets/assets
 mkdir -p android/app/src/main/assets/assets

@@ -67,6 +67,7 @@ export function mount(el) {
         toggle('sound', '🔔', 'Sonidos'),
         toggle('music', '🎵', 'Música'),
         toggle('voice', '🔊', 'Voz de la narradora', tts.recorded() ? 'Una voz cálida lee en voz alta historias, lecciones y oraciones.' : tts.available() ? 'Lee en voz alta historias y oraciones.' : 'Este dispositivo no tiene voz para leer.'),
+        tts.recorded() ? toggle('doveVoice', '🕊️', 'La palomita habla', 'Dice en voz alta lo que pone en sus globitos.') : null,
         talkAvailable ? toggle('listen', '👂', 'La palomita repite lo que digo', 'Usa el micrófono solo mientras estás con la palomita. Nada se guarda.') : null,
         fontRow()),
       h('section', { class: 'panel set-card' },

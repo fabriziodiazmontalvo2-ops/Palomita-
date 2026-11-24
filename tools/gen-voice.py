@@ -8,6 +8,10 @@ Uso:
 Cada grupo se guarda como un paquete assets/voz/<grupo>.ogg: los audios Ogg Opus de sus frases, uno detrás de
 otro. assets/voz/index.json dice, para cada paquete, qué frases trae y cuántos bytes ocupa cada una.
 Las frases que ya están grabadas (mismo texto) se reutilizan, así que volver a correrlo solo graba lo nuevo.
+La copia de cada frase se guarda en assets/voz/.cache-<bitrate>/: si se cambia BITRATE, todo se vuelve a grabar.
+
+Los grupos con "voice": "palomita" son la vocecita de la palomita (sus globitos): la misma voz con el tono más
+agudo y un poquito más rápida, como cuando repite lo que dice el niño. Sus claves empiezan con «p».
 """
 import json, os, subprocess, sys, tempfile, wave, re
 from concurrent.futures import ProcessPoolExecutor
@@ -15,7 +19,9 @@ from concurrent.futures import ProcessPoolExecutor
 LENGTH = 1.08      # un poquito más pausado que lo normal: es para niños
 NOISE = 0.62
 NOISE_W = 0.78
-BITRATE = '20k'
+BITRATE = '16k'     # voz hablada: 16 kbps en Opus se oye limpia y pesa un 20 % menos que 20 kbps
+DOVE_PITCH = 1.3    # la palomita: tono más agudo…
+DOVE_TEMPO = 1.08   # …y un poquito más rápida
 CACHE = None
 _voice = None
 _cfg = None
@@ -46,7 +52,7 @@ def speakable(text):
 
 
 def render(job):
-    key, text, out = job
+    key, text, out, fx = job
     if os.path.exists(out) and os.path.getsize(out) > 0:
         return key
     fd, wav_path = tempfile.mkstemp(suffix='.wav')
@@ -54,9 +60,13 @@ def render(job):
     try:
         with wave.open(wav_path, 'wb') as w:
             _voice.synthesize_wav(speakable(text), w, syn_config=_cfg)
+        with wave.open(wav_path, 'rb') as w:
+            rate = w.getframerate()
+        # La palomita: se sube el tono (asetrate) y se compensa la velocidad (atempo) para que se entienda bien.
+        dove = f'asetrate={round(rate * DOVE_PITCH)},aresample={rate},atempo={DOVE_TEMPO / DOVE_PITCH:.4f},' if fx == 'palomita' else ''
         # Suave: sin ruido grave, un toque de compresión y volumen parejo; 60 ms de silencio al final.
         subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', wav_path,
-                        '-af', 'highpass=f=75,lowpass=f=8500,acompressor=threshold=-21dB:ratio=2.2:attack=8:release=180,'
+                        '-af', dove + 'highpass=f=75,lowpass=f=8500,acompressor=threshold=-21dB:ratio=2.2:attack=8:release=180,'
                                'loudnorm=I=-17:TP=-2:LRA=9,apad=pad_dur=0.06',
                         '-ac', '1', '-ar', '24000', '-c:a', 'libopus', '-b:a', BITRATE, '-application', 'voip',
                         '-map_metadata', '-1', '-fflags', '+bitexact', '-flags:a', '+bitexact', out + '.tmp.ogg'], check=True)
@@ -70,12 +80,12 @@ def main():
     src, model, dest = sys.argv[1], sys.argv[2], sys.argv[3]
     jobs = int(sys.argv[sys.argv.index('--jobs') + 1]) if '--jobs' in sys.argv else 3
     groups = json.load(open(src))
-    cache = os.path.join(dest, '.cache')
+    cache = os.path.join(dest, '.cache-' + BITRATE)
     os.makedirs(cache, exist_ok=True)
     work = []
     for g in groups:
         for s in g['sentences']:
-            work.append((s['key'], s['text'], os.path.join(cache, s['key'] + '.ogg')))
+            work.append((s['key'], s['text'], os.path.join(cache, s['key'] + '.ogg'), g.get('voice', '')))
     todo = [w for w in work if not os.path.exists(w[2])]
     print(f'{len(work)} frases, {len(todo)} por grabar', flush=True)
     done = 0
@@ -99,7 +109,7 @@ def main():
                 parts.append(f"{s['key']}:{len(data)}")
                 total += len(data)
         index.append([g['group'], ' '.join(parts)])
-    json.dump({'v': 1, 'voice': 'es_MX-claude-high', 'packs': index}, open(os.path.join(dest, 'index.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
+    json.dump({'v': 1, 'voice': 'es_MX-claude-high', 'kbps': int(BITRATE.rstrip('k')), 'packs': index}, open(os.path.join(dest, 'index.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
     print(f'{len(index)} paquetes, {total / 1e6:.1f} MB', flush=True)
 
 

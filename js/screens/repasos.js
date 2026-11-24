@@ -45,6 +45,8 @@ export async function mount(el) {
   const sh = shell(el, { title: 'Mis repasos', onBack: () => back(), cls: 'fe rv' });
   const bank = await buildBank();
   if (life.dead) return { unmount() {} };
+  // Las preguntas que ya no existen (cambió el texto en una versión nueva) salen de la lista, toquen hoy o no.
+  for (const k of Object.keys(state.get().review || {})) if (!bank.has(k)) state.reviewDrop(k);
 
   function due() {
     const keys = state.reviewDue();

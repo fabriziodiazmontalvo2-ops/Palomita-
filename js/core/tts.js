@@ -5,9 +5,12 @@
 // teléfono: en Android con TextToSpeech por medio de un puente nativo, en el navegador con speechSynthesis.
 //
 //   available()            → true si hay alguna voz para leer
-//   speak(texto | [textos], { onend, onIndex, keepLines })   lee en español; corta en frases para que no se interrumpa.
+//   speak(texto | [textos], { onend, onIndex, keepLines, voice })   lee en español; corta en frases para que no se interrumpa.
 //        keepLines: true → cada texto del arreglo se lee como una pieza propia y onIndex(i) avisa cuál empieza
 //        (sirve para resaltar el renglón de una oración mientras suena).
+//        voice: 'palomita' → la vocecita de la palomita (grabada aparte, con claves que empiezan con «p»). Solo suena
+//        si TODO está grabado con esa voz: lo que lleva el nombre del niño o números no se lee (devuelve false),
+//        para que la palomita nunca hable con la voz del teléfono.
 //   stop() / speaking()
 //   recorded()             → true si la voz grabada está lista
 import { duck, context } from './audio.js';
@@ -216,9 +219,10 @@ async function run(my, pieces) {
   finish(my);
 }
 
-export function speak(text, { onend, onIndex, keepLines = false } = {}) {
-  if (!available()) { onend?.(); return false; }
-  stop();
+export function speak(text, { onend, onIndex, keepLines = false, voice: who = '' } = {}) {
+  const dove = who === 'palomita';
+  if (!available() || (dove && !clips)) { onend?.(); return false; }
+  if (!dove) stop();          // la palomita no corta a nadie si no tiene qué decir (ver abajo)
   const list = (Array.isArray(text) ? text : [text]).map(t => (t === null || t === undefined ? '' : String(t)));
   const pieces = [];
   list.forEach((t, idx) => {
@@ -226,11 +230,12 @@ export function speak(text, { onend, onIndex, keepLines = false } = {}) {
     if (!c) return;
     for (const part of (keepLines ? [c] : chunks(c))) {
       const sents = sentences(part);
-      const keys = clips && sents.length ? sents.map(keyOf) : null;
+      const keys = clips && sents.length ? sents.map(x => (dove ? 'p' : '') + keyOf(x)) : null;
       pieces.push({ idx, text: part, sents, keys: keys && keys.every(k => clips.has(k)) ? keys : null });
     }
   });
-  if (!pieces.length) { onend?.(); return false; }
+  if (!pieces.length || (dove && !pieces.every(p => p.keys))) { onend?.(); return false; }
+  if (dove) stop();
   // Sin voz grabada para nada y sin voz en el teléfono: no hay cómo leer.
   if (!pieces.some(p => p.keys) && !deviceAvailable()) { onend?.(); return false; }
   endCb = onend || null;

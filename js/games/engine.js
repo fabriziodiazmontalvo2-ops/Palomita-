@@ -392,6 +392,11 @@ export async function startGame(id, { onExit, skipIntro = false, seed, level } =
         parable.story?.length ? button('La historia', { kind: 'ghost', small: true, icon: '📖', onClick: () => showStory(showIntro) }) : null,
         button('Volver', { kind: 'ghost', small: true, icon: '↩️', onClick: () => exit() })),
     );
+    // La primera vez de cada juego, la narradora cuenta cómo se juega (para los que todavía leen despacio).
+    if (!state.flag(`how:${id}`) && tts.available() && state.setting('voice') !== false) {
+      state.setFlag(`how:${id}`, true);
+      tts.speak([def.title, ...def.how]);
+    }
   }
   function showStory(back) {
     tts.stop();

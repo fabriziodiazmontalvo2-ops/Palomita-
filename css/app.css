@@ -393,3 +393,13 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; line-height: 1.
 @keyframes hand-hold { 0%, 15% { transform: translateY(0); } 30%, 80% { transform: translateY(10px) scale(0.92); } 100% { transform: translateY(0); } }
 @keyframes hand-drag { 0%, 100% { transform: translateX(-60px); } 50% { transform: translateX(60px); } }
 @media (prefers-reduced-motion: reduce) { .game-hand__icon { animation: none !important; } }
+
+/* Aviso de versión nueva (web) */
+.upd { position: fixed; left: 50%; bottom: calc(var(--safe-b, 0px) + 14px); transform: translateX(-50%); z-index: 90; width: min(92vw, 440px);
+  display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-radius: 20px; background: var(--white); color: var(--ink);
+  box-shadow: 0 6px 0 var(--paper-edge), 0 12px 26px rgba(40, 30, 20, 0.28); animation: upd-in 0.3s ease-out; }
+.upd__i { font-size: 1.4rem; }
+.upd__t { flex: 1; font-family: var(--font-display); font-weight: 800; line-height: 1.15; }
+.upd__x { appearance: none; border: 0; background: none; cursor: pointer; min-width: 40px; min-height: 40px; font-size: 1rem; color: var(--ink-soft); }
+@keyframes upd-in { from { transform: translate(-50%, 20px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .upd { animation: none; } }

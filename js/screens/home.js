@@ -156,6 +156,7 @@ export async function mount(el, params = {}) {
       h('span', { class: 'home-aviso__icon', 'aria-hidden': 'true' }, ev.icon), h('span', { class: 'home-aviso__text' }, ev.text.replace(/ ([ap])\. m\./g, '\u00a0$1.\u00a0m.'))));
   }
   let bubbleAction = null;
+  let doveTalking = false;
   const bubble = h('button', { type: 'button', class: 'home__bubble', hidden: true, 'aria-live': 'polite', onclick: () => { const a = bubbleAction; hideBubble(); a?.(); } });
   const tray = h('div', { class: 'home__tray' });
   const tabs = h('nav', { class: 'home__tabs', 'aria-label': 'Habitaciones' }, ROOMS.map(r =>
@@ -228,6 +229,19 @@ export async function mount(el, params = {}) {
     bubble.hidden = false;
     placeBubble();
     bubbleTimer = ms / 1000;
+    sayAloud(text);
+  }
+  // La palomita dice en voz alta su globito (con su vocecita grabada) si no está leyendo la narradora, si el
+  // micrófono no está escuchando (se oiría a sí misma) y si no hay una ventana abierta encima.
+  function sayAloud(text) {
+    if (state.setting('voice') === false || state.setting('doveVoice') === false) return;
+    if (tts.speaking() && !doveTalking) return;
+    if (listener && (listener.state !== 'off' || listener.busy)) return;
+    if (document.querySelector('.modal-scrim, .game')) return;
+    const was = doveTalking;
+    const ok = tts.speak(text, { voice: 'palomita', onend: () => { doveTalking = false; } });
+    if (!ok && was) tts.stop();                  // un globito sin voz no se queda con la voz del anterior
+    doveTalking = ok;
   }
   function hideBubble() { bubble.hidden = true; bubbleTimer = 0; bubbleAction = null; bubble.classList.remove('has-action'); }
   function talkAboutNeeds() {

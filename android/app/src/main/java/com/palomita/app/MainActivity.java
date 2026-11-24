@@ -53,6 +53,20 @@ public class MainActivity extends Activity {
     // funcionan igual que en un navegador, sin salir nunca del teléfono.
     private static final String LOCAL_HOST = "appassets.androidplatform.net";
     private static final String START_URL = "https://" + LOCAL_HOST + "/assets/index.html";
+
+    private static String mimeOf(String path) {
+        String p = path.toLowerCase(Locale.ROOT);
+        if (p.endsWith(".js") || p.endsWith(".mjs")) return "text/javascript";
+        if (p.endsWith(".html")) return "text/html";
+        if (p.endsWith(".css")) return "text/css";
+        if (p.endsWith(".json")) return "application/json";
+        if (p.endsWith(".ogg")) return "audio/ogg";
+        if (p.endsWith(".jpg") || p.endsWith(".jpeg")) return "image/jpeg";
+        if (p.endsWith(".png")) return "image/png";
+        if (p.endsWith(".webp")) return "image/webp";
+        if (p.endsWith(".woff2")) return "font/woff2";
+        return null;
+    }
     private static final int REQ_MIC = 7;
     private static final int REQ_NOTIF = 8;
     private static final int REQ_SAVE = 21;
@@ -73,8 +87,19 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         feedHost = getSharedPreferences(PREFS_RED, MODE_PRIVATE).getString("host", "");
 
+        // La app va por módulos (main.js y c/*.js se piden cuando hacen falta): cada archivo sale con su tipo
+        // exacto, porque el WebView no ejecuta un módulo que llegue sin «text/javascript».
+        final WebViewAssetLoader.AssetsPathHandler assets = new WebViewAssetLoader.AssetsPathHandler(this);
         final WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
-                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .addPathHandler("/assets/", path -> {
+                    WebResourceResponse r = assets.handle(path);
+                    String mime = mimeOf(path);
+                    if (r != null && mime != null) {
+                        r.setMimeType(mime);
+                        if (mime.startsWith("text/") || mime.endsWith("json")) r.setEncoding("utf-8");
+                    }
+                    return r;
+                })
                 .build();
 
         web = new WebView(this);

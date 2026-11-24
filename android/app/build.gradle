@@ -45,7 +45,8 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    androidResources { noCompress 'html', 'ogg', 'jpg', 'webp' }
+    // Lo que ya viene comprimido no se vuelve a comprimir (el HTML y el código sí: pesan mucho menos)
+    androidResources { noCompress 'ogg', 'jpg', 'webp', 'png' }
 }
 
 dependencies {

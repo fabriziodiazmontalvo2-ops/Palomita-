@@ -8,6 +8,7 @@ import { startGame, isRunning, handleBack } from './games/engine.js';
 import { queueLevelUp } from './core/rewards.js';
 import { applyFont } from './core/device.js';
 import * as profiles from './core/profiles.js';
+import { watchUpdates, keepData } from './core/update.js';
 
 register('home', () => import('./screens/home.js'));
 register('welcome', () => import('./screens/welcome.js'));
@@ -102,13 +103,10 @@ async function boot() {
   await go(first);
   window.__ready = true;
 
-  // Sin conexión: solo cuando la app está publicada en un sitio https (no en pruebas locales ni dentro de visores).
-  try {
-    const local = ['localhost', '127.0.0.1', ''].includes(location.hostname);
-    if ('serviceWorker' in navigator && location.protocol === 'https:' && !local && window.top === window) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
-    }
-  } catch { /* sin modo sin conexión */ }
+  // Sin conexión y aviso de versión nueva: solo cuando la app está publicada en un sitio https (no en pruebas
+  // locales, ni dentro de visores, ni en el APK).
+  watchUpdates();
+  keepData();
 }
 
 boot().catch(e => {

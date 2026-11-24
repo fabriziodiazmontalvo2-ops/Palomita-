@@ -1,0 +1,20 @@
+{
+  "avisos": [
+    {
+      "id": "colecta-adviento",
+      "title": "Colecta de Adviento",
+      "text": "Este domingo traigan un alimento no perecible para las familias que más lo necesitan. ¡Gracias por compartir!",
+      "until": "2026-12-06"
+    },
+    {
+      "id": "ensayo-comunion",
+      "title": "Ensayo de Primera Comunión",
+      "text": "El sábado a las 3:00 p. m. ensayamos en el templo con todos los grupos. Vengan con un papá o una mamá.",
+      "until": "2026-12-12"
+    }
+  ],
+  "app": {
+    "version": "1.3.0",
+    "note": "Pidan la versión nueva de Palomita a su catequista."
+  }
+}

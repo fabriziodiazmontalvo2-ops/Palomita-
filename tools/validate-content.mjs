@@ -278,11 +278,213 @@ const VALIDATORS = {
   },
 };
 
+// ── Versión 1.3 ──
+const COLORS = ['blanco', 'rojo', 'morado', 'verde', 'rosado'];
+const SCREENS = (() => {   // pantallas registradas en js/main.js (para los enlaces de los contenidos)
+  try { return new Set([...fs.readFileSync(path.join(root, 'js/main.js'), 'utf8').matchAll(/register\('([a-z]+)'/g)].map(m => m[1])); } catch { return new Set(); }
+})();
+const imp = rel => import(pathToFileURL(path.join(root, rel)).href);
+function checkLink(f, w, link) {
+  if (link === undefined || link === null) return;
+  if (!link || typeof link !== 'object') return err(f, `${w}.link: objeto { screen, tab?, label }`);
+  if (!SCREENS.has(link.screen)) err(f, `${w}.link.screen: «${link.screen}» no es una pantalla de la app`);
+  checkText(f, `${w}.link.label`, link.label, 50, 3);
+}
+function checkEmojis(f, w, list, min = 2, max = 4) {
+  if (!Array.isArray(list) || list.length < min || list.length > max || !list.every(e => EMOJI_RE.test(e))) err(f, `${w}: ${min}–${max} emojis`);
+}
+function checkStory(f, w, s, { paragraphs = [4, 9] } = {}) {
+  checkText(f, `${w}.title`, s.title, 70, 3);
+  if (!isStr(s.emoji) || !EMOJI_RE.test(s.emoji)) err(f, `${w}.emoji`);
+  if (!s.art || !BGS.includes(s.art.bg)) err(f, `${w}.art.bg debe ser uno de los fondos pintados`);
+  checkEmojis(f, `${w}.art.emojis`, s.art?.emojis);
+  checkText(f, `${w}.summary`, s.summary, 160);
+  if (!Array.isArray(s.paragraphs) || s.paragraphs.length < paragraphs[0] || s.paragraphs.length > paragraphs[1]) err(f, `${w}.paragraphs: ${paragraphs[0]}–${paragraphs[1]} párrafos`);
+  else s.paragraphs.forEach((p, i) => checkText(f, `${w}.paragraphs[${i}]`, p, 520, 30));
+  if (s.verse) checkText(f, `${w}.verse.text`, s.verse.text, 220);
+  checkText(f, `${w}.think`, s.think, 260);
+  checkText(f, `${w}.prayer`, s.prayer, 320);
+  checkQuiz(f, w, s.quiz, { count: 3 });
+}
+
+Object.assign(VALIDATORS, {
+  async 'oraciones-extra'(m, f) {
+    const base = (await imp('js/data/prayers.js')).PRAYERS || [];
+    const cat = (await imp('js/data/catechism.js')).CATECHISM || [];
+    const X = m.PRAYERS_EXTRA;
+    if (!Array.isArray(X) || !X.length) err(f, 'falta PRAYERS_EXTRA');
+    else {
+      uniqueIds(f, X);
+      for (const p of X) {
+        const w = `PRAYERS_EXTRA.${p.id}`;
+        if (base.some(b => b.id === p.id)) err(f, `${w}: el id ya existe en prayers.js`);
+        if (!['misa', 'maria', 'parroquia'].includes(p.group)) err(f, `${w}.group: misa | maria | parroquia`);
+        checkText(f, `${w}.title`, p.title, 50, 3);
+        if (!Array.isArray(p.lines) || !p.lines.length) err(f, `${w}.lines: vacío`);
+        else p.lines.forEach((l, i) => checkText(f, `${w}.lines[${i}]`, l, 160, 2));
+      }
+    }
+    const V = m.CONTRITION_VARIANTS;
+    if (!Array.isArray(V) || V.length < 2) err(f, 'CONTRITION_VARIANTS: al menos 2 versiones');
+    else {
+      uniqueIds(f, V);
+      const acto = base.find(p => p.id === 'acto-de-contricion');
+      if (V[0].id !== 'jesus-mi-senor' || JSON.stringify(V[0].lines) !== JSON.stringify(acto?.lines)) err(f, 'CONTRITION_VARIANTS[0] debe ser «jesus-mi-senor», igual renglón por renglón a acto-de-contricion de prayers.js');
+      V.forEach(v => { if (!Array.isArray(v.lines) || v.lines.length < 3) err(f, `CONTRITION_VARIANTS.${v.id}.lines`); });
+    }
+    const R = m.ROSARY;
+    if (!R || !Array.isArray(R.mysteries) || R.mysteries.length !== 4) err(f, 'ROSARY.mysteries: 4 grupos');
+    else {
+      const days = R.mysteries.flatMap(g => g.days || []).sort();
+      if (days.join() !== '0,1,2,3,4,5,6') err(f, `ROSARY: cada día de la semana debe tener un grupo de misterios (hay ${days.join(',')})`);
+      for (const g of R.mysteries) {
+        if (!Array.isArray(g.items) || g.items.length !== 5) { err(f, `ROSARY.${g.id}: 5 misterios`); continue; }
+        g.items.forEach((it, i) => {
+          const w = `ROSARY.${g.id}[${i}]`;
+          checkText(f, `${w}.title`, it.title, 70, 3);
+          checkRef(f, `${w}.ref`, it.ref);
+          checkText(f, `${w}.text`, it.text, 360, 20);
+          if (!BGS.includes(it.bg)) err(f, `${w}.bg`);
+          checkEmojis(f, `${w}.emojis`, it.emojis);
+        });
+      }
+      for (const id of ['padre-nuestro', 'ave-maria', 'gloria', ...(R.closing?.prayerIds || [])]) if (!base.some(p => p.id === id)) err(f, `ROSARY: falta la oración «${id}» en prayers.js`);
+      if (!X?.some(p => p.id === 'oh-jesus-mio')) err(f, 'ROSARY: falta «oh-jesus-mio» en PRAYERS_EXTRA');
+    }
+    const I = m.INTENTIONS;
+    if (!Array.isArray(I) || I.length < 6) err(f, 'INTENTIONS: al menos 6'); else { uniqueIds(f, I); I.forEach(x => checkText(f, `INTENTIONS.${x.id}.label`, x.label, 60, 4)); }
+    const C = m.CREDO_PHRASES;
+    const credo = base.find(p => p.id === 'credo');
+    if (!Array.isArray(C) || !credo || JSON.stringify(C.map(x => x.line)) !== JSON.stringify(credo.lines)) err(f, 'CREDO_PHRASES: un renglón por renglón del Credo de prayers.js, con el mismo texto y orden');
+    else C.forEach((x, i) => {
+      if (x.topic !== null && !cat.some(t => t.id === x.topic)) err(f, `CREDO_PHRASES[${i}].topic: «${x.topic}» no es un tema de catechism.js`);
+      checkText(f, `CREDO_PHRASES[${i}].explain`, x.explain, 260, 20);
+    });
+    const M = m.MEMORY_SET;
+    if (!Array.isArray(M) || M.length < 6) err(f, 'MEMORY_SET: al menos 6');
+    else { uniqueIds(f, M); M.forEach(x => {
+      if (x.type === 'prayer' && !base.some(p => p.id === x.id)) err(f, `MEMORY_SET.${x.id}: no es una oración de prayers.js`);
+      if (x.type === 'list' && (!Array.isArray(x.lines) || x.lines.length < 3)) err(f, `MEMORY_SET.${x.id}: lista sin renglones`);
+      if (!['prayer', 'list'].includes(x.type)) err(f, `MEMORY_SET.${x.id}.type: prayer | list`);
+    }); }
+  },
+  dudas(m, f) {
+    const D = m.DUDAS;
+    if (!Array.isArray(D) || D.length < 8) return err(f, 'DUDAS: al menos 8');
+    uniqueIds(f, D);
+    D.forEach(d => { checkText(f, `DUDAS.${d.id}.q`, d.q, 120, 8); checkText(f, `DUDAS.${d.id}.a`, d.a, 600, 30); checkLink(f, `DUDAS.${d.id}`, d.link); });
+  },
+  'gran-dia'(m, f) {
+    const G = m.GRAN_DIA;
+    if (!G) return err(f, 'falta GRAN_DIA');
+    if (!Array.isArray(G.steps) || G.steps.length < 5) err(f, 'GRAN_DIA.steps: al menos 5');
+    else { uniqueIds(f, G.steps); G.steps.forEach(st => {
+      const w = `GRAN_DIA.steps.${st.id}`;
+      checkText(f, `${w}.title`, st.title, 60, 3);
+      checkText(f, `${w}.text`, st.text, 600, 30);
+      if (!BGS.includes(st.bg)) err(f, `${w}.bg`);
+      checkEmojis(f, `${w}.emojis`, st.emojis);
+      checkLink(f, w, st.link);
+    }); }
+    const days = (G.countdown || []).map(c => c.daysLeft).join();
+    if (days !== '9,8,7,6,5,4,3,2,1') err(f, `GRAN_DIA.countdown: una tarea por día, de 9 a 1 (hay ${days})`);
+    (G.countdown || []).forEach(c => { checkText(f, `GRAN_DIA.countdown[${c.daysLeft}]`, c.text, 160, 10); checkLink(f, `GRAN_DIA.countdown[${c.daysLeft}]`, c.link); });
+    for (const k of ['dayOf', 'after']) { checkText(f, `GRAN_DIA.${k}.title`, G[k]?.title, 60, 3); checkText(f, `GRAN_DIA.${k}.text`, G[k]?.text, 400, 20); }
+  },
+  ratito(m, f) {
+    const R = m.RATITO;
+    if (!R || !Array.isArray(R.steps)) return err(f, 'falta RATITO.steps');
+    uniqueIds(f, R.steps);
+    for (const id of ['gracias', 'pido', 'silencio']) if (!R.steps.some(s => s.id === id)) err(f, `RATITO.steps: falta el paso «${id}»`);
+    const total = R.steps.reduce((a, s) => a + (Number(s.seconds) || 0), 0);
+    if (total < 150 || total > 300) err(f, `RATITO: los pasos suman ${total} s (debe ser un ratito de unos 3 minutos)`);
+    R.steps.forEach(st => { checkText(f, `RATITO.steps.${st.id}.title`, st.title, 60, 3); checkText(f, `RATITO.steps.${st.id}.text`, st.text, 520, 20); });
+    if (!Array.isArray(m.GRATITUDE) || m.GRATITUDE.length < 8) err(f, 'GRATITUDE: al menos 8'); else uniqueIds(f, m.GRATITUDE);
+  },
+  'cura-ars'(m, f) {
+    const S = m.CURA_ARS_STORY;
+    if (!S) return err(f, 'falta CURA_ARS_STORY');
+    if (!isStr(S.id) || !/^[a-z0-9-]+$/.test(S.id)) err(f, 'CURA_ARS_STORY.id');
+    checkStory(f, 'CURA_ARS_STORY', S, { paragraphs: [5, 8] });
+    const F = m.CURA_ARS_FACTS;
+    if (!Array.isArray(F) || F.length < 4) err(f, 'CURA_ARS_FACTS: al menos 4');
+    else F.forEach((t, i) => { checkText(f, `CURA_ARS_FACTS[${i}]`, t, 120, 20); if (!/^¿Sabías que /.test(t)) warn(f, `CURA_ARS_FACTS[${i}]: empieza con «¿Sabías que…?»`); });
+  },
+  async fiestas(m, f) {
+    const L = await imp('js/core/liturgy.js');
+    const S = m.SEASONS || {};
+    for (const id of ['adviento', 'navidad', 'ordinario', 'cuaresma', 'triduo', 'pascua']) {
+      const x = S[id];
+      if (!x) { err(f, `SEASONS.${id}: falta`); continue; }
+      if (!COLORS.includes(x.color)) err(f, `SEASONS.${id}.color`);
+      checkText(f, `SEASONS.${id}.text`, x.text, 420, 30);
+      checkText(f, `SEASONS.${id}.kidLine`, x.kidLine, 90, 10);
+      checkText(f, `SEASONS.${id}.tip`, x.tip, 320, 20);
+    }
+    const F = m.FEASTS;
+    if (!Array.isArray(F) || F.length < 10) return err(f, 'FEASTS: al menos 10');
+    uniqueIds(f, F);
+    for (const x of F) {
+      const w = `FEASTS.${x.id}`;
+      checkText(f, `${w}.title`, x.title, 60, 3);
+      if (!COLORS.includes(x.color)) err(f, `${w}.color`);
+      if (!BGS.includes(x.bg)) err(f, `${w}.bg`);
+      checkEmojis(f, `${w}.emojis`, x.emojis);
+      if (!Array.isArray(x.paragraphs) || x.paragraphs.length < 2 || x.paragraphs.length > 3) err(f, `${w}.paragraphs: 2–3`);
+      else x.paragraphs.forEach((p, i) => { checkText(f, `${w}.paragraphs[${i}]`, p, 420, 20); if (/\bhoy\b/i.test(p)) warn(f, `${w}.paragraphs[${i}]: dice «hoy» (también se lee en la lista de próximas fiestas)`); });
+      checkText(f, `${w}.prayer`, x.prayer, 260, 10);
+      for (const y of [2026, 2027, 2028]) if (!L.feastDate(x, y)) err(f, `${w}.rule: no da fecha en ${y}`);
+    }
+    for (const [id, d] of Object.entries(m.SPECIAL_DAYS || {})) {
+      checkText(f, `SPECIAL_DAYS.${id}.kidLine`, d.kidLine, 90, 10);
+      checkText(f, `SPECIAL_DAYS.${id}.text`, d.text, 320, 20);
+      if (d.feast && !F.some(x => x.id === d.feast)) err(f, `SPECIAL_DAYS.${id}.feast: «${d.feast}» no está en FEASTS`);
+    }
+    const A = m.ADVENT_WEEKS;
+    if (!Array.isArray(A) || A.map(a => a.week).join() !== '1,2,3,4') err(f, 'ADVENT_WEEKS: semanas 1 a 4');
+    else if (A.map(a => a.candle).join() !== 'morado,morado,rosado,morado') err(f, 'ADVENT_WEEKS: velas morado, morado, rosado, morado');
+    if (!Array.isArray(m.NOVENA) || m.NOVENA.map(n => n.day).join() !== '1,2,3,4,5,6,7,8,9') err(f, 'NOVENA: días 1 a 9');
+    if (!Array.isArray(m.LENT_TIPS) || m.LENT_TIPS.length < 6) err(f, 'LENT_TIPS: al menos 6');
+    else m.LENT_TIPS.forEach((t, i) => checkText(f, `LENT_TIPS[${i}]`, t, 120, 10));
+  },
+  async familia(m, f) {
+    const cat = (await imp('js/data/catechism.js')).CATECHISM || [];
+    const F = m.FAMILY || {};
+    for (const t of cat) if (!F[t.id]) warn(f, `FAMILY: el tema «${t.id}» no tiene «Para conversar en casa»`);
+    for (const [id, x] of Object.entries(F)) {
+      if (!cat.some(t => t.id === id)) err(f, `FAMILY.${id}: no es un tema de catechism.js`);
+      if (!Array.isArray(x.ask) || x.ask.length !== 3) err(f, `FAMILY.${id}.ask: 3 preguntas`);
+      checkText(f, `FAMILY.${id}.do`, x.do, 420, 20);
+      checkText(f, `FAMILY.${id}.pray`, x.pray, 320, 10);
+    }
+  },
+  papas(m, f) {
+    const P = m.PARENTS_CORNER;
+    if (!P || !Array.isArray(P.sections) || P.sections.length < 5) return err(f, 'PARENTS_CORNER.sections: al menos 5');
+    uniqueIds(f, P.sections);
+    P.sections.forEach(x => { checkText(f, `PARENTS_CORNER.${x.id}.title`, x.title, 60, 3); if (!Array.isArray(x.paragraphs) || !x.paragraphs.length) err(f, `PARENTS_CORNER.${x.id}.paragraphs`); });
+    checkText(f, 'PRIVACY_NOTE', m.PRIVACY_NOTE, 1200, 100);
+  },
+  decor(m, f) {
+    const D = m.DECOR, slots = (m.DECOR_SLOTS || []).map(x => x.id);
+    if (!Array.isArray(D) || !D.length) return err(f, 'falta DECOR');
+    uniqueIds(f, D);
+    for (const d of D) {
+      if (!d.id.startsWith('d-')) err(f, `DECOR.${d.id}: el id empieza con «d-»`);
+      if (!slots.includes(d.slot)) err(f, `DECOR.${d.id}.slot`);
+      if (d.earn && !['misa8', 'flores7'].includes(d.earn)) err(f, `DECOR.${d.id}.earn: misa8 | flores7`);
+    }
+    for (const sl of slots) if (D.filter(d => d.slot === sl && d.default).length !== 1) err(f, `DECOR: el espacio «${sl}» debe tener exactamente uno «default»`);
+  },
+});
+
 const FILES = {
   parables: 'js/data/parables.js', 'bible-at': 'js/data/bible-at.js', 'bible-nt': 'js/data/bible-nt.js',
   prayers: 'js/data/prayers.js', catechism: 'js/data/catechism.js', verses: 'js/data/verses.js',
   trivia: 'js/data/trivia.js', phrases: 'js/data/phrases.js',
   'bible-milagros': 'js/data/bible-milagros.js', lessons: 'js/data/lessons.js', confession: 'js/data/confession.js', mass: 'js/data/mass.js',
+  'oraciones-extra': 'js/data/oraciones-extra.js', dudas: 'js/data/dudas.js', 'gran-dia': 'js/data/gran-dia.js', ratito: 'js/data/ratito.js',
+  'cura-ars': 'js/data/cura-ars.js', fiestas: 'js/data/fiestas.js', familia: 'js/data/familia.js', papas: 'js/data/papas.js', decor: 'js/data/decor.js',
 };
 
 const wanted = process.argv.slice(2);
@@ -295,9 +497,23 @@ for (const name of names) {
   if (!fs.existsSync(file)) { if (wanted.length) err(rel, 'el archivo no existe'); continue; }
   try {
     const mod = await import(pathToFileURL(file).href + `?t=${process.hrtime.bigint()}`);
-    VALIDATORS[name](mod, rel);
+    await VALIDATORS[name](mod, rel);
     checked++;
   } catch (e) { err(rel, `no se pudo importar: ${e.message}`); }
+}
+
+// ── La voz grabada: ¿todo lo que se lee en voz alta tiene su audio? (aviso: grabar lleva tiempo) ──
+if (!wanted.length || wanted.includes('voz')) {
+  try {
+    const ix = JSON.parse(fs.readFileSync(path.join(root, 'assets/voz/index.json'), 'utf8'));
+    const have = new Set();
+    for (const [, list] of ix.packs) for (const it of String(list).split(' ')) have.add(it.split(':')[0]);
+    const { execFileSync } = await import('node:child_process');
+    const want = JSON.parse(execFileSync(process.execPath, [path.join(root, 'tools/narration-texts.mjs'), '--json'], { maxBuffer: 64 << 20 }).toString());
+    const missing = want.flatMap(g => g.sentences.filter(x => !have.has(x.key)).map(x => `${g.group}: ${x.text}`));
+    if (missing.length) warn('assets/voz', `${missing.length} frase(s) sin grabar (se leen con la voz del teléfono). Para grabarlas: ver tools/gen-voice.py. Por ejemplo: ${missing.slice(0, 3).join(' · ')}`);
+    else console.log('Voz grabada: todas las frases tienen su audio.');
+  } catch (e) { warn('assets/voz', `no se pudo revisar la voz grabada: ${e.message}`); }
 }
 for (const w of warns) console.log('AVISO  ' + w);
 for (const e of errors) console.log('ERROR  ' + e);

@@ -1,0 +1,47 @@
+# Pruebas de Palomita en cada cambio: contenidos, calendario litúrgico, empaquetado y un recorrido por toda la app
+# en un navegador de verdad (todas las pantallas, los once juegos, una partida avanzada y el micrófono).
+name: Pruebas
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Dependencias
+        run: npm ci
+
+      - name: Contenidos y calendario
+        run: npm test
+
+      - name: Empaquetado (y presupuesto de arranque)
+        run: npm run build
+
+      - name: Navegador para la prueba de humo
+        run: |
+          npm install --no-save playwright@1
+          npx playwright install --with-deps chromium
+
+      - name: Prueba de humo
+        run: |
+          node tools/serve.mjs 8765 &
+          sleep 2
+          node tools/smoke-test.mjs smoke-shots
+
+      - name: Capturas de la prueba
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas
+          path: smoke-shots/
+          retention-days: 7

@@ -13,7 +13,13 @@ El niño cuida a una palomita en 3D —come, se baña, duerme, juega y reza— y
 - **Mi parroquia — Santo Cura de Ars (Pío Pata, El Tambo, Huancayo)**: datos del párroco y del diácono, dirección con mapa, oficina parroquial, teléfono, fotos de la iglesia y del altar, **horarios de Misa** y **fechas de catequesis** (los edita un adulto) y **avisos en el teléfono** antes de la Misa y de la catequesis.
 - **Álbum de figuritas** (como el de las mascotas virtuales): 48 figuritas en 6 páginas —Jesús Resucitado de la parroquia, mi parroquia, el Santo Cura de Ars, «nuestros pastores explican», íconos de la fe y mi Primera Comunión— que salen en **sobres** (regalo diario, cofres de los juegos, lecciones terminadas o comprados con semillas), con figuritas brillantes, repetidas para cambiar y premios por página.
 - **Premios como en las mascotas virtuales**: regalo diario, cofre al subir de nivel, tienda de alimentos de la Biblia y accesorios (incluidos un chullo y una chalina andinos), y fotos de la palomita en un álbum.
-- **Sin anuncios, sin compras y sin recolección de datos.** El progreso se guarda solo en el dispositivo.
+- **La palomita habla**: dice en voz alta sus globitos con una vocecita propia, grabada aparte (se apaga en Ajustes).
+- **Mi día y la casa viva** (versión 1.3): tres tareas cortitas cada día, misiones de buenas obras que hacen brotar flores, juegos con la palomita (pelota y «Simón dice»), un ropero para probarle accesorios y decoración para el Nido. La capilla sigue el **año de la Iglesia**: su color, la corona de Adviento y el nacimiento que se arma del 16 al 24 de diciembre; las ventanas siguen la hora real.
+- **Rezar**: el **Rosario** tocando las cuentas (un misterio o completo, por quien el niño elija), **Mi ratito con Jesús** (oración guiada de tres minutos) con su **diario de gracias**, y el **pasaporte de la Misa** del domingo.
+- **Aprender de verdad**: **Lo sé de memoria** (pasaporte de 12 oraciones y listas con dos retos cada una; un grande pone el sello verde), **Mis repasos** (lo que el niño falló en cualquier pregunta vuelve al día siguiente, a los 3 días y a la semana), **El Credo frase por frase**, **Calendario de la fe** (tiempos, colores y fiestas, con las del Perú y Huancayo), **Mis dudas** (las preguntas de los niños sobre la Confesión y la Comunión), **Mi gran día** (cómo será la Primera Comunión, con cuenta regresiva y una tarea por día) y un **diploma** con su nombre al terminar «Mi camino».
+- **Para grandes** (con clave de 4 números): informe para el catequista, sellos de lo que el niño sabe de memoria, copia de seguridad, varios niños en el mismo teléfono, letra más grande, «Para conversar en casa» en cada tema y el **Rincón de papás y padrinos**.
+- **Parroquia y catequista**: fechas de la Primera Confesión y la Primera Comunión, tareas de la catequesis y requisitos (partida de bautismo, padrinos…), las **costumbres de la parroquia** (qué Acto de contrición, cómo se comulga, la postura) y el **código del grupo**: la catequista anota una vez los horarios y fechas y los comparte por WhatsApp; las familias lo pegan en la app. Opcional: un **tablón de avisos** por internet (`docs/avisos-ejemplo.json`).
+- **Sin anuncios, sin compras y sin recolección de datos.** El progreso se guarda solo en el dispositivo ([política de privacidad](docs/privacidad.html)).
 
 | Juego | Parábola o historia | Cita |
 | --- | --- | --- |
@@ -95,6 +101,8 @@ node tools/smoke-test.mjs   # recorre todas las pantallas y abre cada minijuego 
 - **Ilustraciones** de las historias, lecciones y figuritas pintadas por código en Canvas (`js/art/`), más las fotos de la parroquia (`assets/parroquia/`). Cada figurita acepta una imagen propia (`assets/figuritas/<id>.webp`) para reemplazar el dibujo.
 - **Avisos** en Android con AlarmManager y notificaciones (se vuelven a programar al reiniciar el teléfono). Se programan las próximas 4 semanas cada vez que se abre Palomita; usan alarmas exactas cuando el teléfono lo permite (`USE_EXACT_ALARM`, pensado para instalar el APK directamente: si algún día se publica en Google Play habría que justificar ese permiso o quitarlo) y un aviso que llega tarde (la Misa ya empezó) no se muestra.
 - JavaScript moderno en módulos, sin compilación obligatoria y sin dependencias en ejecución.
+- **Rápida en teléfonos sencillos**: el APK usa la versión por módulos (`dist/app/`, la arma `npm run build`): al abrir carga unos 100 KB de código y el resto (historias, catecismo, juegos) cuando se usa. El dibujo 3D baja su calidad solo si el teléfono no da abasto y va más despacio cuando nadie toca la pantalla, para cuidar la batería.
+- **Sin conexión en la web**: `sw.js` guarda la app y, aparte, la voz a medida que se escucha. Una versión nueva no recarga la app sola: aparece «Hay una versión nueva · Actualizar».
 
 ```
 index.html              entrada de la app
@@ -117,16 +125,22 @@ android/                app de Android que envuelve la app web (voz del teléfon
 Todos los textos están en `js/data/` como datos sencillos. Después de cambiarlos:
 
 ```bash
-npm run validate            # revisa la forma, las longitudes y las citas
+npm run validate            # revisa la forma, las longitudes, las citas, las fechas de las fiestas y si falta voz
+npm test                    # lo anterior y además el calendario litúrgico (miles de fechas comprobadas)
 ```
 
-Si cambias textos que se leen en voz alta, vuelve a grabar solo lo nuevo (las frases ya grabadas se reutilizan):
+Si cambias textos que se leen en voz alta, vuelve a grabar solo lo nuevo (las frases ya grabadas se reutilizan;
+la voz de la palomita se graba con la misma voz, más aguda). Se graba en Opus a 16 kbps:
 
 ```bash
 pip install piper-tts       # y descarga es_MX-claude-high.onnx (+ .onnx.json) de huggingface.co/rhasspy/piper-voices
 node tools/narration-texts.mjs --json > /tmp/narracion.json
 python3 tools/gen-voice.py /tmp/narracion.json es_MX-claude-high.onnx assets/voz
 ```
+
+Cada cambio que se sube al repositorio pasa por las mismas pruebas en GitHub (`.github/workflows/ci.yml`): contenidos,
+calendario, empaquetado y la prueba de humo en un navegador real. Para publicar en Google Play: [`PLAY.md`](PLAY.md).
+Para pegar en la parroquia: [`docs/afiche.html`](docs/afiche.html) (se imprime en A4).
 
 Los **horarios de Misa** oficiales van en `js/data/parroquia.js` (`MASS_TIMES`); desde la app, un adulto también puede agregarlos en *Mi parroquia → Misas*.
 
@@ -138,6 +152,18 @@ Los **horarios de Misa** oficiales van en `js/data/parroquia.js` (`MASS_TIMES`);
 - «Mi camino a la Primera Comunión» es un **temario general** ordenado según las cuatro partes del Catecismo (Creo, Celebro, Vivo, Rezo), con referencias a los santos del Perú. No es el temario oficial de ninguna diócesis: si la parroquia (por ejemplo, de la Arquidiócesis de Huancayo) usa otro orden u otros temas, se ajusta editando `js/data/catechism.js`.
 - Las respuestas de la Misa siguen el Misal Romano en español usado en América Latina; algunas costumbres (posturas, saludos en la confesión) pueden variar de una parroquia a otra.
 - La palomita es una amiga del niño. La paloma nos recuerda al Espíritu Santo y la paz, pero la mascota **no** lo representa.
+
+## Para revisar con la parroquia
+
+Los contenidos nuevos se escribieron con cuidado, pero conviene que el párroco o la coordinadora de catequesis
+revisen estos puntos antes de usarlos con los grupos (cada archivo explica arriba sus fuentes y decisiones):
+
+- **Protección de menores**: el aviso del examen de conciencia (`js/data/confession.js`, `safety`), la duda sobre el secreto de confesión (`js/data/dudas.js`) y la sección para papás con la **Línea 100** y la Demuna (`js/data/papas.js`).
+- **Textos de la Misa y oraciones**: el Gloria y el Credo largo según el Misal que usa la parroquia, y las versiones del **Acto de contrición** (la catequista elige la suya en *Mi parroquia → Costumbres*) (`js/data/oraciones-extra.js`).
+- **Mi gran día**: la renovación de las promesas del Bautismo, la ropa, la vela y la procesión, que cambian de una parroquia a otra (`js/data/gran-dia.js`).
+- **Fechas de las fiestas en el Perú** (Corpus Christi, Epifanía, Santa Rosa, fiestas de Huancayo) en `js/data/fiestas.js`.
+- **Requisitos** (padrinos, partida de bautismo) y los temas de **pecados capitales** y **mandamientos de la Iglesia** (`js/data/catechism.js`).
+- **Por completar**: los horarios oficiales de Misa (`MASS_TIMES` en `js/data/parroquia.js`, hoy vacío; mientras tanto los agrega un adulto en la app) y las redes sociales de la parroquia para «Síguenos en» (`SOCIAL`, vacío).
 
 ## Licencias
 

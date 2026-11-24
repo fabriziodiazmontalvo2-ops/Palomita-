@@ -27,17 +27,27 @@ const SAVE = {
   settings: { sound: false, music: false, voice: false, listen: false }, flags: { onboarded: true, tutorialHome: true, arrived: true, micAsked: true },
 };
 
-const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
 
-async function newPage(viewport, save = SAVE) {
-  const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
+const BOOT_BUDGET_MS = 20000;      // arranque hasta la primera pantalla (en una máquina de pruebas sin tarjeta de video)
+const boots = [];
+async function newPage(viewport, save = SAVE, { mic = false } = {}) {
+  const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, hasTouch: true, isMobile: true, permissions: mic ? ['microphone'] : [] });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(`pageerror: ${e.message}`));
   page.on('console', m => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
   if (save) await page.addInitScript(s => { try { if (!localStorage.getItem('palomita.save.v1')) localStorage.setItem('palomita.save.v1', JSON.stringify(s)); } catch {} }, save);
+  // Para la prueba del micrófono: se anotan los micrófonos que abre la app.
+  await page.addInitScript(() => {
+    window.__streams = [];
+    const md = navigator.mediaDevices;
+    if (md?.getUserMedia) { const orig = md.getUserMedia.bind(md); md.getUserMedia = async c => { const st = await orig(c); window.__streams.push(st); return st; }; }
+  });
+  const t0 = Date.now();
   await page.goto(base);
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 30000 });
+  boots.push(Date.now() - t0);
   return { ctx, page, errors };
 }
 async function checkLayout(page, where) {
@@ -130,6 +140,74 @@ console.log('Minijuegos');
   }
   await ctx.close();
 }
+
+// ── 4. Una partida avanzada: todo lleno (temas terminados, sellos, misas, intenciones, Primera Comunión cerca) ──
+console.log('Partida avanzada');
+{
+  const { ctx, page, errors } = await newPage({ width: 390, height: 844 });
+  await page.evaluate(async () => {
+    const s = window.__palomita.state;
+    const C = (await import('./js/data/catechism.js')).CATECHISM;
+    for (const c of C) s.markQuiz('cat:' + c.id);
+    for (const id of ['senal-de-la-cruz', 'padre-nuestro', 'ave-maria']) s.setMemorized(id, 'nino');
+    s.setMemorized('gloria', 'grande');
+    s.reviewMiss('q:yanoexiste');                      // una pregunta que ya no existe: se limpia sola
+    s.addIntention({ id: 'mama', label: 'Por mi mamá', emoji: '👩' });
+    s.addJournal({ thanks: ['familia', 'comida'] });
+    s.acceptMission({ text: 'Ayuda en casa sin que te lo pidan', from: 'Prueba' });
+    const sun = new Date(); sun.setDate(sun.getDate() - sun.getDay());
+    s.logMass(s.todayKey(sun), { color: 'verde', ok: true });
+    s.addCoins(2000);
+    const R = await import('./js/core/reminders.js');
+    const d = new Date(); d.setDate(d.getDate() + 5);
+    R.addEvent({ kind: 'comunion', date: s.todayKey(d), time: '10:00', title: 'Primera Comunión' });
+    s.save();
+  });
+  await page.reload();
+  await page.waitForFunction(() => window.__ready === true, null, { timeout: 30000 });
+  const RICH = [['home', {}], ['catequesis', {}], ['memoria', {}], ['repasos', {}], ['diploma', {}], ['ratito', { tab: 'diario' }],
+    ['misa', { tab: 'pasaporte' }], ['grandia', {}], ['bible', { tab: 'catecismo' }], ['bible', { tab: 'oraciones' }], ['parroquia', {}], ['calendario', {}]];
+  let i = 0;
+  for (const [name, params] of RICH) {
+    const where = `avanzada ${name}${params.tab ? ':' + params.tab : ''}`;
+    await page.evaluate(([n, p]) => { window.__screenError = null; return window.__palomita.go(n, p); }, [name, params]);
+    await page.waitForTimeout(name === 'home' ? 1800 : 900);
+    await page.screenshot({ path: path.join(outDir, `04-avanzada-${String(++i).padStart(2, '0')}-${name}${params.tab ? '-' + params.tab : ''}.png`) });
+    await page.evaluate(() => document.querySelectorAll('.modal-scrim').forEach(m => m.remove()));
+    await checkLayout(page, where); flush(errors, where);
+  }
+  if (await page.evaluate(() => Object.keys(window.__palomita.state.get().review).includes('q:yanoexiste'))) note('avanzada', 'la pregunta vieja no salió de «Mis repasos»');
+  await ctx.close();
+}
+
+// ── 5. El micrófono se apaga al salir de la casa y al pasar la app a segundo plano ──
+console.log('Micrófono');
+{
+  const save = { ...SAVE, settings: { ...SAVE.settings, listen: true }, flags: { ...SAVE.flags, micOk: true } };
+  const { ctx, page, errors } = await newPage({ width: 390, height: 844 }, save, { mic: true });
+  const live = () => page.evaluate(() => window.__streams.some(st => st.getTracks().some(t => t.readyState === 'live')));
+  const waitLive = async () => { for (let k = 0; k < 40; k++) { if (await live()) return true; await page.waitForTimeout(250); } return false; };
+  await page.mouse.click(200, 120);                   // el primer toque enciende el audio
+  if (!(await waitLive())) console.log('  (este navegador no abrió el micrófono de prueba: se omite)');
+  else {
+    await page.evaluate(() => window.__palomita.go('catequesis'));
+    await page.waitForTimeout(800);
+    if (await live()) note('micrófono', 'sigue encendido después de salir de la casa de la palomita');
+    await page.evaluate(() => window.__palomita.go('home'));
+    if (await waitLive()) {
+      await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); });
+      await page.waitForTimeout(800);
+      if (await live()) note('micrófono', 'sigue encendido con la app en segundo plano');
+    }
+  }
+  flush(errors, 'micrófono');
+  await ctx.close();
+}
+
+// ── 6. Presupuesto de arranque ──
+const slow = Math.max(...boots);
+console.log(`Arranque: ${Math.min(...boots)}–${slow} ms (máximo permitido ${BOOT_BUDGET_MS} ms)`);
+if (slow > BOOT_BUDGET_MS) note('arranque', `la app tardó ${slow} ms en abrir`);
 
 await browser.close();
 console.log(problems.length ? `\n${problems.length} problema(s) encontrados.` : '\nTodo bien: sin problemas.');
