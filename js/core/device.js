@@ -71,9 +71,16 @@ function dataUrlToBlob(dataUrl) {
   for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
   return new Blob([arr], { type: mime });
 }
-function download(blob, name) {
+// En la página publicada en claude.ai, la app vive dentro de un visor que no deja descargar directo: ahí los
+// archivos (el diploma, las fotos, la copia de seguridad) se ofrecen con el permiso «downloads» del visor, que
+// le pregunta a la persona si lo quiere guardar. Fuera de ese visor, use() no existe y todo sigue como siempre.
+const viewerSaves = (typeof window !== 'undefined' && window.top !== window && typeof window.claude?.use === 'function')
+  ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null);
+async function download(blob, name) {
+  const dl = await viewerSaves;
+  if (dl) { try { await dl.save({ filename: name, data: blob }); return true; } catch { return false; } }
   try {
-    if (window.top !== window) return false;              // dentro de un visor no se puede descargar
+    if (window.top !== window) return false;              // dentro de otro visor no se puede descargar
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = name; a.rel = 'noopener';
@@ -89,7 +96,7 @@ export async function shareImage(dataUrl, name = 'palomita.png', text = '') {
     const file = new File([dataUrlToBlob(dataUrl)], name, { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text }); return 'shared'; }
   } catch (e) { if (e && e.name === 'AbortError') return false; }
-  return download(dataUrlToBlob(dataUrl), name) ? 'downloaded' : false;
+  return (await download(dataUrlToBlob(dataUrl), name)) ? 'downloaded' : false;
 }
 
 export function canShareApp() { return has('shareApp'); }
@@ -117,7 +124,7 @@ export function saveFile(name, mime, text) {
       try { bridge().saveFile(name, mime, text); } catch { fileWaiters.save = null; resolve(false); }
     });
   }
-  return Promise.resolve(download(new Blob([text], { type: mime || 'application/json' }), name) ? 'downloaded' : false);
+  return download(new Blob([text], { type: mime || 'application/json' }), name).then(ok => (ok ? 'downloaded' : false));
 }
 
 export function openFile() {
