@@ -21,6 +21,7 @@
 //   feedSettings() / setFeed({ url, on }) / refreshFeed() / feedItems()   tablón de avisos por internet
 import { MASS_TIMES, PARISH, DAYS } from '../data/parroquia.js';
 import * as state from './state.js';
+import { G } from './genero.js';
 
 const KEY = 'palomita.parroquia.v1';
 const MASS_MIN = 60;          // lo que dura más o menos una Misa (para el aviso de «hoy»)
@@ -352,7 +353,7 @@ export function notifications(now = new Date()) {
         out.push(e.kind === 'misa'
           ? { id: `${e.id}#h`, atMillis: t, expiresMillis, title: `⛪ Hoy hay Misa a las ${hour}`, text: `En la ${place}. ¡Jesús te espera!` }
           : e.kind === 'evento'
-            ? { id: `${e.id}#h`, atMillis: t, expiresMillis, title: `${e.icon} Hoy: ${e.title} a las ${hour}`, text: e.sub === 'comunion' ? '¡Hoy recibes a Jesús por primera vez! Que la palomita te acompañe con su alegría.' : dot(`Hoy a las ${hour}${extra}`) }
+            ? { id: `${e.id}#h`, atMillis: t, expiresMillis, title: `${e.icon} Hoy: ${e.title} a las ${hour}`, text: e.sub === 'comunion' ? G('¡Hoy recibes a Jesús por primera vez! Que {la palomita|el palomito} te acompañe con su alegría.') : dot(`Hoy a las ${hour}${extra}`) }
             : { id: `${e.id}#h`, atMillis: t, expiresMillis, title: `📖 Hoy tienes catequesis a las ${hour}`, text: dot(`Hoy a las ${hour}${extra}`) + ' ¡Lleva tu cuaderno y muchas ganas de aprender!' });
       }
     }

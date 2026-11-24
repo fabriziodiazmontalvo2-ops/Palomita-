@@ -6,16 +6,17 @@ import { VERSION } from '../core/version.js';
 import { NEWS } from '../data/novedades.js';
 import { h, modal } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
+import { G } from '../core/genero.js';
 
 export function showNews({ all = false } = {}) {
   const list = all ? NEWS : NEWS.filter(n => n.version === VERSION);
   if (!list.length) return Promise.resolve(false);
   sfx('sparkle');
   const m = modal({
-    title: list[0].title, icon: '🎉', className: 'news-modal',
+    title: G(list[0].title), icon: '🎉', className: 'news-modal',
     body: list.map((n, i) => h('div', { class: 'news' },
-      i > 0 ? h('h3', { class: 'news__v' }, n.title) : null,
-      h('ul', { class: 'news__list' }, n.items.map(it => h('li', null, h('span', { 'aria-hidden': 'true' }, it.icon), h('span', null, it.text)))))),
+      i > 0 ? h('h3', { class: 'news__v' }, G(n.title)) : null,
+      h('ul', { class: 'news__list' }, n.items.map(it => h('li', null, h('span', { 'aria-hidden': 'true' }, it.icon), h('span', null, G(it.text))))))),
     buttons: [{ label: '¡Genial!', kind: 'sun' }],
   });
   return m.closed.then(() => true);

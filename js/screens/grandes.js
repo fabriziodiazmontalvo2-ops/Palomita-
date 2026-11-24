@@ -11,6 +11,7 @@ import * as device from '../core/device.js';
 import { grownGate, lock, hasPin, choosePin, clearPin } from '../core/grown.js';
 import { h, clear, button, modal, toast, confirmDialog } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
+import { G } from '../core/genero.js';
 import { back, go } from '../core/router.js';
 import { deco, lifecycle, shell, tabBar } from './catequesis.js';
 
@@ -154,7 +155,7 @@ export async function mount(el, params = {}) {
     const cumple = h('input', { type: 'date', class: 'gr-input', value: state.date('cumple'), 'aria-label': 'Cumpleaños' });
     const bautismo = h('input', { type: 'date', class: 'gr-input', value: state.date('bautismo'), 'aria-label': 'Día del Bautismo' });
     const dates = card('Fechas especiales', '🎂',
-      note(`La palomita celebra con ${kidName()} estas fechas (solo se guardan en este teléfono).`),
+      note(`${G('{La palomita|El palomito}')} celebra con ${kidName()} estas fechas (solo se guardan en este teléfono).`),
       h('label', { class: 'gr-label' }, 'Cumpleaños', cumple),
       h('label', { class: 'gr-label' }, 'Día de su Bautismo (si lo saben)', bautismo),
       button('Guardar fechas', { kind: 'leaf', small: true, icon: '💾', onClick: () => {

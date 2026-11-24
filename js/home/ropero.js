@@ -3,7 +3,7 @@
 //   ropero.open(idInicial?)   ropero.close()
 import * as state from '../core/state.js';
 import { ACCESSORIES, SLOT_SHORT } from '../data/items.js';
-import { fits } from '../core/genero.js';
+import { G, fits } from '../core/genero.js';
 import { accArt } from '../core/accart.js';
 import { h, clear, confirmDialog, toast } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
@@ -54,7 +54,7 @@ export function createRopero(ctx) {
     }
     clear(box).append(
       h('div', { class: 'rp-head' },
-        h('span', { class: 'rp-title' }, sel ? h('b', null, sel.name) : h('b', null, '👗 Ropero'), h('span', { class: 'rp-coins' }, sel ? SLOT_SHORT[sel.slot] : `Tienes ${state.get().coins} 🌱`)),
+        h('span', { class: 'rp-title' }, sel ? h('b', null, sel.name) : h('b', null, G('{👗|👕} Ropero')), h('span', { class: 'rp-coins' }, sel ? SLOT_SHORT[sel.slot] : `Tienes ${state.get().coins} 🌱`)),
         action,
         h('button', { type: 'button', class: 'rp-close', 'aria-label': 'Cerrar el ropero', onclick: () => { sfx('tap'); close(); } }, '✖')),
       strip);

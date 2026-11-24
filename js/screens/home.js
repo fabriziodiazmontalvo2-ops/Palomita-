@@ -307,7 +307,7 @@ export async function mount(el, params = {}) {
     avisoBox.hidden = room === 'bano';   // en pantallas bajas el aviso taparía la regadera
     if (room === 'sala') {
       tray.append(trayButton('🎾', 'Jugar', () => { if (!isAsleep()) play.choose(); }, { kind: 'accent' }));
-      if (!worldFailed) tray.append(trayButton('👗', 'Ropero', () => { if (!isAsleep()) ropero.open(); }));
+      if (!worldFailed) tray.append(trayButton(G('{👗|👕}'), 'Ropero', () => { if (!isAsleep()) ropero.open(); }));
       if (!worldFailed) tray.append(trayButton('📷', 'Foto', takePhoto));
       tray.append(trayButton('🖼️', 'Álbum', openAlbum));
     } else if (room === 'cocina') {
