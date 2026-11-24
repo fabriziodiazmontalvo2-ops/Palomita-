@@ -1,0 +1,66 @@
+/* Versión 1.3: Mis dudas, Mi gran día, examen seguro, costumbres de la parroquia, «Para conversar en casa»
+   y las pantallas nuevas de fe (Rosario, ratito con Jesús, Lo sé de memoria, Mis repasos, calendario, diploma). */
+
+/* ── Listas plegables (Mis dudas) ── */
+.fe-list { display: flex; flex-direction: column; gap: 10px; }
+.fe-acc { border-radius: var(--r-md); background: var(--white); box-shadow: 0 3px 0 var(--paper-edge), 0 6px 12px var(--shade); padding: 0 14px; }
+.fe-acc summary { cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 0; list-style: none;
+  font-family: var(--font-display); font-weight: 800; font-size: var(--fs-md); line-height: 1.2; }
+.fe-acc summary::-webkit-details-marker { display: none; }
+.fe-acc summary::after { content: '▾'; margin-left: auto; color: var(--ink-soft); transition: transform 0.15s; }
+.fe-acc[open] summary::after { transform: rotate(180deg); }
+.fe-acc summary:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; border-radius: 8px; }
+.fe-acc__body { padding: 0 0 14px; display: flex; flex-direction: column; gap: 10px; }
+.fe-acc__body p { font-size: var(--fs-md); font-weight: 600; line-height: 1.5; }
+.fe-acc__tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* ── Mi gran día ── */
+.fe-count { position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 18px 16px;
+  border-radius: var(--r-lg); color: var(--white); background: linear-gradient(135deg, #9b7be8 0%, #f0a51e 100%); box-shadow: 0 6px 0 #6b4cc4, 0 10px 18px var(--shade); }
+.fe-count__eyebrow { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-xs); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.92; }
+.fe-count__big { font-family: var(--font-display); font-weight: 800; font-size: calc(var(--fs-xxl) * 1.1); line-height: 1.05; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.14); }
+.fe-count__when { font-family: var(--font-display); font-weight: 800; }
+.fe-count__msg { font-weight: 700; line-height: 1.35; }
+.fe-task { align-self: stretch; margin-top: 8px; padding: 12px; border-radius: var(--r-md); background: rgba(255, 255, 255, 0.95); color: var(--ink); text-align: left; display: flex; flex-direction: column; gap: 6px; }
+.fe-task__h { display: flex; align-items: center; gap: 6px; font-family: var(--font-display); font-weight: 800; color: var(--grape-deep); }
+.fe-task p { font-weight: 700; line-height: 1.4; }
+.fe-note { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px; border-radius: var(--r-md); background: #fff4d6; font-weight: 700; line-height: 1.4; }
+.fe-note > span:first-child { font-size: 1.6rem; }
+.fe-note p { flex: 1 1 200px; }
+.fe-note--after { background: #e9f7ec; }
+.fe-steps { scroll-margin-top: 12px; }
+.fe-step__art { height: 150px; border-radius: var(--r-md); margin-bottom: 10px; }
+.fe-dialog { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.fe-tip { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; background: #fff7df; font-size: var(--fs-sm); font-weight: 700; line-height: 1.4; }
+
+/* ── Confesión: nota de protección y calma, preguntas básicas ── */
+.cf-safety { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: var(--r-md); background: #e7f1ff; border: 3px solid #b9d6ff; }
+.cf-safety__icon { font-size: 1.8rem; line-height: 1; }
+.cf-safety p { font-weight: 700; line-height: 1.45; margin-bottom: 6px; }
+.cf-calm { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; padding: 10px 12px; border-radius: 14px; background: #fff3c9; font-weight: 700; line-height: 1.4; }
+.cf-gnote { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; background: #e7f1ff; font-size: var(--fs-sm); font-weight: 700; line-height: 1.4; }
+.cf-more { appearance: none; border: 2px dashed var(--paper-edge); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 48px; border-radius: 14px; font-family: var(--font-display); font-weight: 800; color: var(--ink-soft); }
+.cf-more:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+/* ── Misa: costumbres de la parroquia ── */
+.ms-tip--parish { background: #efe8ff; }
+.ms-com__step.is-parish { box-shadow: 0 0 0 3px var(--grape) inset; }
+.ms-com__step.is-other { opacity: 0.6; }
+.ms-com__badge { display: inline-block; margin-left: 6px; padding: 2px 10px; border-radius: var(--r-pill); background: var(--grape-deep); color: var(--white); font-family: var(--font-display); font-weight: 800; font-size: var(--fs-xs); }
+
+/* ── Mi camino: para conversar en casa y la meta ── */
+.bb-family { margin-top: 14px; border-radius: var(--r-md); background: #fff8e8; border: 2px solid #f4dfb0; padding: 0 14px; }
+.bb-family summary { cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 56px; list-style: none; }
+.bb-family summary::-webkit-details-marker { display: none; }
+.bb-family summary > span:first-child { font-size: 1.6rem; }
+.bb-family summary > span:last-child { display: flex; flex-direction: column; line-height: 1.15; }
+.bb-family summary b { font-family: var(--font-display); font-weight: 800; }
+.bb-family summary small { font-size: var(--fs-xs); color: var(--ink-soft); font-weight: 700; }
+.bb-family__body { padding-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
+.bb-family__body h4 { font-family: var(--font-display); font-size: var(--fs-sm); color: var(--grape-deep); margin-top: 6px; }
+.bb-family__body ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }
+.bb-family__body li, .bb-family__body p { font-size: var(--fs-sm); font-weight: 600; line-height: 1.45; }
+.bb-family__pray { font-style: italic; }
+.bb-goal__count { font-family: var(--font-display); font-weight: 800; color: var(--grape-deep); }
+.bb-goal__btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }

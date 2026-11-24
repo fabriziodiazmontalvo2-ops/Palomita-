@@ -5,6 +5,7 @@ import * as tts from '../core/tts.js';
 import { h, clear, button } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { back } from '../core/router.js';
+import * as R from '../core/reminders.js';
 import { arr, txt, deco, smooth, shuffle, loadData, lifecycle, shell, tabBar, soon, quiz, speakBtn, rewardRow, grant, celebrate } from './catequesis.js';
 
 const TABS = [
@@ -94,7 +95,9 @@ export async function mount(el, params = {}) {
           dialogues.length ? h('div', { class: 'ms-dialogues' }, dialogues.map(d => h('div', { class: 'ms-dlg' },
             d.priest ? h('div', { class: 'ms-dlg__priest' }, h('span', { class: 'ms-dlg__who' }, deco(LECTOR.has(p.id) ? '📖' : '🧔'), who(p)), h('p', null, `«${txt(d.priest)}»`)) : null,
             d.people ? h('div', { class: 'ms-dlg__people' }, h('span', { class: 'ms-dlg__who' }, deco('🙋'), 'Todos respondemos'), h('p', null, `«${txt(d.people)}»`)) : null))) : null,
-          p.tip ? h('p', { class: 'ms-tip' }, deco('💡'), txt(p.tip)) : null));
+          p.tip ? h('p', { class: 'ms-tip' }, deco('💡'), txt(p.tip)) : null,
+          p.id === 'cordero-de-dios' && R.customs().posture ? h('p', { class: 'ms-tip ms-tip--parish' }, deco('⛪'),
+            `En nuestra parroquia, al terminar el «Cordero de Dios», nos ponemos ${R.customs().posture === 'pie' ? 'de pie' : 'de rodillas'}.`) : null));
     };
     const used = GROUPS.map(g => ({ g, items: parts.filter(p => groupOf(p) === g) })).filter(x => x.items.length);
     const jump = h('nav', { class: 'ms-jump', 'aria-label': 'Ir a una parte de la Misa' }, used.map(({ g }) => {
@@ -258,9 +261,19 @@ export async function mount(el, params = {}) {
         h('h2', null, title),
         h('p', null, 'Jesús viene a tu corazón. Hazlo con calma, con respeto y con mucha alegría.')),
       h('div', { class: 'ct-tools' }, speakBtn(() => [title, ...stepsList.map((s, k) => `Paso ${k + 1}. ${txt(s.text)}`)])),
-      h('ol', { class: 'ms-com' }, stepsList.map((s, k) => h('li', { class: 'ms-com__step' },
-        h('span', { class: 'ms-com__art', 'aria-hidden': 'true' }, h('span', { class: 'ms-com__emoji' }, txt(s.emoji) || '🙏'), h('span', { class: 'ms-com__n' }, String(k + 1))),
-        h('p', null, txt(s.text))))),
+      R.customs().communion ? h('p', { class: 'ms-tip ms-tip--parish' }, deco('⛪'), {
+        boca: 'En nuestra parroquia los niños comulgan en la boca.',
+        mano: 'En nuestra parroquia los niños comulgan en la mano.',
+        ambas: 'En nuestra parroquia se puede comulgar en la boca o en la mano. Tu catequista te dirá cómo.' }[R.customs().communion]) : null,
+      h('ol', { class: 'ms-com' }, stepsList.map((s, k) => {
+        // Las dos formas de comulgar: se destaca la que usa la parroquia (si la eligió la catequista).
+        const way = s.emoji === '👄' ? 'boca' : s.emoji === '🙌' ? 'mano' : '';
+        const cw = R.customs().communion;
+        const mark = way && (cw === 'boca' || cw === 'mano') ? (cw === way ? ' is-parish' : ' is-other') : '';
+        return h('li', { class: `ms-com__step${mark}` },
+          h('span', { class: 'ms-com__art', 'aria-hidden': 'true' }, h('span', { class: 'ms-com__emoji' }, txt(s.emoji) || '🙏'), h('span', { class: 'ms-com__n' }, String(k + 1))),
+          h('p', null, txt(s.text), mark === ' is-parish' ? h('span', { class: 'ms-com__badge' }, 'Así lo hacemos aquí') : null));
+      })),
       goTab('preguntas', 'Responder las preguntas', '🎯'),
     ];
   }

@@ -25,6 +25,8 @@ register('parroquia', () => import('./screens/parroquia.js'));
 register('figuritas', () => import('./screens/figuritas.js'));
 register('grandes', () => import('./screens/grandes.js'));
 register('perfiles', () => import('./screens/perfiles.js'));
+register('dudas', () => import('./screens/dudas.js'));
+register('grandia', () => import('./screens/grandia.js'));
 setHome('home');
 
 const TICK_SECONDS = 5;

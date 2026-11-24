@@ -15,6 +15,7 @@ import * as tts from '../core/tts.js';
 import { h, clear, button, iconButton, toast, meter, reduceMotion } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { go, back } from '../core/router.js';
+import * as R from '../core/reminders.js';
 import { sceneEl, SCENE_IDS, isFloating, hasOrb } from '../art/scenes.js';
 
 // ───────────────────────── Datos fijos de la pantalla ─────────────────────────
@@ -51,6 +52,7 @@ const PRAYER_GROUPS = [
   { key: 'misa', title: 'En la Misa' },
   { key: 'maria', title: 'A María' },
   { key: 'comunion', title: 'Para comulgar' },
+  { key: 'parroquia', title: 'De mi parroquia' },
 ];
 const OTHER_GROUP = { key: 'otras', title: 'Más oraciones' };
 
@@ -90,7 +92,15 @@ const LOADERS = {
   nt: () => import('../data/bible-nt.js').then(m => m.STORIES_NT),
   mi: () => import('../data/bible-milagros.js').then(m => m.STORIES_MILAGROS),
   parables: () => import('../data/parables.js').then(m => m.PARABLES),
-  prayers: () => import('../data/prayers.js').then(m => m.PRAYERS),
+  // Las oraciones de siempre, más las nuevas (Gloria, Credo largo, Ángelus…). Si la catequista eligió otro
+  // Acto de contrición (Mi parroquia → Costumbres), se muestra ese con el mismo id.
+  prayers: () => Promise.all([import('../data/prayers.js'), import('../data/oraciones-extra.js').catch(() => ({}))]).then(([a, b]) => {
+    const extra = Array.isArray(b.PRAYERS_EXTRA) ? b.PRAYERS_EXTRA : [];
+    const cc = R.customs().contrition;
+    const v = cc && cc !== 'jesus-mi-senor' && Array.isArray(b.CONTRITION_VARIANTS) ? b.CONTRITION_VARIANTS.find(x => x.id === cc) : null;
+    const base = (a.PRAYERS || []).map(p => (p.id === 'acto-de-contricion' && v ? { ...p, lines: v.lines, note: 'Es la versión que enseñan en tu parroquia. Se reza en la Confesión y también por la noche.' } : p));
+    return [...base, ...extra.filter(x => !base.some(p => p.id === x.id))];
+  }),
   catechism: () => import('../data/catechism.js').then(m => m.CATECHISM),
   verses: () => import('../data/verses.js').then(m => m.VERSES),
   games: () => import('../games/registry.js').then(m => m.GAMES),
@@ -100,7 +110,7 @@ async function load(key) {
   if (cache[key]) return cache[key];
   try {
     const data = await LOADERS[key]();
-    if (data && typeof data === 'object') { cache[key] = data; return data; }
+    if (data && typeof data === 'object') { if (key !== 'prayers') cache[key] = data; return data; }   // las oraciones dependen de las costumbres
   } catch { /* ese contenido todavía no existe: la pestaña dirá "Muy pronto" */ }
   return null;
 }
@@ -1063,10 +1073,18 @@ export async function mount(el, params = {}) {
           h('p', null, 'Paso a paso te preparas para recibir a Jesús. En cada etapa lees, aprendes y respondes tres preguntas.')),
         progressCard({ icon: '👣', title: `Llevas ${done} de ${plural(list.length, 'etapa', 'etapas')}`, value: (done / list.length) * 100, color: 'var(--leaf)' }),
         path,
-        h('div', { class: `bb-goal${done === list.length ? ' is-won' : ''}` },
-          h('div', { class: 'bb-goal__icon', 'aria-hidden': 'true' }, '🎉'),
-          h('h3', null, done === list.length ? '¡Recorriste todo el camino!' : '¡Mi Primera Comunión!'),
-          h('p', null, 'Al final del camino te espera Jesús en la Eucaristía.')),
+        (() => {
+          const ev = R.nextEvent('comunion');
+          const won = done === list.length;
+          return h('div', { class: `bb-goal${won ? ' is-won' : ''}` },
+            h('div', { class: 'bb-goal__icon', 'aria-hidden': 'true' }, won ? '🎉' : '🕊️'),
+            h('h3', null, won ? '¡Recorriste todo el camino!' : '¡Mi Primera Comunión!'),
+            ev ? h('p', { class: 'bb-goal__count' }, ev.days === 0 ? '¡Es hoy!' : ev.days === 1 ? '¡Es mañana!' : `Faltan ${ev.days} días · ${R.fmtDate(ev.start)}`) : null,
+            h('p', null, 'Al final del camino te espera Jesús en la Eucaristía.'),
+            h('div', { class: 'bb-goal__btns' },
+              button('Mi gran día', { kind: 'sun', small: true, icon: '🕊️', onClick: () => go('grandia') }),
+              won ? button('Mi diploma', { kind: 'grape', small: true, icon: '📜', onClick: () => go('diploma') }) : null));
+        })(),
         h('p', { class: 'bb-footnote' }, 'Temario general según el Catecismo. Tu catequista puede indicarte el orden de tu parroquia.'),
       ],
     };
@@ -1074,6 +1092,7 @@ export async function mount(el, params = {}) {
 
   async function topicView(id) {
     const list = await topics();
+    const fam = await import('../data/familia.js').then(m => m.FAMILY || {}).catch(() => ({}));
     const i = list.findIndex(c => c.id === id);
     if (i < 0) return null;
     const c = list[i];
@@ -1096,8 +1115,20 @@ export async function mount(el, params = {}) {
             h('div', null, it.title ? h('h3', null, txt(it.title)) : null, it.text ? h('p', null, txt(it.text)) : null)))),
           note('closing', '✨', 'Para llevar en el corazón', c.closing),
           h('div', { class: 'bb-end' }, quizBlock(c.quiz, { key: `cat:${c.id}`, prize: PRIZE.catechism, title: 'Tres preguntas' })),
+          familyCard(fam[c.id]),
           navRow(link(list[i - 1], i), link(list[i + 1], i + 2)))),
     };
+  }
+  // «Para conversar en casa»: para los papás, al final de cada tema (plegada para no distraer al niño).
+  function familyCard(f) {
+    if (!f || !arr(f.ask).length) return null;
+    return h('details', { class: 'bb-family' },
+      h('summary', null, h('span', { 'aria-hidden': 'true' }, '👪'), h('span', null, h('b', null, 'Para conversar en casa'), h('small', null, 'Para papás y padrinos'))),
+      h('div', { class: 'bb-family__body' },
+        h('h4', null, 'Pregúntenle (y respondan también ustedes)'),
+        h('ul', null, arr(f.ask).map(q => h('li', null, txt(q)))),
+        f.do ? [h('h4', null, 'Para hacer juntos'), h('p', null, txt(f.do))] : null,
+        f.pray ? [h('h4', null, 'Recen en familia'), h('p', { class: 'bb-family__pray' }, `«${txt(f.pray)}»`)] : null));
   }
 
   // ───────────────────────── 5. Versículos ─────────────────────────

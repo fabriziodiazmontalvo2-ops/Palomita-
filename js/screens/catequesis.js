@@ -12,6 +12,7 @@ import * as tts from '../core/tts.js';
 import { h, clear, button, iconButton, meter, reduceMotion } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
 import { go, back } from '../core/router.js';
+import * as Rm from '../core/reminders.js';
 import { sceneEl, SCENE_IDS, isFloating, hasOrb } from '../art/scenes.js';
 
 // ───────────────────────── Utilidades compartidas ─────────────────────────
@@ -423,6 +424,15 @@ export async function mount(el, params = {}) {
         card({ title: 'Mi Primera Confesión', sub: 'El abrazo de Dios que perdona', bg: 'jardin', c: '#ec6f90',
           actors: [{ e: '🤗', x: 50, y: 60, s: 1.3 }, { e: '💛', x: 80, y: 26, s: 0.8, anim: 'float' }, { e: '🕊️', x: 20, y: 28, s: 0.8, anim: 'float' }],
           note: confDone ? '⭐ Preguntas listas' : '', onClick: () => go('confesion') }),
+        (() => {
+          const ev = Rm.nextEvent('comunion');
+          return card({ title: 'Mi gran día', sub: 'Así será tu Primera Comunión', bg: 'iglesia', c: '#9b7be8',
+            actors: [{ e: '🕊️', x: 50, y: 30, s: 1.1, anim: 'float' }, { e: '🕯️', x: 28, y: 66, s: 1 }, { e: '🍞', x: 72, y: 66, s: 1 }],
+            note: ev ? (ev.days === 0 ? '¡Es hoy!' : ev.days === 1 ? '¡Es mañana!' : `Faltan ${ev.days} días`) : '', onClick: () => go('grandia') });
+        })(),
+        card({ title: 'Mis dudas', sub: 'Lo que preguntan los niños', bg: 'cielo', c: '#4aa3e0',
+          actors: [{ e: '💭', x: 50, y: 30, s: 1.1, anim: 'float' }, { e: '🧒', x: 36, y: 68, s: 1.05 }, { e: '❓', x: 70, y: 56, s: 0.9 }],
+          onClick: () => go('dudas') }),
         card({ title: 'La Misa paso a paso', sub: 'Qué pasa y qué respondemos', bg: 'templo', c: '#7556c9',
           actors: [{ e: '🍞', x: 34, y: 66, s: 1.1 }, { e: '🍷', x: 64, y: 66, s: 1.1 }, { e: '✨', x: 50, y: 28, s: 0.8, anim: 'twinkle' }],
           note: state.quizDone('misa:practica') ? '⭐ Práctica superada' : '', onClick: () => go('misa') }),

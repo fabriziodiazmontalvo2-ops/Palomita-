@@ -10,6 +10,8 @@ import { back } from '../core/router.js';
 import * as tts from '../core/tts.js';
 import * as R from '../core/reminders.js';
 import { grownGate as sharedGate, lock as lockGrown } from '../core/grown.js';
+import * as device from '../core/device.js';
+import { VERSION } from '../core/version.js';
 import { PARISH, ABOUT, SOCIAL, DAYS } from '../data/parroquia.js';
 import { txt, deco, smooth, lifecycle, shell, tabBar, speakBtn } from './catequesis.js';
 
@@ -118,6 +120,19 @@ export async function mount(el, params = {}) {
       h('span', { class: 'pq-next__count' }, countdown(e.start)));
   }
 
+  // Avisos del tablón de la parroquia (si un grande lo encendió) y aviso de versión nueva.
+  const newer = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
+  function feedNotice() {
+    const items = R.feedItems();
+    const app = R.feedApp();
+    const upd = app && newer(app.version, VERSION) ? app : null;
+    if (!items.length && !upd) return null;
+    return h('section', { class: 'pq-card pq-card--feed' },
+      h('h3', { class: 'pq-card__h' }, deco('📢'), 'Avisos de la parroquia'),
+      items.map(x => h('div', { class: 'pq-feed' }, h('b', null, x.title), x.text ? h('p', null, x.text) : null)),
+      upd ? h('div', { class: 'pq-feed pq-feed--app' }, h('b', null, `Hay una versión nueva de Palomita (${upd.version})`), upd.note ? h('p', null, upd.note) : null) : null);
+  }
+
   // ── (1) Mi parroquia ──
   function viewInicio() {
     const office = PARISH.office.map(o => h('li', null, h('b', null, o.days), o.hours.map(x => h('span', null, x))));
@@ -139,6 +154,7 @@ export async function mount(el, params = {}) {
           h('span', { class: 'pq-pill' }, deco('📍'), `${PARISH.place} · El Tambo`),
           h('h2', null, PARISH.name))),
       nextCard(),
+      feedNotice(),
       h('div', { class: 'ct-tools' }, speakBtn(() => [PARISH.name, ...ABOUT.parish.text])),
       h('section', { class: 'pq-card pq-card--about' },
         h('h3', { class: 'pq-card__h' }, deco('🏡'), ABOUT.parish.title),
@@ -247,7 +263,9 @@ export async function mount(el, params = {}) {
           d ? [h('b', null, String(d.getDate())), h('span', null, R.fmtDate(d, { weekday: false }).split(' de ')[1].slice(0, 3))] : [h('b', null, '↻'), h('span', null, 'cada')]),
         h('div', { class: 'pq-class__body' },
           h('p', { class: 'pq-class__when' }, d ? `${DAYS[d.getDay()]} · ${R.fmtTime(c.time)}` : `Todos los ${DAYS[c.weekly].toLowerCase()}${c.weekly === 0 || c.weekly === 6 ? 's' : ''} · ${R.fmtTime(c.time)}`),
-          c.note ? h('p', { class: 'pq-class__note' }, c.note) : null),
+          c.note ? h('p', { class: 'pq-class__note' }, c.note) : null,
+          c.task?.length ? h('ul', { class: 'pq-task' }, c.task.map(t => h('li', { class: R.taskDone(t) ? 'is-done' : '' },
+            h('span', { 'aria-hidden': 'true' }, R.taskDone(t) ? '✅' : '⬜'), h('span', null, t.title || t.id)))) : null),
         grown ? h('span', { class: 'pq-mass__tools' },
           h('button', { type: 'button', class: 'pq-mini', 'aria-label': 'Cambiar esta fecha', onclick: () => { sfx('tap'); classForm(c); } }, '✏️'),
           h('button', { type: 'button', class: 'pq-mini', 'aria-label': 'Borrar esta fecha', onclick: async () => {
@@ -259,6 +277,10 @@ export async function mount(el, params = {}) {
       h('div', { class: 'pq-intro pq-intro--cat' },
         h('span', { class: 'pq-intro__art', 'aria-hidden': 'true' }, '📖'),
         h('div', null, h('h2', null, 'Mi catequesis'), h('p', null, 'Tu catequista te dirá los días. Un grande los anota aquí y la palomita te recuerda.'))),
+      comunionCard(),
+      !grown && !R.classes().length && !R.events().length ? h('div', { class: 'pq-paste-hint' },
+        h('p', null, deco('💬'), ' ¿Tu catequista mandó los horarios por WhatsApp? Un grande puede pegarlos aquí.'),
+        button('Pegar el código del catequista', { kind: 'sky', small: true, icon: '📋', onClick: async () => { if (await grownGate()) pasteCode(); } })) : null,
       next ? h('div', { class: 'pq-countdown' },
         h('p', { class: 'pq-countdown__eyebrow' }, 'Tu próxima catequesis'),
         h('p', { class: 'pq-countdown__big' }, countdown(next.start)),
@@ -272,6 +294,10 @@ export async function mount(el, params = {}) {
         h('h3', null, 'Todavía no hay fechas'),
         h('p', null, 'Pide a tu catequista o a un grande que las anote aquí.')) : null,
       grown ? button('Agregar una fecha', { kind: 'leaf', block: true, icon: '➕', onClick: () => classForm(null) }) : grownButton(),
+      eventsSection(),
+      requirementsSection(),
+      grown ? groupSection() : null,
+      grown ? customsSection() : null,
       h('div', { class: 'pq-tip' }, deco('🎒'), h('p', null, 'Para la catequesis lleva tu cuaderno, tu lápiz y muchas ganas de conocer a Jesús.')),
     ];
   }
@@ -285,6 +311,30 @@ export async function mount(el, params = {}) {
     const note = h('input', { class: 'pq-input', type: 'text', maxlength: '80', placeholder: 'Tema, salón o qué llevar (opcional)', value: c?.note || '', autocomplete: 'off', 'aria-label': 'Nota (opcional)' });
     const msg = h('p', { class: 'pq-gate__msg', role: 'status' });
     const fDate = field('Fecha', date), fWeek = field('Día', wday);
+    // Tarea para esta clase: temas, lecciones u oraciones que el niño debe ver antes (máximo 3).
+    const taskList = (c?.task || []).map(t => ({ ...t }));
+    const taskBox = h('ul', { class: 'pq-task pq-task--edit' });
+    const picker = h('select', { class: 'pq-input', 'aria-label': 'Agregar una tarea' }, h('option', { value: '' }, 'Cargando…'));
+    const paintTasks = () => {
+      clear(taskBox).append(...taskList.map((t, i) => h('li', null, h('span', null, t.title || t.id),
+        h('button', { type: 'button', class: 'pq-mini', 'aria-label': `Quitar ${t.title}`, onclick: () => { sfx('tap'); taskList.splice(i, 1); paintTasks(); } }, '✖'))));
+      picker.disabled = taskList.length >= 3;
+    };
+    Promise.all([import('../data/catechism.js'), import('../data/lessons.js'), import('../data/prayers.js')]).then(([cat, les, pra]) => {
+      clear(picker).append(h('option', { value: '' }, '➕ Agregar una tarea (opcional)'),
+        h('optgroup', { label: 'Mi camino (temas)' }, (cat.CATECHISM || []).map(x => h('option', { value: `cat|${x.id}|${x.title}` }, `${x.emoji || '📖'} ${x.title}`))),
+        h('optgroup', { label: 'Lecciones' }, (les.LESSONS || []).map(x => h('option', { value: `lesson|${x.id}|${x.title}` }, `${x.emoji || '🎬'} ${x.title}`))),
+        h('optgroup', { label: 'Oraciones' }, (pra.PRAYERS || []).map(x => h('option', { value: `prayer|${x.id}|${x.title}` }, `${x.emoji || '🙏'} ${x.title}`))));
+    }).catch(() => { clear(picker).append(h('option', { value: '' }, 'No se pudo cargar la lista')); });
+    picker.addEventListener('change', () => {
+      const [type, id, ...rest] = picker.value.split('|');
+      picker.value = '';
+      if (!type || taskList.length >= 3 || taskList.some(t => t.type === type && t.id === id)) return;
+      sfx('pop');
+      taskList.push({ type, id, title: rest.join('|') });
+      paintTasks();
+    });
+    paintTasks();
     const seg = h('div', { class: 'pq-seg', role: 'radiogroup', 'aria-label': '¿Un día o cada semana?' });
     const paint = () => {
       fDate.hidden = mode !== 'dia'; fWeek.hidden = mode !== 'semana';
@@ -296,11 +346,11 @@ export async function mount(el, params = {}) {
     paint();
     modal({
       title: c ? 'Cambiar la fecha' : 'Nueva fecha de catequesis', icon: '📖', className: 'pq-modal',
-      body: h('div', { class: 'pq-form' }, seg, fDate, fWeek, field('Hora', time), field('Nota (opcional)', note), msg),
+      body: h('div', { class: 'pq-form' }, seg, fDate, fWeek, field('Hora', time), field('Nota (opcional)', note), field('Tarea para esta clase (opcional)', h('div', { class: 'pq-taskpick' }, taskBox, picker)), msg),
       buttons: [
         { label: 'Cancelar', kind: 'ghost', small: true },
         { label: 'Guardar', kind: 'leaf', small: true, onClick: () => {
-          const v = { date: mode === 'dia' ? date.value : null, weekly: mode === 'semana' ? Number(wday.value) : null, time: time.value, note: note.value.trim() };
+          const v = { date: mode === 'dia' ? date.value : null, weekly: mode === 'semana' ? Number(wday.value) : null, time: time.value, note: note.value.trim(), task: taskList };
           const ok = c ? R.updateClass(c.id, v) : R.addClass(v);
           if (!ok) { msg.textContent = 'Revisa la fecha y la hora, por favor.'; sfx('wrong'); return false; }
           refresh();
@@ -309,6 +359,181 @@ export async function mount(el, params = {}) {
         } },
       ],
     });
+  }
+
+  // ── Primera Comunión: la gran cuenta regresiva ──
+  function comunionCard() {
+    const e = R.nextEvent('comunion');
+    if (!e) return null;
+    const big = e.days === 0 ? '¡Es hoy!' : e.days === 1 ? '¡Es mañana!' : `Faltan ${e.days} días`;
+    return h('div', { class: 'pq-countdown pq-countdown--comunion' },
+      h('p', { class: 'pq-countdown__eyebrow' }, 'Mi Primera Comunión'),
+      h('p', { class: 'pq-countdown__big' }, big),
+      h('p', { class: 'pq-countdown__when' }, `${R.fmtDate(e.start)} · ${R.fmtTime(e.time)}`),
+      e.note ? h('p', { class: 'pq-countdown__note' }, e.note) : null);
+  }
+
+  // ── Fechas especiales (eventos) ──
+  function eventsSection() {
+    const list = R.events();
+    const today = R.isoDate(new Date());
+    const future = list.filter(e => e.date >= today);
+    const past = list.filter(e => e.date < today);
+    const row = e => {
+      const d = R.parseDate(e.date);
+      const k = R.EVENT_KINDS[e.kind];
+      return h('li', { class: `pq-class pq-event pq-event--${e.kind}${e.date < today ? ' is-past' : ''}` },
+        h('span', { class: 'pq-class__cal', 'aria-hidden': 'true' }, h('b', null, k.icon), h('span', null, `${d.getDate()} ${R.fmtDate(d, { weekday: false }).split(' de ')[1].slice(0, 3)}`)),
+        h('div', { class: 'pq-class__body' },
+          h('p', { class: 'pq-class__when' }, e.title || k.title),
+          h('p', { class: 'pq-class__note' }, `${R.fmtDate(d)} · ${R.fmtTime(e.time)}${e.date >= today ? ` · ${countdown(R.parseDate(e.date)).toLowerCase()}` : ''}`),
+          e.note ? h('p', { class: 'pq-class__note' }, e.note) : null,
+          e.bring?.length ? h('p', { class: 'pq-class__note' }, `🎒 Llevar: ${e.bring.join(', ')}`) : null),
+        grown ? h('span', { class: 'pq-mass__tools' },
+          h('button', { type: 'button', class: 'pq-mini', 'aria-label': 'Cambiar esta fecha', onclick: () => { sfx('tap'); eventForm(e); } }, '✏️'),
+          h('button', { type: 'button', class: 'pq-mini', 'aria-label': 'Borrar esta fecha', onclick: async () => {
+            sfx('tap');
+            if (await confirmDialog(`¿Borramos «${e.title || k.title}»?`, { yes: 'Sí, borrar', no: 'No' })) { R.removeEvent(e.id); refresh(); }
+          } }, '🗑️')) : null);
+    };
+    if (!list.length && !grown) return null;
+    return h('section', { class: 'pq-day' },
+      h('h3', { class: 'pq-day__h' }, deco('🌟'), 'Fechas especiales'),
+      future.length ? h('ul', { class: 'pq-classes' }, future.map(row)) : h('p', { class: 'pq-small' }, 'La Primera Comunión, la Primera Confesión, el retiro, los ensayos y las reuniones de padres.'),
+      grown && past.length ? h('ul', { class: 'pq-classes' }, past.map(row)) : null,
+      grown ? button('Agregar una fecha especial', { kind: 'grape', block: true, icon: '🌟', onClick: () => eventForm(null) }) : null);
+  }
+  function eventForm(e) {
+    const kind = h('select', { class: 'pq-input', 'aria-label': '¿Qué es?' }, Object.entries(R.EVENT_KINDS).map(([id, k]) => h('option', { value: id }, `${k.icon} ${k.title}`)));
+    kind.value = e?.kind || (R.nextEvent('comunion') ? 'retiro' : 'comunion');
+    const date = h('input', { class: 'pq-input', type: 'date', value: e?.date || R.isoDate(new Date()), 'aria-label': 'Fecha' });
+    const time = h('input', { class: 'pq-input', type: 'time', value: e?.time || '10:00', 'aria-label': 'Hora' });
+    const title = h('input', { class: 'pq-input', type: 'text', maxlength: '60', value: e?.title || '', autocomplete: 'off', 'aria-label': 'Nombre (opcional)' });
+    const note = h('input', { class: 'pq-input', type: 'text', maxlength: '120', value: e?.note || '', placeholder: 'Lugar o indicaciones (opcional)', autocomplete: 'off', 'aria-label': 'Nota (opcional)' });
+    const bring = h('input', { class: 'pq-input', type: 'text', maxlength: '200', value: (e?.bring || []).join(', '), placeholder: 'Vela, ropa blanca… (separado por comas)', autocomplete: 'off', 'aria-label': 'Qué llevar (opcional)' });
+    const msg = h('p', { class: 'pq-gate__msg', role: 'status' });
+    const paintTitle = () => { title.placeholder = R.EVENT_KINDS[kind.value]?.title || ''; };
+    kind.addEventListener('change', paintTitle); paintTitle();
+    modal({
+      title: e ? 'Cambiar la fecha especial' : 'Nueva fecha especial', icon: '🌟', className: 'pq-modal',
+      body: h('div', { class: 'pq-form' }, field('¿Qué es?', kind), field('Fecha', date), field('Hora', time), field('Nombre (opcional)', title), field('Nota (opcional)', note), field('Qué llevar (opcional)', bring), msg),
+      buttons: [
+        { label: 'Cancelar', kind: 'ghost', small: true },
+        { label: 'Guardar', kind: 'leaf', small: true, onClick: () => {
+          const v = { kind: kind.value, date: date.value, time: time.value, title: title.value, note: note.value, bring: bring.value };
+          const ok = e ? R.updateEvent(e.id, v) : R.addEvent(v);
+          if (!ok) { msg.textContent = 'Revisa la fecha y la hora, por favor.'; sfx('wrong'); return false; }
+          refresh();
+          confirmAviso('¡Fecha guardada! Te avisaremos una semana antes, la víspera y el mismo día.', R.EVENT_KINDS[v.kind]?.icon || '🌟');
+          return true;
+        } },
+      ],
+    });
+  }
+
+  // ── Lo que pide la parroquia (requisitos) ──
+  function requirementsSection() {
+    const list = R.requirements();
+    if (!list.length && !grown) return null;
+    return h('section', { class: 'pq-card' },
+      h('h3', { class: 'pq-card__h' }, deco('📋'), 'Para papás: lo que pide la parroquia'),
+      list.length ? h('ul', { class: 'pq-reqs' }, list.map(r => h('li', { class: r.done ? 'is-done' : '' },
+        h('label', null, h('input', { type: 'checkbox', checked: r.done ? true : null, onchange: ev => { sfx('tap'); R.toggleRequirement(r.id, ev.target.checked); refresh(); } }),
+          h('span', null, r.title, r.deadline ? h('small', null, ` · hasta el ${R.fmtDate(R.parseDate(r.deadline))}`) : null)),
+        grown ? h('button', { type: 'button', class: 'pq-mini', 'aria-label': `Borrar «${r.title}»`, onclick: async () => { if (await confirmDialog(`¿Borramos «${r.title}»?`, { yes: 'Sí, borrar', no: 'No' })) { R.removeRequirement(r.id); refresh(); } } }, '🗑️') : null)))
+        : h('p', { class: 'pq-small' }, 'Anoten aquí los documentos, charlas o aportes que pida la oficina parroquial, para no olvidar ninguno.'),
+      grown ? button('Agregar un requisito', { kind: 'ghost', small: true, icon: '➕', onClick: reqForm }) : null);
+  }
+  function reqForm() {
+    const title = h('input', { class: 'pq-input', type: 'text', maxlength: '80', placeholder: 'Partida de bautismo, charla de padres…', autocomplete: 'off', 'aria-label': 'Qué pide la parroquia' });
+    const dl = h('input', { class: 'pq-input', type: 'date', 'aria-label': 'Fecha límite (opcional)' });
+    const msg = h('p', { class: 'pq-gate__msg', role: 'status' });
+    modal({
+      title: 'Nuevo requisito', icon: '📋', className: 'pq-modal',
+      body: h('div', { class: 'pq-form' }, field('Qué pide la parroquia', title), field('Fecha límite (opcional)', dl), msg),
+      buttons: [{ label: 'Cancelar', kind: 'ghost', small: true }, { label: 'Guardar', kind: 'leaf', small: true, onClick: () => {
+        const r = R.addRequirement({ title: title.value, deadline: dl.value });
+        if (!r) { msg.textContent = 'Escribe qué pide la parroquia.'; sfx('wrong'); return false; }
+        if (r.deadline) R.addEvent({ kind: 'otro', date: r.deadline, time: '09:00', title: `Entregar: ${r.title}`.slice(0, 60) });
+        refresh(); return true;
+      } }],
+    });
+  }
+
+  // ── Código del grupo: compartir con todas las familias o pegar el del catequista ──
+  function groupSection() {
+    const g = R.group();
+    return h('section', { class: 'pq-card pq-card--group' },
+      h('h3', { class: 'pq-card__h' }, deco('💬'), 'Compartir con el grupo'),
+      h('p', { class: 'pq-small' }, g.name ? `Grupo: ${g.name} (versión ${g.version}).` : 'El catequista anota una sola vez los horarios, las fechas y los requisitos, y los envía al grupo de WhatsApp. Cada familia pega el mensaje aquí y le llegan los mismos avisos.'),
+      h('div', { class: 'pq-row' },
+        button('Compartir con mi grupo', { kind: 'sky', small: true, icon: '📤', onClick: shareCode }),
+        button('Pegar el código', { kind: 'ghost', small: true, icon: '📋', onClick: pasteCode })));
+  }
+  function shareCode() {
+    const name = h('input', { class: 'pq-input', type: 'text', maxlength: '60', value: R.group().name, placeholder: 'Sábados 3 p. m., Grupo San Juan…', autocomplete: 'off', 'aria-label': 'Nombre del grupo' });
+    modal({
+      title: 'Compartir con mi grupo', icon: '📤', className: 'pq-modal',
+      body: h('div', { class: 'pq-form' }, h('p', { class: 'pq-small' }, 'Se enviará un mensaje con los horarios de Misa, la catequesis, las fechas especiales y los requisitos que están anotados en este teléfono.'), field('Nombre del grupo (opcional)', name)),
+      buttons: [{ label: 'Cancelar', kind: 'ghost', small: true }, { label: 'Compartir', kind: 'sky', small: true, onClick: () => {
+        const { text } = R.exportCode(name.value);
+        device.shareText(text, 'Horarios de catequesis').then(res => {
+          if (res === 'copied') toast('Copiamos el mensaje: pégalo en el grupo de WhatsApp', { icon: '📋', ms: 3200 });
+          else if (!res) toast('No se pudo compartir', { icon: 'ℹ️' });
+        });
+        refresh(); return true;
+      } }],
+    });
+  }
+  function pasteCode() {
+    const area = h('textarea', { class: 'pq-input pq-paste', rows: '5', placeholder: 'Mantén presionado aquí y elige «Pegar»', 'aria-label': 'Mensaje del catequista' });
+    const msg = h('p', { class: 'pq-gate__msg', role: 'status' });
+    const m = modal({
+      title: 'Pegar el código del catequista', icon: '📋', className: 'pq-modal',
+      body: h('div', { class: 'pq-form' }, h('p', { class: 'pq-small' }, 'Copien el mensaje completo que envió el catequista (con la línea que empieza con «PALOMITA:») y péguenlo aquí.'), area, msg),
+      buttons: [{ label: 'Cancelar', kind: 'ghost', small: true }, { label: 'Revisar', kind: 'sun', small: true, onClick: () => {
+        const r = R.parseCode(area.value);
+        if (!r.ok) { msg.textContent = r.error; sfx('wrong'); return false; }
+        setTimeout(() => confirmImport(r), 0);
+        return true;
+      } }],
+    });
+    setTimeout(() => area.focus({ preventScroll: true }), 80);
+    return m;
+  }
+  async function confirmImport(r) {
+    const s = r.summary;
+    const parts = [s.group ? `Grupo «${s.group}».` : '', s.masses ? `${s.masses} Misas.` : '', s.classes ? `${s.classes} fechas de catequesis.` : '',
+      ...s.events, s.requirements ? `${s.requirements} requisitos.` : ''].filter(Boolean);
+    const ok = await confirmDialog(`Se cargarán: ${parts.join(' ')} Lo que llegó antes del catequista se reemplaza; lo que anotaron ustedes se queda.`, { title: '¿Cargar los datos del grupo?', icon: '💬', yes: 'Sí, cargar', no: 'No' });
+    if (!ok) return;
+    R.importCode(r.data);
+    sfx('sticker');
+    refresh();
+    confirmAviso('¡Listo! Ya tienes los horarios del grupo.', '💬');
+  }
+
+  // ── Costumbres de la parroquia (para que la app enseñe lo mismo que la catequista) ──
+  function customsSection() {
+    const c = R.customs();
+    const box = h('section', { class: 'pq-card' },
+      h('h3', { class: 'pq-card__h' }, deco('⛪'), 'Costumbres de nuestra parroquia'),
+      h('p', { class: 'pq-small' }, 'Elijan cómo se hace aquí y la app lo enseñará igual (si no eligen nada, queda como viene).'));
+    import('../data/oraciones-extra.js').then(m => {
+      if (life.dead) return;
+      const variants = Array.isArray(m.CONTRITION_VARIANTS) ? m.CONTRITION_VARIANTS : [];
+      const sel = (label, value, opts, onChange) => {
+        const s = h('select', { class: 'pq-input', 'aria-label': label }, opts.map(([v, t]) => h('option', { value: v }, t)));
+        s.value = value || '';
+        s.addEventListener('change', () => { sfx('tap'); onChange(s.value); toast('Guardado', { icon: '✅' }); });
+        return field(label, s);
+      };
+      box.append(
+        sel('Acto de contrición que enseñan', c.contrition, [['', 'El de la app («Jesús, mi Señor y Redentor»)'], ...variants.filter(v => v.id !== 'jesus-mi-senor').map(v => [v.id, v.title])], v => R.setCustoms({ contrition: v })),
+        sel('Cómo comulgan los niños', c.communion, [['', 'Explicar las dos formas'], ['boca', 'En la boca'], ['mano', 'En la mano'], ['ambas', 'En la boca o en la mano']], v => R.setCustoms({ communion: v })),
+        sel('Después del «Cordero de Dios»', c.posture, [['', 'Lo que haga la comunidad'], ['rodillas', 'De rodillas'], ['pie', 'De pie']], v => R.setCustoms({ posture: v })));
+    }).catch(() => {});
+    return box;
   }
 
   // ── (4) Avisos ──
@@ -348,7 +573,30 @@ export async function mount(el, params = {}) {
           h('span', { class: 'pq-agenda__what' }, h('b', null, e.title), e.note ? h('span', null, e.note) : null),
           h('span', { class: 'pq-agenda__when' }, h('b', null, countdown(e.start)), h('span', null, `${R.fmtDate(e.start)} · ${R.fmtTime(hhmm(e.start))}`)))))
           : h('p', { class: 'pq-small' }, 'No hay nada anotado para los próximos días. Marca una Misa con 🔔 o anota tu catequesis.')),
+      grown ? feedCard() : R.feedSettings().on ? h('p', { class: 'pq-small pq-note' }, deco('🌐'), ' Los avisos de la parroquia se revisan por internet una vez al día.') : grownButton(),
     ];
+  }
+
+  // ── Tablón de avisos de la parroquia por internet (opcional; apagado al instalar) ──
+  function feedCard() {
+    const f = R.feedSettings();
+    const url = h('input', { class: 'pq-input', type: 'url', inputmode: 'url', value: f.url, placeholder: 'https://…/avisos.json', autocomplete: 'off', 'aria-label': 'Dirección del tablón de avisos' });
+    const sw = h('input', { type: 'checkbox', id: 'pq-feed', class: 'set-switch__input' });
+    sw.checked = f.on;
+    sw.addEventListener('change', async () => {
+      const r = R.setFeed({ url: url.value, on: sw.checked });
+      if (sw.checked && !r.on) { sw.checked = false; toast('Primero escriban una dirección que empiece con https://', { icon: 'ℹ️', ms: 3000 }); return; }
+      if (r.on) { const ok = await R.refreshFeed({ force: true }); toast(ok ? 'Avisos de la parroquia actualizados' : 'No se pudo leer el tablón (¿hay internet?)', { icon: ok ? '🌐' : 'ℹ️' }); }
+      refresh();
+    });
+    return h('section', { class: 'pq-card' },
+      h('h3', { class: 'pq-card__h' }, deco('🌐'), 'Avisos de la parroquia por internet'),
+      h('p', { class: 'pq-small' }, 'Opcional. Si la parroquia publica un tablón de avisos (un archivo en internet), Palomita lo revisa una vez al día al abrirse y muestra los avisos y si hay una versión nueva de la app. Solo se conecta a esa dirección y no envía ningún dato del niño. Está apagado hasta que un grande lo encienda.'),
+      field('Dirección del tablón', url),
+      h('label', { class: 'pq-switch pq-switch--plain', for: 'pq-feed' },
+        h('span', { class: 'pq-switch__text' }, h('b', null, 'Revisar avisos por internet'), h('span', null, f.on ? (f.at ? `Última revisión: ${R.fmtDate(new Date(f.at))}` : 'Encendido') : 'Apagado')),
+        h('span', { class: 'set-switch' }, sw, h('span', { class: 'set-switch__track', 'aria-hidden': 'true' }))),
+      f.on ? button('Revisar ahora', { kind: 'ghost', small: true, icon: '🔄', onClick: async () => { const ok = await R.refreshFeed({ force: true }); toast(ok ? 'Listo' : 'No se pudo leer el tablón', { icon: ok ? '🌐' : 'ℹ️' }); refresh(); } }) : null);
   }
 
   // Al volver del cuadro de permiso del teléfono (o de sus ajustes), la pestaña Avisos se repinta con lo que hay ahora.

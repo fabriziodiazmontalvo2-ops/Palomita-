@@ -168,7 +168,7 @@ export const FAMILY = {
       '¿Qué crees que sintió el papá de la parábola cuando vio volver a su hijo?',
       '¿Qué te gustaría saber de la confesión? ¿Hay algo que te dé nervios?',
     ],
-    do: 'Lean juntos Lucas 15, 11-24, el hijo que vuelve a casa, y conversen sobre el abrazo del padre. Si ustedes se confiesan, cuéntenle cómo se sienten después. Muy importante: nunca le pregunten qué va a confesar ni qué confesó. Eso queda entre él y Dios, y el sacerdote guarda siempre el secreto. Después de su confesión, celébrenlo con un abrazo.',
+    do: 'Lean juntos Lucas 15, 11-24, el hijo que vuelve a casa, y conversen sobre el abrazo del padre. Si ustedes se confiesan, cuéntenle cómo se sienten después. Muy importante: nunca le pregunten qué va a confesar ni qué confesó. Eso queda entre él y Dios, y el sacerdote guarda siempre el secreto. Al salir, celébrenlo con un abrazo.',
     pray: 'Jesús, gracias por tu perdón, que nos devuelve la paz. Ayúdanos a pedirnos perdón en casa y a perdonarnos de corazón, como Tú nos perdonas. Amén.',
   },
 

@@ -7,7 +7,8 @@ import * as state from '../core/state.js';
 import * as tts from '../core/tts.js';
 import { h, clear, button, confirmDialog } from '../core/ui.js';
 import { sfx } from '../core/audio.js';
-import { back } from '../core/router.js';
+import { back, go } from '../core/router.js';
+import * as R from '../core/reminders.js';
 import { arr, txt, deco, smooth, loadData, lifecycle, shell, tabBar, soon, quiz, speakBtn, miniScene } from './catequesis.js';
 
 const TABS = [
@@ -32,7 +33,12 @@ export async function mount(el, params = {}) {
     return { unmount() { life.end(); sh.root.remove(); } };
   }
   const exam = arr(C.exam).filter(g => g && g.id && arr(g.questions).length);
-  const steps = arr(C.steps).filter(s => s && (s.title || s.text));
+  // Si la catequista eligió otro Acto de contrición (Mi parroquia → Costumbres), el ensayo usa ese.
+  let contrition = null;
+  const cc = R.customs().contrition;
+  if (cc && cc !== 'jesus-mi-senor') { try { contrition = arr((await import('../data/oraciones-extra.js')).CONTRITION_VARIANTS).find(v => v.id === cc) || null; } catch { /* sin datos */ } }
+  const steps = arr(C.steps).filter(s => s && (s.title || s.text))
+    .map(st => st.id === 'contricion' && contrition ? { ...st, dialogue: [{ who: 'yo', text: arr(contrition.lines).join(' ') }] } : st);
 
   // Mi lista: solo en memoria.
   let mine = new Set();
@@ -77,6 +83,7 @@ export async function mount(el, params = {}) {
       h('div', { class: 'cf-hug' },
         h('span', { class: 'cf-hug__icon', 'aria-hidden': 'true' }, '💛'),
         h('p', null, 'No tengas miedo: confesarte es recibir un abrazo de Dios. Él te quiere siempre y se alegra cuando vuelves a Él.')),
+      button('¿Tienes dudas? Mira las respuestas', { kind: 'ghost', block: true, icon: '💬', onClick: () => go('dudas') }),
       nextTab('examen', 'Siguiente: mi examen'),
     ];
   }
@@ -132,15 +139,22 @@ export async function mount(el, params = {}) {
     }
 
     const groups = exam.map((g, k) => {
+      // Primero las preguntas básicas (las más importantes para los más pequeños) y un botón para ver todas.
+      const basic = new Set(arr(g.basic).filter(Number.isInteger));
+      const hasBasic = basic.size > 0 && basic.size < arr(g.questions).length;
+      const qBtns = arr(g.questions).map((q, i) => {
+        const key = `${g.id}:${i}`;
+        const b = h('button', { type: 'button', class: 'cf-q', 'aria-pressed': 'false', hidden: hasBasic && !basic.has(i) ? true : null, onclick: () => toggle(g.id, i) },
+          h('span', { class: 'cf-q__text' }, txt(q)),
+          h('span', { class: 'cf-q__pill', 'aria-hidden': 'true' }, h('span', { class: 'cf-q__off' }, 'Esto me pasó'), h('span', { class: 'cf-q__on' }, '✓ En mi lista')));
+        rows.set(key, b);
+        return b;
+      });
+      const more = hasBasic ? h('button', { type: 'button', class: 'cf-more', onclick: () => { sfx('pop'); qBtns.forEach(b => { b.hidden = false; }); more.remove(); } },
+        deco('➕'), `Ver todas las preguntas (${arr(g.questions).length})`) : null;
       const panel = h('div', { class: 'cf-qs', id: `cf-g-${g.id}`, hidden: k !== 0 },
-        arr(g.questions).map((q, i) => {
-          const key = `${g.id}:${i}`;
-          const b = h('button', { type: 'button', class: 'cf-q', 'aria-pressed': 'false', onclick: () => toggle(g.id, i) },
-            h('span', { class: 'cf-q__text' }, txt(q)),
-            h('span', { class: 'cf-q__pill', 'aria-hidden': 'true' }, h('span', { class: 'cf-q__off' }, 'Esto me pasó'), h('span', { class: 'cf-q__on' }, '✓ En mi lista')));
-          rows.set(key, b);
-          return b;
-        }));
+        g.note ? h('p', { class: 'cf-gnote', role: 'note' }, deco('🛡️'), txt(g.note)) : null,
+        qBtns, more);
       const count = h('span', { class: 'cf-group__n', hidden: true });
       counters.set(g.id, count);
       const head = h('button', { type: 'button', class: 'cf-group__head', 'aria-expanded': String(k === 0), 'aria-controls': panel.id, onclick: () => {
@@ -172,9 +186,13 @@ export async function mount(el, params = {}) {
       h('div', { class: 'cf-private', role: 'note' },
         h('span', { class: 'cf-private__icon', 'aria-hidden': 'true' }, '🔒'),
         h('p', null, txt(C.privacy) || PRIVACY)),
+      C.safety ? h('div', { class: 'cf-safety', role: 'note' },
+        h('span', { class: 'cf-safety__icon', 'aria-hidden': 'true' }, '🛡️'),
+        h('div', null, h('p', null, txt(C.safety)), speakBtn(() => txt(C.safety), { compact: true, label: 'Escuchar' }))) : null,
       h('div', { class: 'ct-intro' },
         h('h2', null, 'Mi examen de conciencia'),
-        h('p', null, 'Piensa con calma en tu semana. Si algo te pasó, toca «Esto me pasó» y se guardará en tu lista secreta.')),
+        h('p', null, 'Piensa con calma en tu semana. Si algo te pasó, toca «Esto me pasó» y se guardará en tu lista secreta.'),
+        C.calm ? h('p', { class: 'cf-calm' }, deco('💛'), txt(C.calm)) : null),
       groups,
       listBox,
       nextTab('pasos', 'Siguiente: paso a paso'),
@@ -199,6 +217,7 @@ export async function mount(el, params = {}) {
             h('h2', null, txt(st.title)),
             speakBtn(() => [txt(st.title), txt(st.text)], { compact: true, label: 'Escuchar este paso' })),
           h('p', { class: 'cf-step__text' }, txt(st.text)),
+          st.tip ? h('p', { class: 'fe-tip', role: 'note' }, deco('🛡️'), txt(st.tip)) : null,
           dialogue.length ? rehearsal(dialogue) : null),
         h('div', { class: 'cf-steps__nav' },
           button('Anterior', { kind: 'ghost', small: true, icon: '◀️', attrs: { disabled: stepIdx === 0 ? '' : null }, onClick: () => { stepIdx = Math.max(0, stepIdx - 1); paint(); top(); } }),
