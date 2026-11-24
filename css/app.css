@@ -13,6 +13,9 @@
   --coral-deep: #e2643a;
   --leaf: #6cc070;
   --leaf-deep: #3f9a52;
+  /* Botones verdes con texto blanco: un verde más hondo para que se lea bien (contraste ≥ 4:1) */
+  --leaf-btn: #2f8f48;
+  --leaf-btn-edge: #1f6a34;
   --grape: #9b7be8;
   --grape-deep: #7556c9;
   --rose: #ff9db5;
@@ -54,13 +57,15 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; }
+/* Tamaño de letra elegido en Ajustes (A, A+, A++): todo lo que usa rem crece junto */
+html { font-size: calc(100% * var(--font-k, 1)); }
 body {
   margin: 0;
   background: #2b2440;
   color: var(--ink);
   font-family: var(--font-body);
   font-weight: 700;
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.35;
   overflow: hidden;
   overscroll-behavior: none;
@@ -114,7 +119,9 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; line-height: 1.
 .btn:focus-visible, .icon-btn:focus-visible, .chip:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 .btn[disabled] { filter: grayscale(0.7) opacity(0.6); pointer-events: none; }
 .btn--sun { --btn-bg: var(--sun); --btn-edge: var(--sun-deep); --btn-fg: var(--ink); }
-.btn--leaf { --btn-bg: var(--leaf); --btn-edge: var(--leaf-deep); }
+.btn--leaf { --btn-bg: var(--leaf-btn); --btn-edge: var(--leaf-btn-edge); }
+/* Texto blanco sobre colores: una sombrita oscura ayuda a leerlo al sol o en pantallas de poco brillo */
+.btn:not(.btn--sun):not(.btn--ghost) { text-shadow: 0 1px 0 rgba(30, 20, 40, 0.28), 0 0 3px rgba(30, 20, 40, 0.18); }
 .btn--sky { --btn-bg: var(--sky-deep); --btn-edge: #2f7fb8; }
 .btn--grape { --btn-bg: var(--grape); --btn-edge: var(--grape-deep); }
 .btn--ghost { --btn-bg: var(--white); --btn-edge: var(--paper-edge); --btn-fg: var(--ink); }
@@ -338,7 +345,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; line-height: 1.
 .rw-note { font-size: var(--fs-sm); color: var(--ink-soft); }
 .rw-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .rw-day { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 12px; background: rgba(61, 43, 36, 0.06); }
-.rw-day__n { font-size: 0.62rem; font-weight: 800; color: var(--ink-soft); }
+.rw-day__n { font-size: 0.72rem; font-weight: 800; color: var(--ink-soft); }
 .rw-day__icon { font-size: 1.25rem; }
 .rw-day.is-today { background: var(--sun); }
 .rw-day.is-done { opacity: 0.6; }
@@ -359,7 +366,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; line-height: 1.
 .gm-prize span { filter: grayscale(1) opacity(0.35); }
 .gm-prize.is-on { background: #fff1c9; }
 .gm-prize.is-on span { filter: none; }
-.gm-prize small { font-size: 0.62rem; font-weight: 800; text-align: center; line-height: 1.1; font-family: var(--font-body); }
+.gm-prize small { font-size: 0.72rem; font-weight: 800; text-align: center; line-height: 1.1; font-family: var(--font-body); }
 /* Marcador: nunca en dos renglones, aunque la meta tenga tres cifras */
 .game-hud { flex-wrap: nowrap; }
 .game-hud .chip { white-space: nowrap; flex: none; }

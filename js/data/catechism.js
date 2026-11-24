@@ -559,6 +559,64 @@ export const CATECHISM = [
     ],
   },
 
+  // 9 bis ────────────────────────────────────────
+  // Fuentes: Catecismo 185-197 (los símbolos de la fe).
+  {
+    id: 'credo',
+    title: 'El Credo: lo que creemos',
+    emoji: '🕯️',
+    unit: 'creo',
+    intro: 'Si alguien te preguntara «¿En qué creen los cristianos?», ¿qué le responderías? La Iglesia tiene una oración que lo dice en pocas palabras: el Credo. Resume la fe que los apóstoles recibieron de Jesús y que la Iglesia guarda como un tesoro desde hace dos mil años. ¡Hoy ese tesoro llega a tus manos!',
+    items: [
+      {
+        title: '«Credo» quiere decir «creo»',
+        emoji: '📜',
+        text: 'Se llama así por su primera palabra en latín, «credo», que quiere decir «creo». También se le dice Símbolo de la fe, porque es como una contraseña: al rezarlo, los cristianos de todo el mundo nos reconocemos como una sola familia.',
+      },
+      {
+        title: 'Tres partes: Padre, Hijo y Espíritu Santo',
+        emoji: '✨',
+        text: 'La primera habla de Dios Padre, que creó el cielo y la tierra. La segunda, de Jesucristo, su Hijo, que nació de María, murió y resucitó para salvarnos. La tercera, del Espíritu Santo, que da vida a la Iglesia y nos regala el perdón de los pecados y la vida eterna.',
+      },
+      {
+        title: 'Dos Credos, una misma fe',
+        emoji: '🤝',
+        text: 'El Credo de los Apóstoles es cortito y resume fielmente lo que ellos enseñaron: es el que estás aprendiendo. El niceno-constantinopolitano es más largo; lo escribieron los obispos reunidos en Nicea y en Constantinopla, y lo solemos rezar en la Misa del domingo.',
+      },
+      {
+        title: '¿Cuándo lo rezamos?',
+        emoji: '⛪',
+        text: 'En tu Bautismo, tus papás y padrinos dijeron «Sí, creo», y te bautizaron en esa fe. Los domingos y en las grandes fiestas lo rezamos de pie en la Misa, después de la homilía. ¡Y con él empezamos el Rosario!',
+      },
+      {
+        title: 'Un mapa de tu camino',
+        emoji: '🗺️',
+        text: 'Cada frase del Credo te lleva a un tema de tu camino: «Creador del cielo y de la tierra», a la creación; «nació de santa María Virgen», a María; «resucitó», a la Pascua; «la santa Iglesia católica», a la Iglesia; «la vida eterna», al cielo.',
+      },
+    ],
+    closing: 'El Credo termina con «Amén», que quiere decir «así es, lo creo de corazón». Rézalo despacio, pensando en cada frase. ¡Es la fe de toda la Iglesia, y también es tu fe!',
+    quiz: [
+      {
+        q: '¿Qué quiere decir la palabra «credo»?',
+        options: ['Creo', 'Rezo', 'Canto'],
+        answer: 0,
+        explain: '«Credo» es una palabra latina que quiere decir «creo». Por eso el Credo de los Apóstoles empieza así: «Creo en Dios, Padre todopoderoso».',
+      },
+      {
+        q: '¿En qué momento de la Misa del domingo rezamos el Credo?',
+        options: ['Antes de la Señal de la Cruz', 'Durante la Comunión', 'Después de la homilía'],
+        answer: 2,
+        explain: 'Después de escuchar la Palabra de Dios y la homilía, nos ponemos de pie y decimos juntos el Credo: así respondemos a Dios con nuestra fe.',
+      },
+      {
+        q: '¿De quiénes hablan las tres partes del Credo?',
+        options: ['De tres apóstoles de Jesús', 'Del Padre, del Hijo y del Espíritu Santo', 'De los tres Reyes Magos'],
+        answer: 1,
+        explain: 'La primera parte habla de Dios Padre, que creó todo; la segunda, de Jesús, nuestro Salvador; y la tercera, del Espíritu Santo, la Iglesia y la vida eterna.',
+      },
+    ],
+  },
+
   // ═════════════ CELEBRO · Los sacramentos y la vida de la Iglesia ═════════════
 
   // 10 ───────────────────────────────────────────
@@ -1223,6 +1281,132 @@ export const CATECHISM = [
     ],
   },
 
+  // 19 bis ───────────────────────────────────────
+  // Fuentes: Catecismo 2041-2043; Compendio 431-432; Código de Derecho Canónico, cánones 222, 920, 989, 1246-1247 y 1250-1252.
+  {
+    id: 'mandamientos-iglesia',
+    title: 'Los mandamientos de la Iglesia',
+    emoji: '🖐️',
+    unit: 'vivo',
+    intro: 'Ya conoces los Diez Mandamientos de la ley de Dios. La Iglesia, como una buena madre, nos da además cinco mandamientos, también llamados preceptos. Nos aseguran lo mínimo que necesitamos para rezar con la comunidad, recibir los sacramentos y crecer en el amor a Dios y a los demás. ¡Caben en los dedos de una mano!',
+    items: [
+      {
+        title: '1. Oír Misa entera los domingos y fiestas de guardar',
+        emoji: '⛪',
+        text: '«Oír Misa» es participar con todo el corazón: escuchar, cantar, responder y rezar. «Entera», llegar a tiempo y quedarse hasta el final. Las fiestas de guardar son días muy grandes, como la Navidad, en que también vamos a Misa. Si estás enfermo, Dios lo entiende.',
+      },
+      {
+        title: '2. Confesar los pecados al menos una vez al año',
+        emoji: '🤗',
+        text: 'La Iglesia nos pide confesarnos por lo menos una vez al año. ¡Pero puedes hacerlo muchas veces más! Confesarte a menudo, por ejemplo antes de Navidad o de Pascua, te ayuda a tener el corazón limpio y en paz, y a crecer como amigo de Jesús.',
+      },
+      {
+        title: '3. Comulgar por Pascua de Resurrección',
+        emoji: '🍞',
+        text: 'Quien ya hizo su Primera Comunión debe recibir a Jesús por lo menos una vez al año, en el tiempo de Pascua. ¡Pronto será tu caso! Pero eso es solo lo mínimo: Jesús desea que lo recibas mucho más seguido, cada domingo, si tienes el corazón preparado.',
+      },
+      {
+        title: '4. Ayunar y abstenerse de comer carne cuando lo manda la Santa Madre Iglesia',
+        emoji: '🐟',
+        text: 'Ayunar es hacer una sola comida completa al día; abstenerse, no comer carne. Se hace, por ejemplo, el Miércoles de Ceniza y el Viernes Santo. Los niños no están obligados: la abstinencia empieza a los catorce años, y el ayuno, a los dieciocho. Tú puedes ofrecer pequeños sacrificios por amor.',
+      },
+      {
+        title: '5. Ayudar a la Iglesia en sus necesidades',
+        emoji: '🤲',
+        text: 'La parroquia necesita muchas cosas: cuidar el templo, pagar la luz y el agua, ayudar a los pobres… Cada familia colabora como puede, por ejemplo con la colecta de la Misa. Tú también puedes ayudar con una monedita de tu propina, con tu tiempo y con tus talentos.',
+      },
+    ],
+    closing: 'Los mandamientos de la Iglesia marcan lo mínimo, ¡no el máximo! Quien quiere de verdad a Jesús no se conforma con poquito: lo visita, lo recibe y lo sirve con alegría siempre que puede.',
+    quiz: [
+      {
+        q: '¿Cuántos son los mandamientos de la Iglesia?',
+        options: ['Diez', 'Cinco', 'Siete'],
+        answer: 1,
+        explain: 'Son cinco: oír Misa los domingos y fiestas, confesarse al menos una vez al año, comulgar por Pascua, ayunar y abstenerse cuando lo manda la Iglesia, y ayudarla en sus necesidades.',
+      },
+      {
+        q: '¿Qué nos pide el primer mandamiento de la Iglesia?',
+        options: ['Oír Misa entera los domingos y fiestas de guardar', 'Rezar el Rosario todas las noches', 'Ir a la iglesia solo en Navidad'],
+        answer: 0,
+        explain: 'Cada domingo, día de la Resurrección, y en las fiestas de guardar, la familia de Dios se reúne para celebrar la Misa. ¡Jesús nos espera en su mesa!',
+      },
+      {
+        q: 'Cuando la Iglesia pide ayuno y abstinencia, ¿qué puede hacer un niño?',
+        options: ['No comer nada en todo el día', 'Burlarse de los que ayunan', 'Ofrecer pequeños sacrificios por amor'],
+        answer: 2,
+        explain: 'Los niños no están obligados: la abstinencia empieza a los catorce años, y el ayuno, a los dieciocho. Pero puedes ofrecerle a Jesús pequeños sacrificios, como compartir tu dulce.',
+      },
+    ],
+  },
+
+  // 19 ter ───────────────────────────────────────
+  // Fuentes: Catecismo 1866 (pecados capitales) y 1803-1811 (virtudes); Compendio 398.
+  {
+    id: 'pecados-capitales',
+    title: 'Los pecados capitales y las virtudes',
+    emoji: '🌱',
+    unit: 'vivo',
+    intro: 'Hay siete malas costumbres de las que nacen muchos otros pecados. Se llaman pecados capitales, porque son como la cabeza de donde salen los demás: «capital» viene de una palabra latina que quiere decir «cabeza». Por ejemplo, de la envidia pueden salir chismes, mentiras y peleas. ¡Pero cada uno tiene una virtud que lo vence!',
+    items: [
+      {
+        title: 'Contra la soberbia, humildad',
+        emoji: '🌾',
+        text: 'La soberbia es creerse más que los demás: presumir o no aceptar nunca un error. La humildad reconoce que todo lo bueno es regalo de Dios. Vívela pidiendo perdón cuando te equivocas y sin burlarte de nadie. Jesús dijo: «Aprendan de mí, que soy humilde de corazón» (Mateo 11, 29).',
+      },
+      {
+        title: 'Contra la avaricia, generosidad',
+        emoji: '🎁',
+        text: 'La avaricia es querer tener cada vez más cosas y guardarlas solo para uno. La generosidad abre las manos y el corazón: prestas tus colores, compartes tu lonchera y regalas con gusto lo que ya no usas. «Dios ama al que da con alegría» (2 Corintios 9, 7).',
+      },
+      {
+        title: 'Contra la envidia, caridad',
+        emoji: '🎉',
+        text: 'La envidia es ponerse triste porque a otro le va bien: porque sacó mejor nota o estrenó zapatillas. La caridad, en cambio, se alegra con el bien de los demás. Felicita de corazón a tu amigo y da gracias por lo tuyo: «Alégrense con los que están alegres» (Romanos 12, 15).',
+      },
+      {
+        title: 'Contra la ira, paciencia',
+        emoji: '🐢',
+        text: 'Sentir enojo no es pecado; la ira es dejarse llevar por él hasta gritar, insultar o pegar. La paciencia y la mansedumbre te ayudan a respirar hondo y hablar sin herir. Y que la noche no te encuentre enojado: haz las paces antes de dormir (Efesios 4, 26).',
+      },
+      {
+        title: 'Contra la lujuria, pureza',
+        emoji: '🤍',
+        text: 'La pureza, o castidad, te ayuda a cuidar tu cuerpo como un regalo de Dios, a mirar a todos con respeto y a tener limpio el corazón. Lo contrario es la lujuria, que no respeta ese regalo. Si en la tele o en el celular aparece algo que no es para niños, apágalo y cuéntaselo a tus papás.',
+      },
+      {
+        title: 'Contra la gula, templanza',
+        emoji: '🍎',
+        text: 'La gula es comer o beber más de lo necesario, como llenarse de golosinas hasta empacharse. La templanza te ayuda a disfrutar con medida de lo bueno, también de los juegos. Sírvete lo justo, no te quejes de la comida y da gracias a Dios por cada plato.',
+      },
+      {
+        title: 'Contra la pereza, diligencia',
+        emoji: '🐜',
+        text: 'La pereza es la flojera que nos hace dejar para después lo que toca hacer: las tareas, ayudar en casa o rezar. La diligencia es hacerlo con ganas y a tiempo: ¡primero el deber y después el juego! «Mira a la hormiga, perezoso, y aprende de ella» (Proverbios 6, 6).',
+      },
+    ],
+    closing: 'Nadie se vuelve humilde o paciente de un día para otro. Con la ayuda de Jesús, las virtudes crecen en ti como una plantita. Y si te caes, no te desanimes: Él te levanta con su perdón.',
+    quiz: [
+      {
+        q: '¿Por qué se llaman «capitales» estos siete pecados?',
+        options: ['Porque solo se cometen en la capital', 'Porque son los pecados más pequeñitos', 'Porque de ellos, como de una cabeza, salen otros'],
+        answer: 2,
+        explain: '«Capital» viene de una palabra latina que quiere decir «cabeza». De estos siete pecados, como de una cabeza, nacen muchos otros.',
+      },
+      {
+        q: 'Tu amigo sacó la mejor nota de la clase. ¿Cómo vences la envidia?',
+        options: ['Alegrándote con él y felicitándolo', 'Diciendo que hizo trampa', 'Dejando de hablarle'],
+        answer: 0,
+        explain: 'La caridad se alegra con lo bueno de los demás. San Pablo nos dice: «Alégrense con los que están alegres» (Romanos 12, 15).',
+      },
+      {
+        q: 'Tu hermanito rompió tu dibujo y te da mucha rabia. ¿Qué es lo mejor?',
+        options: ['Romperle algo suyo', 'Calmarte y hablarle sin gritar', 'No hablarle nunca más'],
+        answer: 1,
+        explain: 'Sentir enojo no es pecado; lo malo es dejarse llevar por él. La paciencia te ayuda a calmarte, decir lo que sientes sin herir y hacer las paces.',
+      },
+    ],
+  },
+
   // 20 ───────────────────────────────────────────
   {
     id: 'amor',
@@ -1710,6 +1894,64 @@ export const CATECHISM = [
         options: ['Solo pan para el desayuno', 'Dulces y juguetes nuevos', 'Lo que necesitamos para vivir y la Eucaristía'],
         answer: 2,
         explain: 'Pedimos alimento, casa, salud y todo lo necesario, y también el Pan de Vida, Jesús en la Eucaristía. ¡Y nos comprometemos a compartir!',
+      },
+    ],
+  },
+
+  // 27 ───────────────────────────────────────────
+  // Fuentes: Catecismo 971 y 2678; carta Rosarium Virginis Mariae, 19-38 (los misterios y sus días).
+  {
+    id: 'rosario',
+    title: 'El Santo Rosario',
+    emoji: '📿',
+    unit: 'rezo',
+    intro: '¿Has visto a tu abuelita rezar pasando unas cuentas entre sus dedos? Es el Rosario, una oración sencilla y muy grande. En ella rezamos junto a la Virgen María mientras recordamos la vida de Jesús. ¡Es como recorrer el Evangelio de la mano de nuestra Madre!',
+    items: [
+      {
+        title: 'Una corona de rosas para María',
+        emoji: '🌹',
+        text: 'El nombre «rosario» viene de «rosa»: es como una corona de rosas para la Virgen, y cada Ave María es una de esas rosas. Pero no es solo repetir: mientras rezamos, miramos con María la vida de Jesús. Cada momento que recordamos se llama misterio.',
+      },
+      {
+        title: '¿Cómo se reza?',
+        emoji: '📿',
+        text: 'Haz la Señal de la Cruz. Con la cruz del rosario en la mano, reza el Credo, y en las primeras cuentas, un Padre Nuestro, tres Avemarías y un Gloria. Después se anuncian cinco misterios, y en cada uno se reza un denario: un Padre Nuestro, diez Avemarías y un Gloria. Al final, la Salve.',
+      },
+      {
+        title: 'Misterios gozosos y luminosos',
+        emoji: '⭐',
+        text: 'Los gozosos, los lunes y sábados, celebran la llegada de Jesús y su infancia, desde el anuncio del ángel a María. Los luminosos, los jueves, nos muestran a Jesús, luz del mundo, desde su Bautismo en el Jordán hasta la Última Cena.',
+      },
+      {
+        title: 'Misterios dolorosos y gloriosos',
+        emoji: '✝️',
+        text: 'Los dolorosos, los martes y viernes, recuerdan la pasión de Jesús y su muerte en la cruz. Los gloriosos, los miércoles y domingos, celebran que resucitó y subió al cielo, que envió al Espíritu Santo y que María fue llevada al cielo y coronada como Reina.',
+      },
+      {
+        title: 'Una oración para rezar en familia',
+        emoji: '🏠',
+        text: 'En el Perú, muchas familias rezan juntas el Rosario, sobre todo en mayo, el mes de María, y en octubre, el mes del Rosario. Si hay poco tiempo, pueden rezar un solo misterio, es decir, un denario. San Juan Macías, santo del Perú, lo rezaba cada día.',
+      },
+    ],
+    closing: 'Ten un rosario en tu cuarto o en tu mochila. Cuando lo reces, no corras: imagina cada misterio y cuéntale a María lo que llevas en el corazón. ¡La familia que reza unida permanece unida!',
+    quiz: [
+      {
+        q: '¿Cuántas Avemarías se rezan en cada misterio del Rosario?',
+        options: ['Tres', 'Diez', 'Cincuenta'],
+        answer: 1,
+        explain: 'En cada misterio se reza un Padre Nuestro, diez Avemarías y un Gloria. Por eso se le llama denario, palabra que viene de «diez».',
+      },
+      {
+        q: '¿Qué misterios rezamos los domingos, día de la Resurrección?',
+        options: ['Los dolorosos', 'Los luminosos', 'Los gloriosos'],
+        answer: 2,
+        explain: 'Los domingos y los miércoles rezamos los misterios gloriosos: celebramos que Jesús resucitó, subió al cielo y nos envió al Espíritu Santo.',
+      },
+      {
+        q: '¿Qué hacemos mientras rezamos las Avemarías del Rosario?',
+        options: ['Recordamos con María la vida de Jesús', 'Contamos rápido para terminar pronto', 'Pensamos en otras cosas'],
+        answer: 0,
+        explain: 'Cada misterio es un momento de la vida de Jesús. Lo miramos con los ojos de María, que guardaba todo en su corazón (Lucas 2, 19).',
       },
     ],
   },

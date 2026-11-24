@@ -13,6 +13,7 @@ import { music } from '../core/audio.js';
 import { dailyGiftDue, showDailyGift, showChest, takeLevelUps } from '../core/rewards.js';
 import * as reminders from '../core/reminders.js';
 import * as stickers from '../core/stickers.js';
+import { grownGate } from '../core/grown.js';
 
 const ROOMS = [
   { id: 'sala', icon: '🏠', name: 'Nido' },
@@ -346,8 +347,13 @@ export async function mount(el, params = {}) {
     } else if (L.state !== 'off' && !L.paused) L.pause();
     if (state.get().sleeping && (L.state !== 'off' || L.busy)) L.stop();
   }
-  function toggleListen() {
+  async function toggleListen() {
     const on = !wantsListen();
+    // La primera vez que se enciende el micrófono lo decide un grande.
+    if (on && !state.flag('micOk')) {
+      if (!(await grownGate({ reason: 'Para que la palomita use el micrófono y repita lo que el niño dice.' }))) return;
+      state.setFlag('micOk');
+    }
     state.setSetting('listen', on);
     if (on && state.get().sleeping) toast('Cuando despierte te escucho 👂', { icon: '😴' });
     else if (on) say('¡Háblame y te repito! 👂', 3000);
@@ -362,7 +368,15 @@ export async function mount(el, params = {}) {
       body: [h('p', { style: { textAlign: 'center' } }, `Si me hablas, ${state.get().name} te repite con su vocecita.`),
         h('p', { class: 'home-prayer__note' }, 'Para eso necesito el micrófono. Lo que digas no se guarda ni se envía a ningún lado. Puedes apagarlo cuando quieras tocando la orejita 👂.')],
       buttons: [{ label: 'Ahora no', kind: 'ghost', small: true, onClick: () => { state.setSetting('listen', false); paintEar(); } },
-        { label: '¡Sí, repíteme!', kind: 'leaf', icon: '🎤', onClick: () => { state.setSetting('listen', true); paintEar(); setTimeout(syncListen, 50); } }] });
+        { label: '¡Sí, repíteme!', kind: 'leaf', icon: '🎤', onClick: () => {
+          setTimeout(async () => {
+            if (!state.flag('micOk')) {
+              if (!(await grownGate({ reason: 'Para que la palomita use el micrófono y repita lo que el niño dice.' }))) { state.setSetting('listen', false); paintEar(); return; }
+              state.setFlag('micOk');
+            }
+            state.setSetting('listen', true); paintEar(); setTimeout(syncListen, 50);
+          }, 0);
+        } }] });
   }
 
   // ── Regalo diario y celebraciones de nivel ──

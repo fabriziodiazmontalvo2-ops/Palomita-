@@ -44,7 +44,7 @@
 .ct-tab { appearance: none; border: 0; cursor: pointer; position: relative; min-height: 56px; padding: 6px 2px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   background: rgba(255, 255, 255, 0.5); color: var(--ink); border-radius: 16px 16px 0 0; transform: translateY(6px); transition: background 0.15s, transform 0.15s; }
 .ct-tab__icon { font-size: 1.4rem; line-height: 1.1; }
-.ct-tab__label { font-family: var(--font-display); font-weight: 800; font-size: 0.74rem; line-height: 1; text-align: center; }
+.ct-tab__label { font-family: var(--font-display); font-weight: 800; font-size: min(0.8rem, 14px); line-height: 1; text-align: center; }
 .ct-tab__n { position: absolute; top: 4px; left: 6px; width: 18px; height: 18px; border-radius: 50%; background: rgba(61, 43, 36, 0.12); font-family: var(--font-display); font-weight: 800; font-size: 0.7rem;
   display: flex; align-items: center; justify-content: center; }
 .ct-tab[aria-selected="true"] { background: var(--paper); transform: none; }
@@ -358,7 +358,7 @@
 .ms-jump__btn { appearance: none; border: 0; cursor: pointer; min-height: 60px; padding: 6px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   border-radius: 14px; background: var(--gb); color: var(--ink); box-shadow: 0 3px 0 var(--gc); box-shadow: 0 3px 0 color-mix(in srgb, var(--gc) 45%, white); }
 .ms-jump__icon { font-size: 1.35rem; line-height: 1; }
-.ms-jump__label { font-family: var(--font-display); font-weight: 800; font-size: 0.66rem; line-height: 1.05; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.ms-jump__label { font-family: var(--font-display); font-weight: 800; font-size: min(0.74rem, 13px); line-height: 1.05; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .ms-group { display: flex; flex-direction: column; gap: 10px; scroll-margin-top: 8px; }
 .ms-group__head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--r-md); background: var(--gb); border-left: 6px solid var(--gc); }
 .ms-group__icon { font-size: 1.9rem; flex: none; }
@@ -450,7 +450,7 @@
   background: var(--white); border-radius: var(--r-md); box-shadow: 0 4px 0 var(--paper-edge); }
 .rt-level__icon { font-size: 1.7rem; line-height: 1.1; }
 .rt-level__name { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-md); }
-.rt-level__sub { font-size: 0.7rem; font-weight: 800; color: var(--ink-soft); line-height: 1.1; }
+.rt-level__sub { font-size: 0.78rem; font-weight: 800; color: var(--ink-soft); line-height: 1.1; }
 .rt-level[aria-checked="true"] { background: #e3f3ff; box-shadow: 0 4px 0 var(--sky-deep), inset 0 0 0 3px var(--sky-deep); }
 .rt-hud { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .rt-hud__n { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-md); font-variant-numeric: tabular-nums; }

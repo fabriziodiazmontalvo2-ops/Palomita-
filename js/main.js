@@ -6,6 +6,8 @@ import { fitApp, toast } from './core/ui.js';
 import { register, go, back, setHome, current, screenBack } from './core/router.js';
 import { startGame, isRunning, handleBack } from './games/engine.js';
 import { queueLevelUp } from './core/rewards.js';
+import { applyFont } from './core/device.js';
+import * as profiles from './core/profiles.js';
 
 register('home', () => import('./screens/home.js'));
 register('welcome', () => import('./screens/welcome.js'));
@@ -21,6 +23,8 @@ register('misa', () => import('./screens/misa.js'));
 register('reto', () => import('./screens/reto.js'));
 register('parroquia', () => import('./screens/parroquia.js'));
 register('figuritas', () => import('./screens/figuritas.js'));
+register('grandes', () => import('./screens/grandes.js'));
+register('perfiles', () => import('./screens/perfiles.js'));
 setHome('home');
 
 const TICK_SECONDS = 5;
@@ -50,6 +54,7 @@ function androidBack() {
 }
 
 async function boot() {
+  applyFont();
   fitApp();
   window.addEventListener('resize', fitApp);
   window.addEventListener('orientationchange', () => setTimeout(fitApp, 250));
@@ -83,7 +88,9 @@ async function boot() {
   // Espera breve a las tipografías para que nada "salte" al aparecer.
   try { await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]); } catch { /* sigue */ }
 
-  await go(state.flag('onboarded') ? 'home' : 'welcome');
+  // Con varios niños en el teléfono, primero se elige quién juega (una vez por apertura de la app).
+  const first = !state.flag('onboarded') ? 'welcome' : profiles.count() > 1 && !profiles.picked() ? 'perfiles' : 'home';
+  await go(first);
   window.__ready = true;
 
   // Sin conexión: solo cuando la app está publicada en un sitio https (no en pruebas locales ni dentro de visores).

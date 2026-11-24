@@ -41,7 +41,7 @@
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 6px 4px; text-align: center; }
 .fg-slot__hint { font-size: 1.9rem; line-height: 1; opacity: 0.3; filter: grayscale(1); }
 .fg-slot__n { font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; line-height: 1; color: rgba(61, 43, 36, 0.5); }
-.fg-slot__t { font-size: 0.66rem; font-weight: 800; line-height: 1.1; color: rgba(61, 43, 36, 0.55); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.fg-slot__t { font-size: min(0.74rem, 13px); font-weight: 800; line-height: 1.1; color: rgba(61, 43, 36, 0.55); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .fg-slot.is-owned { border: 0; background: none; padding: 0; }
 .fg-slot.is-owned:nth-child(3n + 1) .fg-st { --tilt: -1.4deg; }
 .fg-slot.is-owned:nth-child(3n + 3) .fg-st { --tilt: 1.2deg; }
@@ -79,7 +79,7 @@ button.fg-st:focus-visible, .fg-card:focus-visible, .fg-dot:focus-visible, .fg-a
 .fg-prize { aspect-ratio: 3 / 4; border-radius: 12px; border: 2.5px dashed rgba(240, 165, 30, 0.7); background: rgba(255, 249, 225, 0.75); display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 4px; padding: 6px; text-align: center; }
 .fg-prize__icon { font-size: 1.8rem; line-height: 1; }
-.fg-prize__text { font-family: var(--font-display); font-weight: 800; font-size: 0.72rem; line-height: 1.15; color: var(--ink); }
+.fg-prize__text { font-family: var(--font-display); font-weight: 800; font-size: 0.8rem; line-height: 1.15; color: var(--ink); }
 .fg-prize.is-done { border-style: solid; border-color: var(--sun-deep); background: linear-gradient(160deg, #fff4c4, #ffd77a); box-shadow: 0 0 14px rgba(255, 201, 74, 0.6); }
 .fg-prize.is-done .fg-prize__icon { animation: bob 2s ease-in-out infinite; }
 

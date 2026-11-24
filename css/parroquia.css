@@ -105,7 +105,7 @@
 .pq-mini { appearance: none; border: 0; cursor: pointer; width: 40px; height: 40px; border-radius: 12px; background: #f6efe4; font-size: 1.05rem; display: inline-flex; align-items: center; justify-content: center; }
 .pq-mini:active { transform: translateY(2px); }
 .pq-bell { appearance: none; border: 0; cursor: pointer; flex: none; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-  min-width: 64px; min-height: 52px; padding: 4px 6px; border-radius: 14px; background: #f3eee6; font-family: var(--font-display); font-weight: 800; font-size: 0.72rem; line-height: 1; }
+  min-width: 64px; min-height: 52px; padding: 4px 6px; border-radius: 14px; background: #f3eee6; font-family: var(--font-display); font-weight: 800; font-size: min(0.8rem, 14px); line-height: 1; }
 .pq-bell > span[aria-hidden] { font-size: 1.35rem; line-height: 1.1; }
 .pq-bell[aria-pressed="true"] { background: linear-gradient(180deg, #ffe08a, #ffc94a); box-shadow: 0 3px 0 var(--sun-deep); }
 .pq-bell[aria-pressed="true"] > span[aria-hidden] { animation: pq-ring 0.6s ease-in-out 1; transform-origin: 50% 10%; }
@@ -141,7 +141,7 @@
 .pq-class__cal { flex: none; width: 56px; height: 60px; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: linear-gradient(180deg, var(--coral) 0 18px, var(--white) 18px); box-shadow: inset 0 0 0 2px #ffd9cc; }
 .pq-class__cal b { font-family: var(--font-display); font-weight: 800; font-size: 1.45rem; line-height: 1; margin-top: 16px; }
-.pq-class__cal span { font-family: var(--font-display); font-weight: 800; font-size: 0.7rem; text-transform: uppercase; color: var(--ink-soft); }
+.pq-class__cal span { font-family: var(--font-display); font-weight: 800; font-size: 0.76rem; text-transform: uppercase; color: var(--ink-soft); }
 .pq-class__body { flex: 1; min-width: 0; }
 .pq-class__when { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-md); line-height: 1.15; }
 .pq-class__note { font-size: var(--fs-sm); color: var(--ink-soft); overflow-wrap: anywhere; }

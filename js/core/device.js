@@ -149,3 +149,23 @@ export function openFile() {
     input.click();
   });
 }
+
+// ── Tamaño de letra de la app (Ajustes: A, A+, A++). Es del teléfono, no de cada niño. ──
+const DKEY = 'palomita.device.v1';
+export const FONT_STEPS = [1, 1.12, 1.25];
+function readDevice() { try { return JSON.parse(localStorage.getItem(DKEY) || 'null') || {}; } catch { return {}; } }
+export function fontStep() {
+  const d = readDevice();
+  if (Number.isInteger(d.font) && d.font >= 0 && d.font < FONT_STEPS.length) return d.font;
+  // Primera vez en Android: se propone el tamaño que el teléfono ya usa.
+  const sys = systemFontScale();
+  return sys && sys >= 1.22 ? 2 : sys && sys >= 1.1 ? 1 : 0;
+}
+export function setFontStep(i) {
+  const k = Math.max(0, Math.min(FONT_STEPS.length - 1, i | 0));
+  try { localStorage.setItem(DKEY, JSON.stringify({ ...readDevice(), font: k })); } catch { /* nada */ }
+  applyFont();
+}
+export function applyFont() {
+  try { document.documentElement.style.setProperty('--font-k', String(FONT_STEPS[fontStep()])); } catch { /* nada */ }
+}

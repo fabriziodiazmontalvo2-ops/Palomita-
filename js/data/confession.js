@@ -11,11 +11,22 @@
 // «Ave María Purísima» / «Sin pecado concebida» (costumbre), el Acto de contrición, la absolución y la
 // despedida («Da gracias al Señor porque es bueno» / «El Señor ha perdonado tus pecados. Vete en paz»).
 //
+// Protección de menores: `safety`, la `note` del grupo 'yo' y el `tip` del paso 'pecados' dicen lo mismo con
+// distintas palabras: lo que otra persona le hizo al niño (hacerle daño, tocarlo de una forma que no le gustó,
+// hacerle ver o hacer algo malo) no es pecado del niño, no es su culpa y no va en su lista; tiene que contárselo
+// a sus papás o a otro adulto de confianza y, si no le creen, a otro, hasta que alguien lo ayude.
+// Si se cambian estos textos, que no se pierda ninguna de esas ideas. `calm` va contra los escrúpulos.
+//
 // Forma: CONFESSION = {
 //   intro: { title, paragraphs: [2–4] },
 //   privacy,                                        // aviso: lo marcado en el examen no se guarda
-//   exam: [{ id, title, emoji, questions: [...] }],  // dios | casa | colegio | amigos | yo
-//   steps: [{ id, title, emoji, text, dialogue?: [{ who: 'sacerdote' | 'yo', text }] }],
+//   safety,                                         // protección (3 frases): fijo arriba del examen, con botón de voz
+//   calm,                                           // contra los escrúpulos (2 frases): arriba del examen
+//   exam: [{ id, title, emoji, basic: [i, j], note?, questions: [...] }],  // dios | casa | colegio | amigos | yo
+//     basic: índices (en questions) de 1 o 2 preguntas básicas: un niño de 7 años ve primero solo esas
+//     note:  frase corta que se muestra dentro del grupo (solo en 'yo': recuerda lo de safety)
+//   steps: [{ id, title, emoji, text, tip?, dialogue?: [{ who: 'sacerdote' | 'yo', text }] }],
+//     tip:   consejo corto del paso (solo en 'pecados': se confiesa lo que uno hizo, no lo que le hicieron)
 //   quiz: [{ q, options: [3], answer, explain }],
 // }
 
@@ -32,12 +43,19 @@ export const CONFESSION = {
 
   privacy: 'Lo que marques en tu examen de conciencia es solo entre tú y Dios. No se guarda, no se envía a nadie y se borra apenas sales de esta pantalla.',
 
+  // Protección: va fijo arriba del examen de conciencia, con botón de voz.
+  safety: 'Si alguien, sea quien sea, te hizo daño, te tocó de una forma que no te gustó o te hizo ver o hacer algo malo, eso no es pecado tuyo: no es tu culpa y no tienes que ponerlo en tu lista. Cuéntaselo a tus papás o a otro adulto de confianza, como tu catequista o tu profesora, aunque te hayan dicho que no lo cuentes. Si no te creen, cuéntaselo a otro, y a otro, hasta que alguien te ayude: Jesús te quiere mucho y quiere que estés a salvo.',
+
+  // Calma: contra los escrúpulos, también arriba del examen.
+  calm: 'No tienes que marcar todas las preguntas: marca solo lo que de verdad te pasó. Lo que hiciste sin querer, o sin saber que estaba mal, no es pecado; y Dios mira tu corazón y se alegra mucho de que vengas.',
+
   // ───────────── Examen de conciencia ─────────────
   exam: [
     {
       id: 'dios',
       title: 'Con Dios',
       emoji: '🙏',
+      basic: [0, 3],
       questions: [
         '¿Dejé de rezar por flojera, en la mañana o en la noche?',
         '¿Dejé pasar el día sin darle gracias a Dios por lo bueno que me da?',
@@ -53,6 +71,7 @@ export const CONFESSION = {
       id: 'casa',
       title: 'En mi casa',
       emoji: '🏠',
+      basic: [0, 4],
       questions: [
         '¿Desobedecí a mis papás o a quienes me cuidan, o les hice caso renegando?',
         '¿Les contesté mal o les falté el respeto a mis papás, a mis abuelos o a otros mayores?',
@@ -68,6 +87,7 @@ export const CONFESSION = {
       id: 'colegio',
       title: 'En el colegio',
       emoji: '🎒',
+      basic: [4, 6],
       questions: [
         '¿Me dio flojera hacer mis tareas y no me esforcé?',
         '¿Desobedecí a mis profesores o les falté el respeto?',
@@ -83,6 +103,7 @@ export const CONFESSION = {
       id: 'amigos',
       title: 'Con mis amigos',
       emoji: '🤝',
+      basic: [2, 3],
       questions: [
         '¿Solo pensé en mí y no en lo que necesitaban mis amigos?',
         '¿Tuve envidia de mis amigos por sus cosas o porque les iba bien?',
@@ -98,6 +119,8 @@ export const CONFESSION = {
       id: 'yo',
       title: 'Conmigo mismo',
       emoji: '💛',
+      basic: [5, 6],
+      note: 'Recuerda: si alguien te hizo daño o te tocó de una forma que no te gustó, no es tu culpa y no va en tu lista; cuéntaselo a un adulto de confianza.',
       questions: [
         '¿Dejé de cuidar mi cuerpo o no respeté el cuerpo de los demás?',
         '¿Miré o escuché cosas que no eran buenas?',
@@ -156,6 +179,7 @@ export const CONFESSION = {
       title: 'Cuenta tus pecados con sencillez',
       emoji: '🗣️',
       text: 'Dile tus pecados con tus propias palabras, con sencillez y sin esconder nada. No hace falta contar detalles ni echarles la culpa a otros: solo lo que hiciste tú. Puedes empezar diciendo «Me acuso de…». Si no sabes cómo decir algo, el sacerdote te ayuda con cariño. Al terminar, avísale que ya acabaste.',
+      tip: 'Solo confiesas lo que hiciste tú, no lo que otros te hicieron. Si alguien te hizo daño, no es tu culpa: cuéntaselo a un adulto de confianza.',
       dialogue: [
         { who: 'yo', text: 'Me acuso de que desobedecí a mi mamá, de que dije una mentira y de que peleé con mi hermano.' },
         { who: 'yo', text: 'Esos son mis pecados. Me arrepiento de ellos y también de los que no recuerdo.' },

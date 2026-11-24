@@ -9,7 +9,7 @@
 .bb-tab { appearance: none; border: 0; cursor: pointer; min-height: 56px; padding: 6px 2px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   background: rgba(255, 255, 255, 0.5); color: var(--ink); border-radius: 16px 16px 0 0; transition: background 0.15s, transform 0.15s; transform: translateY(6px); }
 .bb-tab__icon { font-size: 1.45rem; line-height: 1.1; }
-.bb-tab__label { font-family: var(--font-display); font-weight: 800; font-size: 0.72rem; line-height: 1; }
+.bb-tab__label { font-family: var(--font-display); font-weight: 800; font-size: min(0.8rem, 14px); line-height: 1; }
 .bb-tab[aria-selected="true"] { background: var(--paper); transform: none; }
 .bb-tab:focus-visible, .bb-card:focus-visible, .bb-item:focus-visible, .bb-feature:focus-visible, .bb-opt:focus-visible, .bb-step__btn:focus-visible, .bb-theme__head:focus-visible,
 .bb-heart:focus-visible, .bb-nav__btn:focus-visible, .bb-font__btn:focus-visible, .bb-line:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }

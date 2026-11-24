@@ -33,7 +33,7 @@
   background: rgba(255, 255, 255, 0.94); border-radius: 20px; box-shadow: 0 4px 0 var(--paper-edge), 0 8px 14px var(--shade); transition: transform 0.08s; }
 .home-side:active { transform: translateY(3px); }
 .home-side__icon { font-size: 1.7rem; line-height: 1.1; }
-.home-side__label { font-family: var(--font-display); font-weight: 800; font-size: 0.74rem; line-height: 1; color: var(--ink); }
+.home-side__label { font-family: var(--font-display); font-weight: 800; font-size: min(0.78rem, 13.5px); line-height: 1; color: var(--ink); }
 .home-side--verse.is-new::after { content: ""; position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; border-radius: 50%; background: var(--coral); border: 2px solid var(--white); animation: pulse 1s infinite; }
 
 /* Globito de diálogo */
@@ -72,7 +72,7 @@
   background: rgba(255, 255, 255, 0.92); border-radius: 18px; box-shadow: 0 4px 0 var(--paper-edge), 0 8px 14px var(--shade); transition: transform 0.08s, background 0.15s; }
 .home-tab:active { transform: translateY(3px); }
 .home-tab__icon { font-size: 1.55rem; line-height: 1.1; }
-.home-tab__label { font-family: var(--font-display); font-weight: 800; font-size: 0.74rem; line-height: 1; color: var(--ink); }
+.home-tab__label { font-family: var(--font-display); font-weight: 800; font-size: min(0.8rem, 14px); line-height: 1; color: var(--ink); }
 .home-tab.is-on { background: var(--coral); box-shadow: 0 4px 0 var(--coral-deep), 0 8px 14px var(--shade); }
 .home-tab.is-on .home-tab__label { color: var(--white); }
 
@@ -98,7 +98,7 @@
 
 /* Nombre + etapa de crecimiento */
 .home-level__row { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
-.home-level__stage { font-size: 0.66rem; font-weight: 800; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-level__stage { font-size: min(0.74rem, 13px); font-weight: 800; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Orejita: la palomita está escuchando */
 .home-ear { appearance: none; border: 0; cursor: pointer; pointer-events: auto; flex: none;
   width: 48px; height: 48px; border-radius: 50%; font-size: 1.4rem; background: rgba(255, 255, 255, 0.85); box-shadow: 0 3px 0 var(--paper-edge); opacity: 0.75; }
@@ -151,7 +151,7 @@
 .home__side-col { gap: 8px; }
 .home-side { padding: 5px 2px 4px; }
 .home-side__icon { font-size: 1.55rem; }
-@media (max-height: 680px) { .home__side-col { gap: 6px; } .home-side__icon { font-size: 1.3rem; } .home-side__label { font-size: 0.68rem; } }
+@media (max-height: 680px) { .home__side-col { gap: 6px; } .home-side__icon { font-size: 1.3rem; } .home-side__label { font-size: min(0.72rem, 12.5px); } }
 
 /* Aviso de Misa / catequesis (entre las dos columnas) */
 .home__aviso { position: absolute; top: 12px; left: calc(var(--gutter-l) + 72px); right: calc(var(--gutter-r) + 72px); display: flex; justify-content: center; pointer-events: none; }

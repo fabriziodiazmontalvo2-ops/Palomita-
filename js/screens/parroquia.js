@@ -9,6 +9,7 @@ import { sfx } from '../core/audio.js';
 import { back } from '../core/router.js';
 import * as tts from '../core/tts.js';
 import * as R from '../core/reminders.js';
+import { grownGate as sharedGate, lock as lockGrown } from '../core/grown.js';
 import { PARISH, ABOUT, SOCIAL, DAYS } from '../data/parroquia.js';
 import { txt, deco, smooth, lifecycle, shell, tabBar, speakBtn } from './catequesis.js';
 
@@ -94,32 +95,12 @@ export async function mount(el, params = {}) {
   }
   const goTab = (id, label, icon) => button(label, { kind: 'sun', block: true, icon, sound: 'pop', onClick: () => { show(id); tabs.button(id)?.focus({ preventScroll: true }); } });
 
-  // ── Pregunta para grandes (para anotar horarios y fechas) ──
-  function grownGate() {
-    if (grown) return Promise.resolve(true);
-    return new Promise(resolve => {
-      let a, b;
-      const q = h('p', { class: 'pq-gate__q' });
-      const input = h('input', { class: 'pq-input pq-gate__in', type: 'text', inputmode: 'numeric', pattern: '[0-9]*', maxlength: '4', autocomplete: 'off', 'aria-label': 'Respuesta' });
-      const msg = h('p', { class: 'pq-gate__msg', role: 'status', 'aria-live': 'polite' });
-      const ask = () => { a = 12 + Math.floor(Math.random() * 8); b = 3 + Math.floor(Math.random() * 7); q.textContent = `¿Cuánto es ${a} × ${b}?`; input.value = ''; };
-      ask();
-      let ok = false;
-      const m = modal({
-        title: 'Solo para grandes', icon: '🧑‍🏫', className: 'pq-modal',
-        body: [h('p', { class: 'pq-gate__lead' }, 'Los horarios los anota papá, mamá o el catequista.'), q, input, msg],
-        buttons: [
-          { label: 'Cancelar', kind: 'ghost', small: true },
-          { label: 'Entrar', kind: 'sun', small: true, onClick: () => {
-            if (Number(input.value.trim()) === a * b) { ok = true; grown = true; return true; }
-            sfx('wrong'); msg.textContent = 'Esa no es. Prueba con esta otra.'; ask(); input.focus(); return false;
-          } },
-        ],
-      });
-      input.addEventListener('keydown', e => { if (e.key === 'Enter') m.el.querySelector('.btn--sun')?.click(); });
-      setTimeout(() => input.focus({ preventScroll: true }), 60);
-      m.closed.then(() => resolve(ok));
-    });
+  // ── Para grandes (para anotar horarios y fechas): la clave de grandes de toda la app ──
+  async function grownGate() {
+    if (grown) return true;
+    const ok = await sharedGate({ reason: 'Los horarios y las fechas los anota papá, mamá o el catequista.' });
+    if (ok) grown = true;
+    return ok;
   }
   const grownButton = () => grown ? null : h('button', { type: 'button', class: 'pq-grown', onclick: async () => { sfx('tap'); if (await grownGate()) refresh(); } },
     deco('🧑‍🏫'), h('span', null, h('b', null, 'Soy grande'), h('span', null, 'Agregar o cambiar')), h('span', { class: 'pq-grown__lock', 'aria-hidden': 'true' }, '🔒'));
@@ -376,5 +357,5 @@ export async function mount(el, params = {}) {
 
   R.sync();
   show(TABS.some(t => t.id === params.tab) ? params.tab : 'inicio');
-  return { unmount() { life.end(); sh.root.remove(); } };
+  return { unmount() { life.end(); lockGrown(); sh.root.remove(); } };
 }
